@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-28
+
+### Added
+- 新模块 `lib/projectPath.js`：集中 `projectPath` 校验
+  - `normalizeProjectPath(value)`：拒绝系统目录（`/`、`/Applications`、`/Library`、`/System`、`/bin`、`/etc`、`/opt`、`/private`、`/sbin`、`/tmp`、`/usr`、`/var`）、用户主目录 `$HOME`、以及 `$HOME` 的祖先目录；`path.resolve` 后返回
+  - `requirePath(value, label)`：从 `claudeStore.js` 抽出的非空 + 类型校验，供 `projectPath.js` 与 `skillStore.js` 复用
+- 新模块 `lib/projectActions.js`：`enableProjectSkill(rootDir, input)` 包装 `enableSkill`，启用后 best-effort 调用 `syncClaudeSkills`，结果合并为 `{ ...enableResult, claudeSync: { ok: true, ... } | { ok: false, error } }`，Claude 同步失败不会抛出
+- 测试新增 `project enable syncs Claude skills best-effort`：覆盖 `enableProjectSkill` 正常路径（claude 同步成功 + agents 启用都生效）
+
+### Changed
+- `lib/claudeStore.js`、`lib/skillStore.js`：所有接受 `projectPath` 的入口（`syncClaudeSkills` / `getClaudeStatus` / `unlinkClaudeSkill` / `getAgentsSkillsDir` / `getClaudeSkillsPath` / `scanEnabledSkills` / `getState`）改为先调用 `normalizeProjectPath`，删除 `claudeStore.js` 内本地 `requirePath`
+- `server.js`：`/api/enable` 路由从 `enableSkill` 切到 `enableProjectSkill`，响应体新增 `claudeSync` 字段（向后兼容，原有字段保留）
+- `public/app.js`：新增 `enableMessage(name, result)`，根据 `claudeSync` 给出三种 UI 文案——默认"已启用 X"；`claudeSync.ok=true` 时"已启用 X，并同步 Claude Code"；`claudeSync.ok=false` 时"已启用 X；Claude Code 自动同步失败：<error>"
+
+### Security
+- `projectPath` 服务端校验前置到 `normalizeProjectPath`，早于任何文件系统操作；不合法路径直接拒绝（防止误把 `/`、`/Users` 等作为目标执行 symlink / readdir）
+
 ## [0.2.1] - 2026-06-27
 
 ### Fixed
