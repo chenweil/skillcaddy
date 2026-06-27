@@ -179,7 +179,7 @@ async function disable(alias) {
     method: 'POST',
     body: { projectPath: elements.projectPath.value, alias }
   });
-  setMessage(`已禁用 ${alias}`);
+  setMessage(`已清空 ${alias}`);
   await loadState({ button: null });
 }
 
@@ -190,7 +190,7 @@ async function disableAgents() {
       method: 'POST',
       body: { projectPath: elements.projectPath.value, alias }
     })));
-    setMessage(aliases.length ? `已禁用 ${aliases.length} 个 agents skill` : '没有可禁用的 agents skill');
+    setMessage(aliases.length ? `已清空 ${aliases.length} 个 agents skill` : '没有可清空的 agents skill');
     await loadState({ button: null });
   });
 }
@@ -208,14 +208,14 @@ async function syncClaude() {
 }
 
 async function unlinkClaude() {
-  await withButtonState(elements.unlinkClaude, '清理中', async () => {
+  await withButtonState(elements.unlinkClaude, '清空中', async () => {
     const result = await api('/api/unlink-claude', {
       method: 'POST',
       body: { projectPath: elements.projectPath.value }
     });
-    setMessage(result.removed ? '已一键禁用 Claude Code skill' : 'Claude Code 当前未启用 skill 入口');
+    setMessage(result.removed ? '已一键清空 Claude Code skill' : 'Claude Code 当前未启用 skill 入口');
     await loadState({ button: null });
-    await flashButton(elements.unlinkClaude, '已清理');
+    await flashButton(elements.unlinkClaude, '已清空');
   });
 }
 
@@ -224,7 +224,7 @@ async function unlinkClaudeSkill(alias) {
     method: 'POST',
     body: { projectPath: elements.projectPath.value, alias }
   });
-  setMessage(`已清理 Claude skill：${alias}`);
+  setMessage(`已清空 Claude skill：${alias}`);
   await loadState({ button: null });
 }
 

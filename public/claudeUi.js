@@ -28,7 +28,7 @@ function renderClaudeSkills({ skills, elements, onUnlink }) {
     item.querySelector('p').textContent = skill.targetPath || (skill.isSymlink ? '断开的软链接' : '非软链接条目');
 
     const unlinkButton = item.querySelector('[data-action="unlink"]');
-    unlinkButton.textContent = skill.isSymlink ? '清理' : '不可清理';
+    unlinkButton.textContent = skill.isSymlink ? '清空' : '不可清空';
     unlinkButton.disabled = !skill.isSymlink;
     unlinkButton.addEventListener('click', () => onUnlink(skill.alias));
     elements.claudeSkillList.append(item);

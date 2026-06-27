@@ -20,7 +20,7 @@ export function renderAgentsSkills({ enabled, elements, onDisable }) {
 
     const button = document.createElement('button');
     button.className = 'secondary danger';
-    button.textContent = '清理';
+    button.textContent = '清空';
     button.disabled = !skill.isSymlink;
     button.addEventListener('click', () => onDisable(skill.alias));
     item.querySelector('.actions').append(button);
