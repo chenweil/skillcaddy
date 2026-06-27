@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "pull:github": "bash scripts/pull-github.sh"
   },
   "engines": {
     "node": ">=20"
