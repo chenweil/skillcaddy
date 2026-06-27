@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-28
+
+### Added
+- 新源 `skills/`：仓库自带的 skill 视作 `source: 'local'`、`id: 'local/<name>'`，与 `official/github/personal/archived` 一同被扫描
+- 新 skill `skills/skillcaddy-manager/`：教 Agent 如何使用 Skillcaddy 自身
+  - `SKILL.md`：列出 / 启用 / 禁用 / 同步 / 更新 / 健康检查 / 冲突检测的工作流；强制 dry-run 摘要 + 多种确认门（重复名 / 别名占用 / 非 symlink 占用 / GitHub 本地脏 / 动 archived / 删中央原件）
+  - `agents/openai.yaml`：interface 元数据，`allow_implicit_invocation: true`
+- 新工具脚本 `scripts/pull-github.sh` + `npm run pull:github`：批量 fast-forward pull `github/` 下所有仓库，脏工作树跳过，失败汇总退出码
+- 测试新增 `scans repository-provided root skills`：覆盖 `skills/<name>/` 扫描 + 启用路径
+
+### Changed
+- `lib/skillStore.js`：
+  - `ensureSourceFolders` 同时创建 `skills/`
+  - `scanSkills` 增加 `scanRepositorySkills`，先扫仓库自带再扫外部源
+  - `scanSourceFolder(rootDir, sourceFolder, source = sourceFolder)` 增加可选第三参支持自定义 source label（向后兼容：默认仍等于目录名）
+  - `assertInsideSources` 接受 `skills/`，错误信息更新为"来源目录或仓库 skills 目录内"
+
 ## [0.3.0] - 2026-06-28
 
 ### Added
