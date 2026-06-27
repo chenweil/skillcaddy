@@ -4,12 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   disableSkill,
-  enableSkill,
   ensureSourceFolders,
   getState
 } from './lib/skillStore.js';
 import { syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
 import { readVersion } from './lib/version.js';
+import { enableProjectSkill } from './lib/projectActions.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = __dirname;
@@ -59,7 +59,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/enable') {
     const body = await readJson(req);
-    sendJson(res, 200, await enableSkill(rootDir, body));
+    sendJson(res, 200, await enableProjectSkill(rootDir, body));
     return;
   }
 

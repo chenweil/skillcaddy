@@ -1,5 +1,5 @@
 import { lstat, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +14,7 @@ import {
   unlinkClaudeSkill,
   unlinkClaudeSkills
 } from '../lib/claudeStore.js';
+import { enableProjectSkill } from '../lib/projectActions.js';
 
 test('scans source folders and enables a skill with a symlink', async () => {
   const root = await makeTempDir('skills-root-');
@@ -40,6 +41,48 @@ test('scans source folders and enables a skill with a symlink', async () => {
   assert.equal(nextState.enabled.length, 1);
   assert.equal(nextState.enabled[0].alias, 'review');
   assert.equal(nextState.enabled[0].targetPath, skill);
+});
+
+test('project enable syncs Claude skills best-effort', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(root, 'personal', 'project-sync');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Project sync\n');
+
+  const result = await enableProjectSkill(root, {
+    projectPath: project,
+    skillPath: skill,
+    alias: 'project-sync'
+  });
+
+  assert.equal(result.claudeSync.ok, true);
+  assert.equal(result.claudeSync.unchanged, false);
+
+  const state = await getState(root, project);
+  assert.equal(state.enabled[0].alias, 'project-sync');
+  assert.equal(state.claude.skills[0].alias, 'project-sync');
+});
+
+test('rejects unsafe project paths before creating skill links', async () => {
+  const root = await makeTempDir('skills-root-');
+  const skill = path.join(root, 'personal', 'safe-path');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Safe path\n');
+
+  await assert.rejects(
+    () => enableSkill(root, { projectPath: '/', skillPath: skill, alias: 'safe-path' }),
+    /projectPath 不能是系统目录/
+  );
+
+  await assert.rejects(
+    () => enableSkill(root, { projectPath: path.dirname(homedir()), skillPath: skill, alias: 'safe-path' }),
+    /projectPath 不能是用户主目录的父目录/
+  );
 });
 
 test('scans direct skills and nested repository skills', async () => {

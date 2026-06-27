@@ -176,12 +176,20 @@ function toggleGroup(key) {
 }
 
 async function enable(skill) {
-  await api('/api/enable', {
+  const result = await api('/api/enable', {
     method: 'POST',
     body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
   });
-  setMessage(`已启用 ${skill.name}`);
+  setMessage(enableMessage(skill.name, result));
   await loadState({ button: null });
+}
+
+function enableMessage(skillName, result) {
+  if (result.claudeSync?.ok === false) {
+    return `已启用 ${skillName}；Claude Code 自动同步失败：${result.claudeSync.error}`;
+  }
+
+  return result.claudeSync ? `已启用 ${skillName}，并同步 Claude Code` : `已启用 ${skillName}`;
 }
 
 async function disable(alias) {
