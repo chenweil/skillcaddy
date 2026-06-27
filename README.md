@@ -12,6 +12,39 @@ npm start
 
 需要 Node.js >= 20。打开控制台输出的本地地址，在页面里填写目标项目路径，启用/禁用 skill。
 
+## 平台兼容性
+
+| 平台 | 状态 | 备注 |
+|------|------|------|
+| macOS | ✅ 完全支持 | 原生目录符号链接 |
+| Linux | ✅ 完全支持 | 原生目录符号链接 |
+| Windows | ⚠️ 需额外配置 | 详见下方说明 |
+
+### Windows 前置条件
+
+Skillcaddy 通过 Node.js 的 `fs.symlink(..., 'dir')` 创建目录符号链接。在 Windows 上这一调用需要满足下列条件之一，否则会抛出 `EPERM`：
+
+1. **开启"开发人员模式"**（推荐）
+   - 设置 → 隐私和安全 → 开发者选项 → **开发人员模式**
+   - 适用于 Windows 10 创意者更新（1703）及以上
+2. **以管理员身份运行**
+   - 用管理员终端执行 `npm start`
+
+### Windows 已知限制
+
+- `readlink` 返回的目标路径可能带有 `\\?\` 前缀或反斜杠，可能影响"别名重复指向"检测（`enableSkill` 中的 `existingTarget !== resolvedSkillPath` 判断）。
+- NTFS 默认大小写不敏感，但代码按大小写敏感比较别名（一般不影响日常使用，但同义大小写的别名会被视为两个 skill）。
+- 没有针对 Windows 的路径规整、junction fallback 或复制降级。
+
+### 计划中的兼容改进（未实现）
+
+为了让 Windows 用户开箱即用，后续会引入以下策略，但**当前版本均未实现**：
+
+- **平台分支**：检测到 `process.platform === 'win32'` 时优先使用 junction（`fs.symlink(target, path, 'junction')`），junction 不需要开发者模式。
+- **失败降级**：捕获 `EPERM` 后递归复制 skill 内容到 `.agents/skills/`，并在 `disableSkill` 中改为删除真实目录。
+- **路径规整**：`resolveLinkTarget` 去掉 `\\?\` 前缀、统一分隔符、Windows 下做大小写不敏感比较。
+- **README Windows 段**：补充 PowerShell 命令、磁盘格式要求（NTFS）、junction 与 symlink 的取舍说明。
+
 ## 架构示意
 
 ```
