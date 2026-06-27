@@ -15,7 +15,7 @@ export function renderAgentsSkills({ enabled, elements, onDisable }) {
       </div>
       <div class="actions"></div>
     `;
-    item.querySelector('.name').textContent = skill.isSymlink ? `🔗 ${skill.alias}` : skill.alias;
+    item.querySelector('.name').textContent = skill.isSymlink ? `link/${skill.alias}` : skill.alias;
     item.querySelector('.path').textContent = skill.targetPath || skill.linkPath;
 
     const button = document.createElement('button');

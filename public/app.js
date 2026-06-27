@@ -27,7 +27,11 @@ const elements = {
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   message: document.querySelector('#message'),
-  versionTag: document.querySelector('#versionTag')
+  versionTag: document.querySelector('#versionTag'),
+  heroTotalSkills: document.querySelector('#heroTotalSkills'),
+  heroAgentsCount: document.querySelector('#heroAgentsCount'),
+  heroClaudeCount: document.querySelector('#heroClaudeCount'),
+  activeProject: document.querySelector('#activeProject')
 };
 
 elements.loadProject.addEventListener('click', () => loadState({ feedback: true }));
@@ -59,6 +63,10 @@ function render() {
   elements.totalSkills.textContent = state.stats.total;
   elements.agentsCount.textContent = state.enabled.length;
   elements.claudeCount.textContent = state.claude?.skills?.length || 0;
+  elements.heroTotalSkills.textContent = state.stats.total;
+  elements.heroAgentsCount.textContent = state.enabled.length;
+  elements.heroClaudeCount.textContent = state.claude?.skills?.length || 0;
+  elements.activeProject.textContent = state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, elements, onDisable: disable });
   renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
   renderSkills();
@@ -82,8 +90,10 @@ function renderSkills() {
     groupElement.innerHTML = `
       <button class="group-head" type="button" aria-expanded="${!isCollapsed}">
         <div>
-          <span class="chevron">▾</span>
-          <h3></h3>
+          <h3>
+            <span class="chevron" aria-hidden="true">▾</span>
+            <span class="title"></span>
+          </h3>
           <p></p>
         </div>
         <span class="badge"></span>
@@ -91,7 +101,7 @@ function renderSkills() {
       <div class="group-items"></div>
     `;
 
-    groupElement.querySelector('h3').textContent = group.collection;
+    groupElement.querySelector('h3 .title').textContent = group.collection;
     groupElement.querySelector('p').textContent = group.collectionPath;
     groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}`;
     groupElement.querySelector('.group-head').addEventListener('click', () => toggleGroup(group.key));
@@ -196,14 +206,14 @@ async function disableAgents() {
 }
 
 async function syncClaude() {
-  await withButtonState(elements.syncClaude, '加入中', async () => {
+  await withButtonState(elements.syncClaude, '…', async () => {
     const result = await api('/api/sync-claude', {
       method: 'POST',
       body: { projectPath: elements.projectPath.value }
     });
     setMessage(`已加入 Claude Code：${result.targetPath}`);
     await loadState({ button: null });
-    await flashButton(elements.syncClaude, '已加入');
+    await flashButton(elements.syncClaude, '✓');
   });
 }
 
@@ -261,7 +271,10 @@ function empty(text) {
   return element;
 }
 
-function setMessage(text, isError = false) { elements.message.textContent = text; elements.message.style.color = isError ? '#b42318' : ''; }
+function setMessage(text, isError = false) {
+  elements.message.textContent = text;
+  elements.message.classList.toggle('is-error', isError);
+}
 
 async function withButtonState(button, busyText, task) {
   const originalText = button.textContent;

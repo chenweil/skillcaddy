@@ -10,12 +10,46 @@
   </head>
   <body>
     <main class="shell">
-      <section class="topbar">
-        <div>
-          <p class="eyebrow">Local Skill Library</p>
-          <h1>Skillcaddy <span id="versionTag" class="version" aria-label="版本号"></span></h1>
+      <nav class="topbar" aria-label="主导航">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span>Skillcaddy</span>
         </div>
-        <button id="refreshButton" class="icon-button" title="刷新">↻</button>
+        <div class="topbar-actions">
+          <span id="versionTag" class="version" aria-label="版本号"></span>
+          <button id="refreshButton" class="icon-button" title="刷新" aria-label="刷新">↻</button>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Local Skill Library</p>
+          <h1>把本地 skills 像产品资产一样管理。</h1>
+          <p class="lede">集中整理 official、github、personal 与 archived 来源，再把需要的 skill 安全启用到当前项目和 Claude Code。</p>
+        </div>
+        <div class="product-surface" aria-label="当前库状态">
+          <div class="surface-header">
+            <span></span>
+            <span></span>
+            <span></span>
+            <strong>skillcaddy/state</strong>
+          </div>
+          <div class="surface-grid">
+            <div>
+              <span>Skill 原件</span>
+              <strong id="heroTotalSkills">0</strong>
+            </div>
+            <div>
+              <span>Agents 已启用</span>
+              <strong id="heroAgentsCount">0</strong>
+            </div>
+            <div>
+              <span>Claude Code</span>
+              <strong id="heroClaudeCount">0</strong>
+            </div>
+          </div>
+          <p id="activeProject" class="surface-path">等待读取项目路径</p>
+        </div>
       </section>
 
       <section class="controls">
@@ -29,14 +63,17 @@
       <section class="workspace">
         <aside class="panel">
           <div class="panel-title">
-            <h2>已启用</h2>
+            <div>
+              <p class="eyebrow">Enabled</p>
+              <h2>已启用</h2>
+            </div>
             <span>当前项目</span>
           </div>
           <div class="enabled-grid">
             <section class="enabled-column">
               <div class="column-title">
                 <span>.agents/skills <span id="agentsCount" class="count">0</span></span>
-                <button id="disableAgents" class="icon-button danger" title="一键清空">🗑</button>
+                <button id="disableAgents" class="icon-button danger" title="一键清空" aria-label="一键清空">×</button>
               </div>
               <div id="enabledList" class="list compact"></div>
             </section>
@@ -44,8 +81,8 @@
               <div class="column-title">
                 <span>Claude Code <span id="claudeCount" class="count">0</span></span>
                 <div class="actions">
-                  <button id="syncClaude" class="secondary">加入 Claude Code</button>
-                  <button id="unlinkClaude" class="icon-button danger" title="一键清空">🗑</button>
+                  <button id="syncClaude" class="icon-button" title="加入 Claude Code" aria-label="加入 Claude Code">+</button>
+                  <button id="unlinkClaude" class="icon-button danger" title="一键清空" aria-label="一键清空 Claude Code">×</button>
                 </div>
               </div>
               <section id="claudeSkillList" class="claude-list" aria-live="polite"></section>
@@ -55,7 +92,10 @@
 
         <section class="panel">
           <div class="panel-title">
-            <h2>Skill 原件库 <strong id="totalSkills" class="count">0</strong></h2>
+            <div>
+              <p class="eyebrow">Library</p>
+              <h2>Skill 原件库 <strong id="totalSkills" class="count">0</strong></h2>
+            </div>
             <select id="sourceFilter" title="来源过滤">
               <option value="">全部来源</option>
               <option value="official">official</option>

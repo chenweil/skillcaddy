@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-27
+
+### Fixed
+- Skill 原件库分组标题箭头 `▾` 与文字水平对齐：把 `.chevron` 移进 `<h3>` 内部，h3 改为 flex 容器（`align-items: center` + `gap: 8px`），箭头自身改为 `inline-flex` + `height: 1em`，按字形而非行盒做垂直居中，修复此前箭头视觉上偏低的问题
+- 箭头加 `aria-hidden="true"`，避免屏幕阅读器重复读出
+
+### Changed
+- `app.js`：`groupElement.querySelector('h3')` 改为 `groupElement.querySelector('h3 .title')`，标题文本写入新增的 `.title` span，避免 `textContent` 把箭头字符冲掉
+
 ## [0.2.0] - 2026-06-27
 
 ### Changed

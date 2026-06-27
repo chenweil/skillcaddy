@@ -2,7 +2,7 @@
   display: grid;
   gap: 1px;
   margin-top: 0;
-  background: var(--line);
+  background: var(--hairline);
 }
 
 .claude-skill {
@@ -10,13 +10,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: var(--panel);
-  padding: 10px 12px;
+  background: var(--canvas);
+  padding: 14px 16px;
 }
 
 .claude-skill p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
-  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font: 12px/1.45 var(--mono);
   overflow-wrap: anywhere;
+}
+
+.claude-skill strong {
+  color: var(--body-strong);
+  font-weight: 500;
 }
