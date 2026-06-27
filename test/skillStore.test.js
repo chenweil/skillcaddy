@@ -118,6 +118,30 @@ test('scans direct skills and nested repository skills', async () => {
   assert.equal(state.skills.find((skill) => skill.id === 'personal/writing').collection, 'writing');
 });
 
+test('scans repository-provided root skills', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(root, 'skills', 'skillcaddy-manager');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '---\ndescription: Manage project skills\n---\n');
+
+  const state = await getState(root, project);
+  assert.equal(state.skills.length, 1);
+  assert.equal(state.skills[0].id, 'local/skillcaddy-manager');
+  assert.equal(state.skills[0].source, 'local');
+  assert.equal(state.skills[0].collection, 'skillcaddy-manager');
+  assert.equal(state.skills[0].description, 'Manage project skills');
+
+  const result = await enableSkill(root, {
+    projectPath: project,
+    skillPath: skill,
+    alias: 'skillcaddy-manager'
+  });
+  assert.equal(result.targetPath, skill);
+});
+
 test('disable only removes symlinks and keeps original files', async () => {
   const root = await makeTempDir('skills-root-');
   const project = await makeTempDir('skills-project-');

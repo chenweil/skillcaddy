@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skillcaddy Manager"
+  short_description: "Manage project skills with Skillcaddy."
+  default_prompt: "Use $skillcaddy-manager to list, enable, disable, or update skills for this project."
+
+policy:
+  allow_implicit_invocation: true
