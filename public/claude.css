@@ -1,21 +1,11 @@
-.claude-list,
-.skill-content {
+.claude-list {
   display: grid;
   gap: 1px;
   margin-top: 0;
   background: var(--line);
 }
 
-.status-line + .claude-list {
-  margin-top: 10px;
-}
-
-.status-line {
-  font-size: 14px;
-}
-
-.claude-skill,
-.content-head {
+.claude-skill {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -24,20 +14,9 @@
   padding: 10px 12px;
 }
 
-.claude-skill p,
-.content-head span {
+.claude-skill p {
   margin: 3px 0 0;
   color: var(--muted);
   font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   overflow-wrap: anywhere;
-}
-
-.skill-content pre {
-  max-height: 360px;
-  margin: 0;
-  overflow: auto;
-  background: var(--panel);
-  padding: 14px;
-  white-space: pre-wrap;
-  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
 }

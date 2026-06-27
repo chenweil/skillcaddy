@@ -9,19 +9,18 @@ export function renderAgentsSkills({ enabled, elements, onDisable }) {
     const item = document.createElement('article');
     item.className = 'enabled';
     item.innerHTML = `
-      <div class="enabled-head">
-        <span class="name"></span>
-        <span class="badge">${skill.isSymlink ? 'link' : 'file'}</span>
+      <div>
+        <strong class="name"></strong>
+        <p class="path"></p>
       </div>
-      <div class="path"></div>
       <div class="actions"></div>
     `;
-    item.querySelector('.name').textContent = skill.alias;
+    item.querySelector('.name').textContent = skill.isSymlink ? `🔗 ${skill.alias}` : skill.alias;
     item.querySelector('.path').textContent = skill.targetPath || skill.linkPath;
 
     const button = document.createElement('button');
-    button.className = 'danger';
-    button.textContent = '禁用';
+    button.className = 'secondary danger';
+    button.textContent = '清理';
     button.disabled = !skill.isSymlink;
     button.addEventListener('click', () => onDisable(skill.alias));
     item.querySelector('.actions').append(button);

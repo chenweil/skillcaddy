@@ -1,5 +1,5 @@
 import { renderAgentsSkills } from './agentsUi.js';
-import { renderClaudeSkillContent, renderClaudeStatus } from './claudeUi.js';
+import { renderClaudeStatus } from './claudeUi.js';
 
 const state = {
   rootDir: '',
@@ -17,16 +17,14 @@ const elements = {
   loadProject: document.querySelector('#loadProject'),
   refreshButton: document.querySelector('#refreshButton'),
   disableAgents: document.querySelector('#disableAgents'),
-  syncClaude: document.querySelector('#syncClaude'),
   unlinkClaude: document.querySelector('#unlinkClaude'),
-  claudeStatus: document.querySelector('#claudeStatus'),
+  syncClaude: document.querySelector('#syncClaude'),
   claudeSkillList: document.querySelector('#claudeSkillList'),
-  claudeSkillContent: document.querySelector('#claudeSkillContent'),
   totalSkills: document.querySelector('#totalSkills'),
-  enabledSkills: document.querySelector('#enabledSkills'),
-  availableSkills: document.querySelector('#availableSkills'),
   sourceFilter: document.querySelector('#sourceFilter'),
   enabledList: document.querySelector('#enabledList'),
+  agentsCount: document.querySelector('#agentsCount'),
+  claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   message: document.querySelector('#message'),
   versionTag: document.querySelector('#versionTag')
@@ -35,8 +33,8 @@ const elements = {
 elements.loadProject.addEventListener('click', () => loadState({ feedback: true }));
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
 elements.sourceFilter.addEventListener('change', render);
-elements.syncClaude.addEventListener('click', syncClaude);
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
+elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
 
 await Promise.all([loadState(), loadVersion()]);
@@ -59,10 +57,10 @@ async function loadState(options = {}) {
 
 function render() {
   elements.totalSkills.textContent = state.stats.total;
-  elements.enabledSkills.textContent = state.stats.enabled;
-  elements.availableSkills.textContent = state.stats.available;
+  elements.agentsCount.textContent = state.enabled.length;
+  elements.claudeCount.textContent = state.claude?.skills?.length || 0;
   renderAgentsSkills({ enabled: state.enabled, elements, onDisable: disable });
-  renderClaudeStatus({ claude: state.claude, elements, onRead: readClaudeSkill, onUnlink: unlinkClaudeSkill });
+  renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
   renderSkills();
 }
 
@@ -228,15 +226,6 @@ async function unlinkClaudeSkill(alias) {
   });
   setMessage(`已清理 Claude skill：${alias}`);
   await loadState({ button: null });
-}
-
-async function readClaudeSkill(alias) {
-  const result = await api('/api/read-claude-skill', {
-    method: 'POST',
-    body: { projectPath: elements.projectPath.value, alias }
-  });
-  renderClaudeSkillContent(elements, result);
-  setMessage(`已读取 Claude skill：${result.alias}`);
 }
 
 async function api(url, options = {}) {

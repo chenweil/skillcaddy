@@ -132,11 +132,6 @@ select {
   padding: 0 12px;
 }
 
-.summary { grid-template-columns: repeat(3, 1fr); margin: 18px 0; }
-
-.status-line { margin-top: 10px; color: var(--muted); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
-
-.summary div,
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -144,10 +139,6 @@ select {
   box-shadow: var(--shadow);
 }
 
-.summary div { padding: 18px; }
-.summary strong { display: block; font-size: 34px; line-height: 1; }
-
-.summary span,
 .panel-title span,
 .meta,
 .path {
@@ -235,26 +226,39 @@ select {
 }
 
 .empty,
-.skill,
-.enabled {
+.skill {
   background: var(--panel);
   padding: 14px 16px;
 }
 
 .empty { color: var(--ink); font: 16px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-.skill,
-.enabled {
+.skill {
   display: grid;
   gap: 8px;
 }
 
-.skill-head,
-.enabled-head {
+.skill-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.enabled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--panel);
+  padding: 10px 12px;
+}
+
+.enabled p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
 }
 
 .name {

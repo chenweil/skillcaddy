@@ -8,7 +8,7 @@ import {
   ensureSourceFolders,
   getState
 } from './lib/skillStore.js';
-import { readClaudeSkill, syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
+import { syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
 import { readVersion } from './lib/version.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,7 +42,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`AI Skills Manager: http://127.0.0.1:${port}`);
+  console.log(`Skillcaddy: http://127.0.0.1:${port}`);
 });
 
 async function handleApi(req, res, url) {
@@ -84,12 +84,6 @@ async function handleApi(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/api/unlink-claude-skill') {
     const body = await readJson(req);
     sendJson(res, 200, await unlinkClaudeSkill(body));
-    return;
-  }
-
-  if (req.method === 'POST' && url.pathname === '/api/read-claude-skill') {
-    const body = await readJson(req);
-    sendJson(res, 200, await readClaudeSkill(body));
     return;
   }
 

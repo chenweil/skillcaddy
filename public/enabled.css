@@ -30,6 +30,17 @@
   flex-wrap: nowrap;
 }
 
+.count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-dark);
+  color: #fffdf8;
+  font: 600 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  vertical-align: middle;
+}
+
 .column-title .icon-button {
   display: inline-flex;
   width: 38px;

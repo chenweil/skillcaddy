@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -10,7 +10,6 @@ import {
   getState
 } from '../lib/skillStore.js';
 import {
-  readClaudeSkill,
   syncClaudeSkills,
   unlinkClaudeSkill,
   unlinkClaudeSkills
@@ -95,7 +94,7 @@ test('disable only removes symlinks and keeps original files', async () => {
   assert.equal(nextState.enabled.length, 0);
 });
 
-test('syncs Claude skills entry to the agents skills directory', async () => {
+test('syncs Claude skills as a real directory with per-skill symlinks', async () => {
   const project = await makeTempDir('skills-project-');
   const skill = path.join(project, 'personal', 'claude-review');
 
@@ -103,20 +102,104 @@ test('syncs Claude skills entry to the agents skills directory', async () => {
   await mkdir(skill, { recursive: true });
   await writeFile(path.join(skill, 'SKILL.md'), '# Claude review\n');
   await enableSkill(project, { projectPath: project, skillPath: skill, alias: 'claude-review' });
+
   const result = await syncClaudeSkills(project);
-  assert.equal(result.targetPath, '../.agents/skills');
+  assert.equal(result.targetPath, path.join(project, '.agents', 'skills'));
+  assert.equal(result.unchanged, false);
+
+  const claudeSkills = path.join(project, '.claude', 'skills');
+  const stat = await lstat(claudeSkills);
+  assert.equal(stat.isSymbolicLink(), false, '.claude/skills 应该是真实目录，不是软链接');
+  assert.equal(stat.isDirectory(), true);
+
+  const claudeEntry = await lstat(path.join(claudeSkills, 'claude-review'));
+  assert.equal(claudeEntry.isSymbolicLink(), true, '.claude/skills/<alias> 应该是软链接');
+
   const state = await getState(project, project);
   assert.equal(state.claude.exists, true);
   assert.equal(state.claude.skills[0].alias, 'claude-review');
-  assert.equal((await readClaudeSkill({ projectPath: project, alias: 'claude-review' })).content, '# Claude review\n');
 
   const again = await syncClaudeSkills(project);
   assert.equal(again.unchanged, true);
+
   assert.equal((await unlinkClaudeSkill({ projectPath: project, alias: 'claude-review' })).removed, true);
+  assert.equal((await getState(project, project)).claude.skills.length, 0);
 
   const removed = await unlinkClaudeSkills(project);
-  assert.equal(removed.removed, true);
-  assert.equal((await getState(project, project)).claude.exists, false);
+  assert.equal(removed.removed, false, '目录已空，不应算移除');
+});
+
+test('disabling an agents skill does not remove the Claude entry', async () => {
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(project, 'personal', 'isolated');
+
+  await ensureSourceFolders(project);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Isolated\n');
+  await enableSkill(project, { projectPath: project, skillPath: skill, alias: 'isolated' });
+  await syncClaudeSkills(project);
+
+  assert.equal((await getState(project, project)).claude.skills[0].alias, 'isolated');
+
+  await disableSkill({ projectPath: project, alias: 'isolated' });
+
+  const state = await getState(project, project);
+  assert.equal(state.enabled.length, 0, 'agents 列表里应该已经移除');
+  assert.equal(state.claude.skills.length, 1, 'Claude 列表里应该仍然存在（独立软链接）');
+  assert.equal(state.claude.skills[0].alias, 'isolated');
+  assert.equal(state.claude.skills[0].exists, false, '目标已不存在，标记为断链');
+});
+
+test('migrates legacy .claude/skills directory symlink to per-skill layout', async () => {
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(project, 'personal', 'legacy');
+
+  await ensureSourceFolders(project);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Legacy\n');
+  await enableSkill(project, { projectPath: project, skillPath: skill, alias: 'legacy' });
+
+  // 手动模拟旧版 layout：.claude/skills -> ../.agents/skills
+  const claudeParent = path.join(project, '.claude');
+  await mkdir(claudeParent, { recursive: true });
+  await symlink('../.agents/skills', path.join(claudeParent, 'skills'), 'dir');
+
+  const beforeStat = await lstat(path.join(claudeParent, 'skills'));
+  assert.equal(beforeStat.isSymbolicLink(), true, '前置条件：应该是目录级软链接');
+
+  const result = await syncClaudeSkills(project);
+  assert.equal(result.unchanged, false);
+
+  const afterStat = await lstat(path.join(claudeParent, 'skills'));
+  assert.equal(afterStat.isSymbolicLink(), false, '迁移后应该是真实目录');
+  assert.equal(afterStat.isDirectory(), true);
+
+  const state = await getState(project, project);
+  assert.equal(state.claude.skills[0].alias, 'legacy');
+  assert.equal(state.claude.skills[0].isSymlink, true);
+});
+
+test('Claude list is sorted alphabetically by alias', async () => {
+  const project = await makeTempDir('skills-project-');
+  const sources = ['zebra', 'alpha', 'mango', 'banana'];
+  const expectedOrder = ['alpha', 'banana', 'mango', 'zebra'];
+
+  await ensureSourceFolders(project);
+  for (const alias of sources) {
+    const dir = path.join(project, 'personal', alias);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, 'SKILL.md'), `# ${alias}\n`);
+    await enableSkill(project, { projectPath: project, skillPath: dir, alias });
+  }
+  await syncClaudeSkills(project);
+
+  const state = await getState(project, project);
+  const aliases = state.claude.skills.map((skill) => skill.alias);
+  assert.deepEqual(aliases, expectedOrder);
+
+  // agents 列也得是排序的
+  const agentsAliases = state.enabled.map((skill) => skill.alias);
+  assert.deepEqual(agentsAliases, expectedOrder);
 });
 
 async function makeTempDir(prefix) {
