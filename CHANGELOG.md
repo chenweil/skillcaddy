@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-28
+
+### Changed
+- README 双语化
+  - 新增 `README.md`（English，canonical），顶部加 `[English](README.md) · [中文](README_CN.md)` 语言切换
+  - 中文版迁到 `README_CN.md`，顶部同步加语言切换链接
+  - 两份内容 1:1 对应；ASCII 架构图、命令、表格结构保留
+- 新增 "Why Skillcaddy?" / "为什么是 Skillcaddy？" 段（双语）：痛点列表（5 条多项目 / 多 Agent 场景）+ 能力清单（6 条：单一事实来源 / 零项目污染 / 多 Agent 友好 / 独立管理 / 安全默认 / 便于贡献）+ 收尾点题（个人 / 团队 / 作者三类读者）；放置在标题下方、Installation 之前
+
 ## [0.4.0] - 2026-06-28
 
 ### Added
