@@ -1,0 +1,29 @@
+# 依赖
+node_modules/
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 本机状态（使用本工具产生的用户级配置，不入库）
+.agents/
+.claude/
+
+# skill 原件库（本地内容不进入版本控制；克隆后自行填充）
+official/*
+!official/.gitkeep
+github/*
+!github/.gitkeep
+personal/*
+!personal/.gitkeep
+archived/*
+!archived/.gitkeep

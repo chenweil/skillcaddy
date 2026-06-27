@@ -1,0 +1,37 @@
+export function renderAgentsSkills({ enabled, elements, onDisable }) {
+  elements.enabledList.replaceChildren();
+  if (enabled.length === 0) {
+    elements.enabledList.append(empty('当前项目还没有启用 skill'));
+    return;
+  }
+
+  enabled.forEach((skill) => {
+    const item = document.createElement('article');
+    item.className = 'enabled';
+    item.innerHTML = `
+      <div class="enabled-head">
+        <span class="name"></span>
+        <span class="badge">${skill.isSymlink ? 'link' : 'file'}</span>
+      </div>
+      <div class="path"></div>
+      <div class="actions"></div>
+    `;
+    item.querySelector('.name').textContent = skill.alias;
+    item.querySelector('.path').textContent = skill.targetPath || skill.linkPath;
+
+    const button = document.createElement('button');
+    button.className = 'danger';
+    button.textContent = '禁用';
+    button.disabled = !skill.isSymlink;
+    button.addEventListener('click', () => onDisable(skill.alias));
+    item.querySelector('.actions').append(button);
+    elements.enabledList.append(item);
+  });
+}
+
+function empty(text) {
+  const element = document.createElement('div');
+  element.className = 'empty';
+  element.textContent = text;
+  return element;
+}

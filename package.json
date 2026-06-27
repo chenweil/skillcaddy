@@ -1,0 +1,14 @@
+{
+  "name": "skillcaddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local skill source library and per-project symlink manager.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

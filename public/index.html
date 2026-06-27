@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Skills Manager</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/enabled.css">
+    <link rel="stylesheet" href="/claude.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Local Skill Library</p>
+          <h1>AI Skills Manager <span id="versionTag" class="version" aria-label="版本号"></span></h1>
+        </div>
+        <button id="refreshButton" class="icon-button" title="刷新">↻</button>
+      </section>
+
+      <section class="controls">
+        <label>
+          <span>目标项目路径</span>
+          <input id="projectPath" type="text" spellcheck="false">
+        </label>
+        <button id="loadProject">读取项目</button>
+      </section>
+
+      <section class="summary" aria-live="polite">
+        <div><strong id="totalSkills">0</strong><span>原件</span></div>
+        <div><strong id="enabledSkills">0</strong><span>已启用</span></div>
+        <div><strong id="availableSkills">0</strong><span>可用</span></div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel">
+          <div class="panel-title">
+            <h2>已启用</h2>
+            <span>当前项目</span>
+          </div>
+          <div class="enabled-grid">
+            <section class="enabled-column">
+              <div class="column-title">
+                <span>.agents/skills</span>
+                <button id="disableAgents" class="icon-button danger" title="禁用所有 agents skill">🗑</button>
+              </div>
+              <div id="enabledList" class="list compact"></div>
+            </section>
+            <section class="enabled-column">
+              <div class="column-title">
+                <span>Claude Code</span>
+                <div class="actions">
+                  <button id="syncClaude" class="secondary">加入 Claude Code</button>
+                  <button id="unlinkClaude" class="icon-button danger" title="一键禁用 Claude Code skill">🗑</button>
+                </div>
+              </div>
+              <section id="claudeStatus" class="status-line" aria-live="polite"></section>
+              <section id="claudeSkillList" class="claude-list" aria-live="polite"></section>
+              <section id="claudeSkillContent" class="skill-content" aria-live="polite"></section>
+            </section>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Skill 原件库</h2>
+            <select id="sourceFilter" title="来源过滤">
+              <option value="">全部来源</option>
+              <option value="official">official</option>
+              <option value="github">github</option>
+              <option value="personal">personal</option>
+              <option value="archived">archived</option>
+            </select>
+          </div>
+          <div id="skillList" class="list"></div>
+        </section>
+      </section>
+
+      <p id="message" class="message" role="status"></p>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
