@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-29
+
+### Added
+- 导入依赖规则系统：`.import-rules.json` 配置 + `scripts/check-imports.js` 检查脚本，强制模块依赖分层
+- 全局技能检测：自动扫描 `~/.agents/skills` 和 `~/.claude/skills`，返回 `global` 数组
+- 技能建议系统：`buildSkillAdvice()` 提供"重复名 / 未启用推荐 / 已启用但来源变化"等管理建议
+- 导入检查测试：`test/check-imports.test.js` 覆盖规则解析、glob 匹配、违规检测
+
+### Changed
+- `npm test` 现在包含导入检查（`npm run lint:imports`），破坏性变更：不合规导入会导致测试失败
+- `lib/skillStore.js`：
+  - `getState()` 返回值新增 `global` 和 `advice` 字段
+  - 新增 `scanGlobalSkills()`：扫描用户级全局技能目录
+  - 新增 `scanSkillLinks(skillsDir)`：提取公共软链接扫描逻辑，供项目级与全局级复用
+  - 新增 `buildSkillAdvice(rootDir, { skills, enabled, global })`：生成管理建议
+- `public/app.js`：适配新的 `global` / `advice` 字段（UI 准备）
+- `skills/skillcaddy-manager/SKILL.md`：增补导入规则、全局技能、建议系统的使用说明
+
 ## [0.4.1] - 2026-06-28
 
 ### Changed
