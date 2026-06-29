@@ -230,12 +230,54 @@ npm run pull:github
 <project>/.claude/skills/<alias> -> ../../.agents/skills/<alias>
 ```
 
-**禁用**：删除软链接，不删原件。
+**禁用**：删除软链接,不删原件。
 
 **为什么是两层软链接？**
-- `.agents/skills` 是 Agent Skills 标准，Codex / OpenCode / Pi 都能识别
-- `.claude/skills` 让 Claude Code 也能使用，且支持单独管理（部分启用/禁用）
-- 一次启用，多 Agent 共享；禁用不影响原件，安全可靠
+- `.agents/skills` 是 Agent Skills 标准,Codex / OpenCode / Pi 都能识别
+- `.claude/skills` 让 Claude Code 也能使用,且支持单独管理（部分启用/禁用）
+- 一次启用,多 Agent 共享；禁用不影响原件,安全可靠
+
+## 推荐系统
+
+Skillcaddy 内置推荐系统,帮助用户发现和选择合适的 skills。
+
+### 快速查看推荐
+
+```bash
+cd references
+node view-recommendations.cjs workflows      # 查看核心工作流推荐
+node view-recommendations.cjs scenario new-project  # 查看场景推荐
+```
+
+### 推荐原则
+
+- **少而精**: 一次最多推荐 3 个库
+- **黄金组合**: mattpocock + lencx 覆盖开发全流程
+- **冲突检测**: 自动检测功能重叠的库 (如 mattpocock vs superpowers)
+- **全局检测**: 检测全局 skills 目录,建议统一管理
+
+### 核心推荐
+
+**开发流程黄金组合:**
+
+1. **mattpocock/skills** (工作流套件)
+   - Setup: `setup-matt-pocock-skills` 一键配置
+   - 包含: TDD、领域建模、调试、实现、质询
+
+2. **lencx/skills** (项目把控)
+   - coding-protocol: 防止 AI 误改
+   - keel: 架构治理
+
+### 相关脚本
+
+```bash
+node check-conflicts.cjs superpowers    # 检测冲突
+node check-global-skills.cjs            # 检测全局 Skills
+node version-manager.cjs check          # 检查版本同步
+```
+
+详细文档请查看 [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md)。
+
 
 ## 测试
 

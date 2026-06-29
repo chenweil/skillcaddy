@@ -5,6 +5,63 @@ description: Manage Skillcaddy project skills. Use when Codex needs to list avai
 
 # Skillcaddy Manager
 
+## Recommendations System
+
+This skill includes a built-in recommendation system:
+
+```
+skills/skillcaddy-manager/
+├── references/                 # Data and documentation
+│   ├── featured-skills.json    # Recommended skills data + conflict config
+│   ├── skill-platforms.json    # External skill platforms reference
+│   └── RECOMMENDATION_GUIDE.md # Full recommendation strategy guide
+└── scripts/                    # Utility scripts
+    ├── view-recommendations.cjs
+    ├── check-conflicts.cjs
+    ├── check-global-skills.cjs
+    └── version-manager.cjs
+```
+
+### When to Use Recommendations
+
+1. **User asks for skill recommendations** → Read `references/featured-skills.json`
+2. **User asks "推荐一些库"** → Use `scripts/view-recommendations.cjs workflows`
+3. **Detecting potential conflicts** → Use `scripts/check-conflicts.cjs`
+4. **Detecting global skills** → Use `scripts/check-global-skills.cjs`
+5. **Checking version sync** → Use `scripts/version-manager.cjs check`
+
+### Core Recommendation Principles
+
+From `references/RECOMMENDATION_GUIDE.md`:
+
+1. **Less is more**: Maximum 3 libraries per recommendation
+2. **Golden combo**: mattpoclock + lencx for development workflow
+3. **Conflict detection**: mattpocock vs superpowers (choose one)
+4. **Global detection**: Suggest Skillcaddy when global skills detected
+
+### Quick Commands
+
+```bash
+# View core workflow recommendations
+node scripts/view-recommendations.cjs workflows
+
+# View scenario-based recommendations
+node scripts/view-recommendations.cjs scenario new-project
+
+# Detect conflicts
+node scripts/check-conflicts.cjs superpowers
+
+# Detect global skills
+node scripts/check-global-skills.cjs
+
+# Check version sync
+node scripts/version-manager.cjs check
+```
+
+### Data Version
+
+The `references/featured-skills.json` version syncs with Skillcaddy main project version. Current: **0.7.0**
+
 ## Core Model
 
 Treat Skillcaddy as a central skill library plus per-project symlink manager.

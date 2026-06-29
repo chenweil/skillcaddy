@@ -237,6 +237,48 @@ Lets an Agent (especially Codex) know how to use Skillcaddy itself correctly:
 - `.claude/skills` lets Claude Code use them too, with independent enable/disable.
 - Enable once, share across Agents; disable doesn't touch the source files — safe and reversible.
 
+## Recommendation System
+
+Skillcaddy includes a built-in recommendation system to help users discover and choose appropriate skills.
+
+### Quick View
+
+```bash
+cd references
+node view-recommendations.cjs workflows      # View core workflow recommendations
+node view-recommendations.cjs scenario new-project  # View scenario-based recommendations
+```
+
+### Recommendation Principles
+
+- **Less is more**: Maximum 3 libraries per recommendation
+- **Golden combo**: mattpocock + lencx covers the full development workflow
+- **Conflict detection**: Auto-detect overlapping libraries (e.g., mattpocock vs superpowers)
+- **Global detection**: Detect global skills directories and suggest unified management
+
+### Core Recommendations
+
+**Development workflow golden combo:**
+
+1. **mattpocock/skills** (workflow suite)
+   - Setup: `setup-matt-pocock-skills` one-click configuration
+   - Includes: TDD, domain modeling, debugging, implementation, grilling
+
+2. **lencx/skills** (project control)
+   - coding-protocol: Prevent AI from making unintended changes
+   - keel: Architecture governance
+
+### Utility Scripts
+
+```bash
+node check-conflicts.cjs superpowers    # Detect conflicts
+node check-global-skills.cjs            # Detect global skills
+node version-manager.cjs check          # Check version sync
+```
+
+See [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md) for detailed documentation.
+
+
 ## Tests
 
 ```bash

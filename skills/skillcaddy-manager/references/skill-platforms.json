@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-06-29",
+  "platforms": [
+    {
+      "name": "SkillsMP",
+      "url": "https://skillsmp.com",
+      "description": "收录量非常大的 AI Skills 市场,支持中文界面和语义搜索,适合想广撒网找技能的人",
+      "features": [
+        "海量 Skills 收录",
+        "中文界面支持",
+        "语义搜索,精准匹配需求",
+        "社区评分和评论",
+        "一键安装到本地",
+        "作者主页和订阅"
+      ],
+      "bestFor": "想广撒网找技能的人,中文用户友好",
+      "status": "active",
+      "focus": "Claude Code, Codex, OpenAI, 多平台 skills"
+    },
+    {
+      "name": "Skills.sh",
+      "url": "https://www.skills.sh",
+      "description": "按 24 小时热度排序的 Skills 平台,适合想看当前热门技能的人,快速发现社区里正在流行的 Skills",
+      "features": [
+        "24 小时热度排行榜",
+        "实时发现流行 Skills",
+        "Skills 发布平台",
+        "版本管理",
+        "使用统计",
+        "社区驱动"
+      ],
+      "bestFor": "想看当前热门技能的人,快速发现社区流行趋势",
+      "status": "active",
+      "focus": "AI Agent Skills 生态,热门趋势发现"
+    }
+  ],
+  "notes": [
+    "SkillsMP: 收录量大,支持中文和语义搜索,适合广撒网找技能",
+    "Skills.sh: 按 24 小时热度排序,适合发现当前流行趋势",
+    "可以通过这些平台发现更多高质量的 skills",
+    "Skillcaddy 支持从这些平台克隆 skills 到本地库"
+  ],
+  "usageGuide": {
+    "SkillsMP": "当你想搜索特定功能的 skill,或者中文界面更友好时使用",
+    "Skills.sh": "当你想了解社区最新流行什么 skill,或者想发现新趋势时使用"
+  }
+}

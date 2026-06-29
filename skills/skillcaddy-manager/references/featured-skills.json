@@ -1,0 +1,398 @@
+{
+  "version": "0.8.0",
+  "lastUpdated": "2026-06-29",
+  "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
+  "changelog": [
+    {
+      "version": "0.8.0",
+      "date": "2026-06-29",
+      "changes": [
+        "添加完整推荐系统 (references + scripts)",
+        "实现冲突检测 (mattpocock vs superpowers)",
+        "实现全局 Skills 检测和建议",
+        "实现版本管理和同步",
+        "更新 README 文档",
+        "优化目录结构,符合 skill 规范"
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-06-29",
+      "changes": [
+        "添加全局 Skills 检测功能",
+        "添加冲突检测逻辑 (mattpocock vs superpowers)",
+        "优化推荐策略: 少而精,一次最多3个",
+        "版本号与 Skillcaddy 主项目同步"
+      ]
+    }
+  ],
+  "recommendationStrategy": {
+    "principle": "少而精,一次不推荐太多,优先推荐组合型 skill 库",
+    "maxRecommendations": 3,
+    "notes": [
+      "推荐要精准,避免选择困难",
+      "优先推荐有 setup 脚本的组合库",
+      "开发流程用 mattpocock + lencx 基本足够"
+    ]
+  },
+  "conflicts": {
+    "mattpocock-vs-superpowers": {
+      "collections": [
+        "mattpocock-workflow",
+        "superpowers-workflow"
+      ],
+      "reason": "两者都是开发工作流套件,功能重叠",
+      "skills": {
+        "mattpocock": [
+          "tdd",
+          "diagnosing-bugs",
+          "implement"
+        ],
+        "superpowers": [
+          "test-driven-development",
+          "systematic-debugging"
+        ]
+      },
+      "recommendation": "推荐 mattpocock (更完整,有 setup 脚本),二选一",
+      "advice": "检测到您已安装 {existing},建议不要同时安装 {conflicting},避免工作流冲突"
+    },
+    "coding-protocol-overlap": {
+      "note": "coding-protocol 与其他风险控制 skill 可能冲突",
+      "check": "如果已有其他风险控制类 skill,需评估是否重复"
+    }
+  },
+  "essentialWorkflows": {
+    "development": {
+      "label": "开发流程",
+      "description": "覆盖开发全流程的核心组合",
+      "collections": [
+        {
+          "id": "mattpocock-workflow",
+          "name": "mattpocock/skills",
+          "priority": 1,
+          "type": "workflow-suite",
+          "setupSkill": "setup-matt-pocock-skills",
+          "description": "一键安装整套开发工作流",
+          "includes": [
+            "tdd - 测试驱动开发",
+            "domain-modeling - 领域建模",
+            "diagnosing-bugs - 系统化调试",
+            "implement - 实现执行",
+            "grill-me - 方案质询"
+          ],
+          "installCommand": "启用 setup-matt-pocock-skills 自动配置",
+          "repo": "https://github.com/mattpocock/skills",
+          "installs": "6.7K+"
+        },
+        {
+          "id": "lencx-control",
+          "name": "lencx/skills",
+          "priority": 2,
+          "type": "quality-control",
+          "description": "项目质量把控和风险控制",
+          "includes": [
+            "coding-protocol - 防止 AI 误改的风险控制协议",
+            "keel - 架构治理和系统边界管理"
+          ],
+          "installCommand": "启用 coding-protocol + keel",
+          "repo": "https://github.com/lencx/skills",
+          "installs": null
+        }
+      ],
+      "whyThisCombo": "mattpocock 负责开发流程执行,lencx 负责质量把控,两者配合覆盖开发全流程",
+      "conflictNote": "mattpocock 和 superpowers 有功能重叠,二选一即可,推荐 mattpocock"
+    }
+  },
+  "alternatives": {
+    "superpowers": {
+      "label": "Superpowers 工作流",
+      "description": "另一个开发工作流选择,与 mattpocock 二选一",
+      "collections": [
+        {
+          "id": "superpowers-workflow",
+          "name": "superpowers",
+          "type": "workflow-suite",
+          "description": "AI 协作提效工作流",
+          "includes": [
+            "brainstorming - 头脑风暴",
+            "verification-before-completion - 完成验证",
+            "systematic-debugging - 系统化调试",
+            "test-driven-development - TDD"
+          ],
+          "repo": "https://github.com/superpowers/skills",
+          "installs": "1.2K+"
+        },
+        {
+          "id": "lencx-control",
+          "name": "lencx/skills",
+          "description": "项目质量把控"
+        }
+      ],
+      "whyThisCombo": "superpowers 做提效,lencx 做把控",
+      "conflictWith": [
+        "mattpocock-workflow"
+      ]
+    }
+  },
+  "featured": {
+    "development": {
+      "label": "开发类",
+      "description": "编程语言、代码质量、测试、调试",
+      "collections": [
+        {
+          "id": "mattpocock",
+          "name": "mattpocock/skills",
+          "source": "github",
+          "repo": "https://github.com/mattpocock/skills",
+          "skills": [
+            "setup-matt-pocock-skills",
+            "tdd",
+            "domain-modeling",
+            "diagnosing-bugs",
+            "implement",
+            "grill-me",
+            "codebase-design"
+          ],
+          "tags": [
+            "TypeScript",
+            "Engineering",
+            "Testing",
+            "Workflow"
+          ],
+          "reason": "TypeScript 工程实践全套: TDD、领域建模、调试、实现、质询",
+          "priority": "essential",
+          "installs": "6.7K+",
+          "isSuite": true,
+          "setupGuide": "先启用 setup-matt-pocock-skills,它会自动配置整个工作流环境",
+          "conflictWith": [
+            "superpowers"
+          ]
+        },
+        {
+          "id": "superpowers",
+          "name": "superpowers",
+          "source": "github",
+          "repo": "https://github.com/superpowers/skills",
+          "skills": [
+            "brainstorming",
+            "verification-before-completion",
+            "systematic-debugging",
+            "test-driven-development"
+          ],
+          "tags": [
+            "Core",
+            "AI",
+            "Productivity"
+          ],
+          "reason": "AI 协作提效: 头脑风暴、验证完成、系统化调试、TDD",
+          "priority": "alternative",
+          "installs": "1.2K+",
+          "isSuite": true,
+          "conflictWith": [
+            "mattpocock"
+          ],
+          "note": "与 mattpocock 功能重叠,二选一"
+        },
+        {
+          "id": "lencx-core",
+          "name": "lencx/skills",
+          "source": "github",
+          "repo": "https://github.com/lencx/skills",
+          "skills": [
+            "coding-protocol",
+            "keel"
+          ],
+          "tags": [
+            "Core",
+            "Workflow",
+            "Quality",
+            "Risk Control"
+          ],
+          "reason": "项目把控: coding-protocol 防止 AI 误改,keel 架构治理",
+          "priority": "essential",
+          "installs": null,
+          "isSuite": false
+        }
+      ]
+    },
+    "frontend": {
+      "label": "前端开发",
+      "description": "UI 生成、组件库",
+      "collections": [
+        {
+          "id": "json-render",
+          "name": "json-render",
+          "source": "github",
+          "repo": "https://github.com/json-render/json-render",
+          "skills": [
+            "react",
+            "vue",
+            "svelte",
+            "next",
+            "shadcn"
+          ],
+          "tags": [
+            "UI",
+            "React",
+            "Vue",
+            "Svelte"
+          ],
+          "reason": "JSON 驱动 UI 生成,支持多框架",
+          "priority": "recommended",
+          "installs": null,
+          "isSuite": false
+        }
+      ]
+    },
+    "golang": {
+      "label": "Go 语言",
+      "description": "Go 开发规范",
+      "collections": [
+        {
+          "id": "samber-golang",
+          "name": "samber/cc-skills-golang",
+          "source": "github",
+          "repo": "https://github.com/samber/cc-skills-golang",
+          "skills": [
+            "golang-code-style",
+            "golang-testing",
+            "golang-performance",
+            "golang-concurrency"
+          ],
+          "tags": [
+            "Golang",
+            "Code Style",
+            "Performance"
+          ],
+          "reason": "Go 语言开发规范全套: 代码风格、测试、性能、并发",
+          "priority": "recommended",
+          "installs": "600+",
+          "isSuite": false
+        }
+      ]
+    },
+    "office": {
+      "label": "办公效率",
+      "description": "PPT、PDF、文档处理",
+      "collections": [
+        {
+          "id": "guizang-ppt",
+          "name": "guizang-ppt-skill",
+          "source": "github",
+          "repo": "https://github.com/user/guizang-ppt-skill",
+          "skills": [
+            "guizang-ppt-skill"
+          ],
+          "tags": [
+            "PPT",
+            "Presentation"
+          ],
+          "reason": "生成网页 PPT,WebGL 背景、瑞士风格",
+          "priority": "recommended",
+          "installs": null,
+          "isSuite": false
+        }
+      ]
+    },
+    "tools": {
+      "label": "工具类",
+      "description": "浏览器、搜索、部署",
+      "collections": [
+        {
+          "id": "vercel-labs-skills",
+          "name": "vercel-labs/skills",
+          "source": "github",
+          "repo": "https://github.com/vercel-labs/skills",
+          "skills": [
+            "find-skills"
+          ],
+          "tags": [
+            "Discovery",
+            "Tools"
+          ],
+          "reason": "技能发现工具",
+          "priority": "recommended",
+          "installs": "15.7K+",
+          "isSuite": false
+        }
+      ]
+    }
+  },
+  "scenarios": {
+    "new-project": {
+      "label": "新项目启动",
+      "description": "刚创建的新项目,需要建立开发流程",
+      "recommend": {
+        "primary": [
+          "mattpocock-workflow",
+          "lencx-control"
+        ],
+        "why": "mattpocock 建立完整开发工作流,lencx 做质量把控"
+      },
+      "setupSteps": [
+        "1. 启用 setup-matt-pocock-skills (自动配置工作流)",
+        "2. 启用 coding-protocol (风险控制)",
+        "3. 启用 keel (架构治理)",
+        "4. 开始开发"
+      ]
+    },
+    "typescript": {
+      "label": "TypeScript 项目",
+      "description": "TypeScript/JavaScript 项目",
+      "recommend": {
+        "primary": [
+          "mattpocock-workflow",
+          "lencx-control"
+        ],
+        "optional": [
+          "json-render"
+        ]
+      }
+    },
+    "react": {
+      "label": "React 项目",
+      "description": "React 前端项目",
+      "recommend": {
+        "primary": [
+          "mattpocock-workflow",
+          "lencx-control"
+        ],
+        "optional": [
+          "json-render"
+        ]
+      }
+    },
+    "golang": {
+      "label": "Go 项目",
+      "description": "Go 语言项目",
+      "recommend": {
+        "primary": [
+          "lencx-control"
+        ],
+        "optional": [
+          "samber-golang"
+        ]
+      }
+    },
+    "maintenance": {
+      "label": "项目维护",
+      "description": "已有项目,需要改进质量",
+      "recommend": {
+        "primary": [
+          "lencx-control"
+        ],
+        "why": "重点做风险控制和架构治理"
+      }
+    }
+  },
+  "sources": {
+    "skillsmp": {
+      "url": "https://skillsmp.com",
+      "note": "海量收录,中文界面,语义搜索"
+    },
+    "skills-sh": {
+      "url": "https://www.skills.sh",
+      "note": "24 小时热度排行,发现流行趋势"
+    }
+  }
+}
