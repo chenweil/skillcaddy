@@ -4,6 +4,8 @@
 
 本地 AI Skills 中央库 + 按项目软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到任意项目。
 
+![](public/skillcaddy_CN.png)
+
 ## 为什么是 Skillcaddy？
 
 如果你在多个项目里同时用 Claude Code / Codex / OpenCode / Pi，迟早会遇到这些场景：

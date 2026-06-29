@@ -4,6 +4,8 @@
 
 Local AI skills central library + per-project symlink enablement. One AISkills directory holds every skill source; symlink what you need into any project on demand.
 
+![](public/skillcaddy_EN.png)
+
 ## Why Skillcaddy?
 
 If you use Claude Code, Codex, OpenCode, or Pi across multiple projects, you eventually hit one of these:
