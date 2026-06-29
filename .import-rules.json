@@ -1,0 +1,49 @@
+{
+  "_notes": [
+    "Import dependency rules for internal modules.",
+    "Each rule: { from, allow, reason }.",
+    "from is a file path and supports * globs.",
+    "allow is either an array of allowed internal targets or true.",
+    "targets in allow support * globs.",
+    "Imports from node:* are always allowed.",
+    "Files matched by requireRulesFor must be covered by at least one rule."
+  ],
+  "requireRulesFor": ["server.js", "lib/*.js"],
+  "rules": [
+    {
+      "from": "lib/projectPath.js",
+      "allow": [],
+      "reason": "Leaf module — no internal dependencies"
+    },
+    {
+      "from": "lib/version.js",
+      "allow": [],
+      "reason": "Leaf module — no internal dependencies"
+    },
+    {
+      "from": "lib/claudeStore.js",
+      "allow": ["lib/projectPath.js"],
+      "reason": "Store layer — can only depend on leaf modules"
+    },
+    {
+      "from": "lib/skillStore.js",
+      "allow": ["lib/projectPath.js", "lib/claudeStore.js"],
+      "reason": "Store layer — currently imports claudeStore for getState aggregation; dept probe: decouple via aggregator layer"
+    },
+    {
+      "from": "lib/projectActions.js",
+      "allow": ["lib/skillStore.js", "lib/claudeStore.js"],
+      "reason": "Coordinator — can depend on all stores and leaves"
+    },
+    {
+      "from": "server.js",
+      "allow": true,
+      "reason": "Entry point — can depend on any lib module"
+    },
+    {
+      "from": "test/*.js",
+      "allow": true,
+      "reason": "Tests — can depend on any lib module"
+    }
+  ]
+}

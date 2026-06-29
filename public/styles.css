@@ -232,6 +232,49 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.advice-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.advice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--hairline);
+  border-left: 4px solid var(--accent-teal);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.advice.warning {
+  border-left-color: var(--warning);
+}
+
+.advice strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--body-strong);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.advice p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.advice span {
+  color: var(--muted-soft);
+  font: 11px/1.4 var(--mono);
+}
+
 .controls {
   display: grid;
   grid-template-columns: 1fr auto;

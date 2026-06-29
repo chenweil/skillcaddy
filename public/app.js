@@ -6,6 +6,8 @@ const state = {
   projectPath: '',
   skills: [],
   enabled: [],
+  global: [],
+  advice: [],
   claude: null,
   collapsedGroups: new Set(),
   knownGroups: new Set(),
@@ -26,6 +28,7 @@ const elements = {
   agentsCount: document.querySelector('#agentsCount'),
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
+  adviceList: document.querySelector('#adviceList'),
   message: document.querySelector('#message'),
   versionTag: document.querySelector('#versionTag'),
   heroTotalSkills: document.querySelector('#heroTotalSkills'),
@@ -69,7 +72,29 @@ function render() {
   elements.activeProject.textContent = state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, elements, onDisable: disable });
   renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
+  renderAdvice();
   renderSkills();
+}
+
+function renderAdvice() {
+  elements.adviceList.replaceChildren();
+  if (!state.advice || state.advice.length === 0) return;
+
+  state.advice.slice(0, 6).forEach((advice) => {
+    const item = document.createElement('article');
+    item.className = `advice ${advice.severity || 'info'}`;
+    item.innerHTML = `
+      <div>
+        <strong></strong>
+        <p></p>
+      </div>
+      <span></span>
+    `;
+    item.querySelector('strong').textContent = advice.title;
+    item.querySelector('p').textContent = advice.detail;
+    item.querySelector('span').textContent = advice.type;
+    elements.adviceList.append(item);
+  });
 }
 
 function renderSkills() {

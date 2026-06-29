@@ -85,6 +85,20 @@ test('rejects unsafe project paths before creating skill links', async () => {
   );
 });
 
+test('rejects skill paths outside configured source directories', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const outsideSkill = await makeTempDir('outside-skill-');
+
+  await ensureSourceFolders(root);
+  await writeFile(path.join(outsideSkill, 'SKILL.md'), '# Outside\n');
+
+  await assert.rejects(
+    () => enableSkill(root, { projectPath: project, skillPath: outsideSkill, alias: 'outside' }),
+    /skillPath 必须位于当前 AISkills 的来源目录或仓库 skills 目录内/
+  );
+});
+
 test('scans direct skills and nested repository skills', async () => {
   const root = await makeTempDir('skills-root-');
   const project = await makeTempDir('skills-project-');
@@ -140,6 +154,32 @@ test('scans repository-provided root skills', async () => {
     alias: 'skillcaddy-manager'
   });
   assert.equal(result.targetPath, skill);
+});
+
+test('reports unmanaged project skills and duplicate library names as advice', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const personalSkill = path.join(root, 'personal', 'review');
+  const repoSkill = path.join(root, 'github', 'toolbox', 'skills', 'review');
+  const unmanagedSkill = await makeTempDir('unmanaged-skill-');
+  const agentsSkills = path.join(project, '.agents', 'skills');
+
+  await ensureSourceFolders(root);
+  await mkdir(personalSkill, { recursive: true });
+  await mkdir(repoSkill, { recursive: true });
+  await mkdir(agentsSkills, { recursive: true });
+  await writeFile(path.join(personalSkill, 'SKILL.md'), '# Personal review\n');
+  await writeFile(path.join(repoSkill, 'SKILL.md'), '# Repo review\n');
+  await writeFile(path.join(unmanagedSkill, 'SKILL.md'), '# Unmanaged\n');
+  await symlink(unmanagedSkill, path.join(agentsSkills, 'unmanaged'), 'dir');
+  await mkdir(path.join(agentsSkills, 'manual'), { recursive: true });
+
+  const state = await getState(root, project);
+  const adviceTypes = state.advice.map((advice) => advice.type);
+
+  assert.ok(adviceTypes.includes('project-unmanaged-symlink'));
+  assert.ok(adviceTypes.includes('project-unmanaged-entry'));
+  assert.ok(adviceTypes.includes('library-duplicate-name'));
 });
 
 test('disable only removes symlinks and keeps original files', async () => {

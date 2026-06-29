@@ -1,6 +1,6 @@
 ---
 name: skillcaddy-manager
-description: Manage Skillcaddy project skills. Use when Codex needs to list available skills from a Skillcaddy library, inspect which skills are enabled in the current project, enable or disable one skill or a whole source/collection, update GitHub-backed skills, check skill health, detect symlink conflicts, or explain which skills an agent can load from this repository.
+description: Manage Skillcaddy project skills. Use when Codex needs to list available skills from a Skillcaddy library, inspect project/global skills, explain loadable skills, enable or disable one skill or a whole source/collection, update GitHub-backed skills, initialize or audit a project skill setup, check health, detect unmanaged skills, broken links, duplicate names, global/project conflicts, or symlink boundary issues.
 ---
 
 # Skillcaddy Manager
@@ -13,6 +13,8 @@ Treat Skillcaddy as a central skill library plus per-project symlink manager.
 - Central sources live under `official/`, `github/`, `personal/`, and `archived/`.
 - Project-enabled skills live under `<project>/.agents/skills/`.
 - Claude Code compatibility entries live under `<project>/.claude/skills/`.
+- Global Codex skills may live under `~/.agents/skills/`.
+- Global Claude Code skills may live under `~/.claude/skills/`.
 - Enabling or disabling a project skill must only create or remove project symlinks by default.
 - Do not delete central skill files unless the user explicitly asks to remove or archive a source skill.
 - Do not enable `archived/` skills unless the user explicitly names one.
@@ -20,6 +22,7 @@ Treat Skillcaddy as a central skill library plus per-project symlink manager.
 Prefer the existing Skillcaddy implementation over ad hoc filesystem logic:
 
 - Use `npm start` or `GET /api/state?projectPath=...` for UI/API inspection.
+- Treat `/api/state` as the preferred summary because it returns `skills`, `enabled`, `global`, `claude`, and `advice`.
 - Use `POST /api/enable` and `POST /api/disable` when the server is already running.
 - Use `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` behavior as the source of truth when editing code.
 - Use `npm run pull:github` to update GitHub-backed skill repositories.
@@ -32,6 +35,7 @@ Before any operation that changes project state, produce a dry-run style summary
 - Skills that will be enabled, disabled, updated, skipped, or left unchanged.
 - Source, collection, name, alias, and path for each affected skill.
 - Conflicts that require user confirmation.
+- Existing `advice` from `/api/state`, especially unmanaged project entries, broken symlinks, duplicate names, and global/project alias conflicts.
 
 Stop and ask for confirmation when:
 
@@ -41,6 +45,9 @@ Stop and ask for confirmation when:
 - A GitHub skill repository has uncommitted local changes.
 - A request would touch `archived/` without explicitly naming archived skills.
 - A request would delete central source files instead of project symlinks.
+- `/api/state.advice` reports a warning for the alias being enabled, disabled, or initialized.
+
+Warnings are advisory unless they affect deletion safety. Do not block purely informational duplicate-name or global-shadowing advice, but surface it before changing state.
 
 ## Query Skills
 
@@ -50,8 +57,10 @@ When the user asks what skills are available or loadable:
 2. Scan repository skills from `skills/`.
 3. Scan central sources: `official/`, `github/`, `personal`, and `archived/`.
 4. Scan project-enabled skills: `<project>/.agents/skills/`.
-5. Scan Claude entries if relevant: `<project>/.claude/skills/`.
-6. Present results as available vs enabled, grouped by source and collection.
+5. Scan global skills: `~/.agents/skills/` and `~/.claude/skills/`.
+6. Scan Claude entries if relevant: `<project>/.claude/skills/`.
+7. Read `advice` from `/api/state` and present active warnings or recommendations.
+8. Present results as available vs enabled vs global, grouped by source and collection.
 
 For each skill, include:
 
@@ -62,7 +71,39 @@ For each skill, include:
 - `description`: the `description:` value from `SKILL.md` when available.
 - `enabled alias`: project alias when already enabled.
 
-When the user asks "agent 还有哪些 skill 可加载", answer from the repository and central sources, then mark which ones are already enabled in the current project.
+When the user asks "agent 还有哪些 skill 可加载", answer from the repository and central sources, then mark which ones are already enabled in the current project, which ones exist globally, and which ones have advice.
+
+## Advice And Conflict Checks
+
+Use `state.advice` whenever available. It is Skillcaddy's project setup review surface.
+
+Important advice types:
+
+- `project-unmanaged-entry`: a non-symlink entry exists under `<project>/.agents/skills/`; do not delete it through Skillcaddy.
+- `project-unmanaged-symlink`: a project skill symlink points outside Skillcaddy sources; treat it as externally managed.
+- `project-broken-link`: a project skill symlink points to a missing target.
+- `global-shadowed-by-project`: a project skill and global skill share the same alias; project-level loading may win depending on the agent.
+- `global-alias-conflict`: enabling a source skill would create an alias already present globally.
+- `library-duplicate-name`: multiple source skills share the same name; require source/collection disambiguation before enabling.
+
+Use advice this way:
+
+1. Before enabling a skill, check advice for the target alias and report relevant duplicate/global conflicts.
+2. Before disabling a skill, check whether the project entry is a symlink and whether it is Skillcaddy-managed.
+3. During project initialization, summarize all warning-level advice first, then informational duplicate/global advice.
+4. For broken links, suggest cleanup or re-enable only after showing the missing target path.
+5. For unmanaged entries, avoid automatic cleanup; ask the user whether they want to leave, move, or manually inspect them.
+
+If `/api/state` is not available, reproduce the minimum check manually:
+
+```text
+<project>/.agents/skills       project skills
+<project>/.claude/skills       project Claude entries
+~/.agents/skills               global Codex skills
+~/.claude/skills               global Claude Code skills
+```
+
+Compare aliases across project and global scopes. Treat same-alias entries as potential conflicts even when targets differ.
 
 ## Search And Match
 
@@ -87,18 +128,21 @@ When enabling a single skill:
 
 1. Match the requested skill.
 2. Skip `archived/` unless explicitly requested.
-3. Decide the alias. Default to the skill folder name unless the user provides an alias.
-4. Confirm the target alias does not point to a different skill.
-5. Create `<project>/.agents/skills/<alias>` as a directory symlink to the source skill path.
-6. Sync Claude compatibility entries with the existing per-skill `.claude/skills/<alias>` symlink behavior.
-7. Rescan and report the final enabled state.
+3. Read current project state and advice.
+4. Decide the alias. Default to the skill folder name unless the user provides an alias.
+5. Report global same-alias skill, duplicate source names, broken project links, or unmanaged project entries for that alias.
+6. Confirm the target alias does not point to a different skill.
+7. Create `<project>/.agents/skills/<alias>` as a directory symlink to the source skill path.
+8. Sync Claude compatibility entries with the existing per-skill `.claude/skills/<alias>` symlink behavior.
+9. Rescan and report the final enabled state plus remaining advice.
 
 When enabling a source or collection:
 
 1. Expand the request to the matching set of skills.
 2. Skip archived skills by default.
-3. Show the full list before changing anything.
-4. Enable each skill independently and report enabled, unchanged, skipped, and failed items.
+3. Read advice and group it by affected alias.
+4. Show the full list before changing anything, including aliases that conflict with project/global skills.
+5. Enable each skill independently and report enabled, unchanged, skipped, failed, and advised items.
 
 Use the existing API when possible:
 
@@ -117,16 +161,37 @@ When disabling a single skill:
 1. Resolve the project path.
 2. Match the enabled alias from `<project>/.agents/skills/`.
 3. Refuse to remove non-symlink entries.
-4. Remove only the project symlink.
-5. Remove or resync the matching Claude compatibility symlink when needed.
-6. Rescan and report the final enabled state.
+4. If the symlink target is outside Skillcaddy sources, report that it is unmanaged before removal.
+5. Remove only the project symlink.
+6. Remove or resync the matching Claude compatibility symlink when needed.
+7. Rescan and report the final enabled state.
 
 When disabling a source or collection:
 
 1. Map each enabled symlink target back to a source path.
 2. Select only aliases whose target path belongs to the requested source or collection.
-3. Show the list before removal.
-4. Remove project symlinks only; do not delete source skill directories.
+3. Exclude non-symlink and unmanaged entries unless the user explicitly confirms a manual cleanup workflow.
+4. Show the list before removal.
+5. Remove project symlinks only; do not delete source skill directories.
+
+## Initialize Or Audit Project Setup
+
+When the user asks to initialize, prepare, audit, or review a project's skill setup:
+
+1. Resolve the target project path.
+2. Read `/api/state?projectPath=<project>`.
+3. Summarize:
+   - project `.agents/skills` entries,
+   - project `.claude/skills` entries,
+   - global `~/.agents/skills` and `~/.claude/skills` entries,
+   - `advice` grouped by severity.
+4. Recommend a minimal action:
+   - leave existing unmanaged entries alone,
+   - fix broken symlinks,
+   - choose a source before enabling duplicate-name skills,
+   - rename aliases when global/project conflicts are confusing,
+   - sync Claude entries only after project `.agents/skills` looks correct.
+5. Do not automatically enable, disable, rename, or clean anything during audit unless the user explicitly asks.
 
 Use the existing API when possible:
 
@@ -170,6 +235,8 @@ Use health checks before large changes and after suspicious results:
 - Verify enabled entries in `.agents/skills` are symlinks unless intentionally managed otherwise.
 - Verify symlink targets still exist.
 - Verify `.claude/skills` entries point back to `.agents/skills` for enabled skills.
+- Verify global skill aliases do not unintentionally duplicate project aliases.
+- Verify unmanaged project entries are called out before enabling or cleanup.
 - Flag duplicate names across sources or collections.
 - Flag descriptions that are empty or not useful for discovery.
 
@@ -190,6 +257,9 @@ Always distinguish:
 
 - Available in repository or central library.
 - Enabled in the project.
+- Present globally.
+- Unmanaged or broken in the project.
+- Advice requiring confirmation or attention.
 - Loadable by Codex through `.agents/skills`.
 - Loadable by Claude Code through `.claude/skills`.
 

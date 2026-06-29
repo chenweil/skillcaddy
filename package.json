@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/*.test.js && npm run lint:imports",
+    "test:unit": "node --test test/*.test.js",
+    "lint:imports": "node scripts/check-imports.js",
+    "lint": "node scripts/check-imports.js",
     "pull:github": "bash scripts/pull-github.sh"
   },
   "engines": {
