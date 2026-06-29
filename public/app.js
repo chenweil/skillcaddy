@@ -1,9 +1,13 @@
 import { renderAgentsSkills } from './agentsUi.js';
 import { renderClaudeStatus } from './claudeUi.js';
 
+const PROJECT_HISTORY_KEY = 'skillcaddy.projectHistory';
+const MAX_PROJECT_HISTORY = 8;
+
 const state = {
   rootDir: '',
   projectPath: '',
+  projectHistory: readProjectHistory(),
   skills: [],
   enabled: [],
   global: [],
@@ -16,6 +20,8 @@ const state = {
 
 const elements = {
   projectPath: document.querySelector('#projectPath'),
+  addProject: document.querySelector('#addProject'),
+  projectHistory: document.querySelector('#projectHistory'),
   loadProject: document.querySelector('#loadProject'),
   refreshButton: document.querySelector('#refreshButton'),
   disableAgents: document.querySelector('#disableAgents'),
@@ -38,12 +44,14 @@ const elements = {
 };
 
 elements.loadProject.addEventListener('click', () => loadState({ feedback: true }));
+elements.addProject.addEventListener('click', addCurrentProject);
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
 elements.sourceFilter.addEventListener('change', render);
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
 
+initializeProjectPathFromUrl();
 await Promise.all([loadState(), loadVersion()]);
 
 async function loadState(options = {}) {
@@ -55,6 +63,8 @@ async function loadState(options = {}) {
     const nextState = await api(url);
     Object.assign(state, nextState);
     elements.projectPath.value = state.projectPath;
+    rememberProject(state.projectPath);
+    syncProjectPathToUrl(state.projectPath);
     render();
     if (options.feedback) setMessage(`已${action}：${state.projectPath}`);
   };
@@ -73,7 +83,66 @@ function render() {
   renderAgentsSkills({ enabled: state.enabled, elements, onDisable: disable });
   renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
   renderAdvice();
+  renderProjectHistory();
   renderSkills();
+}
+
+function renderProjectHistory() {
+  elements.projectHistory.replaceChildren();
+  if (state.projectHistory.length === 0) return;
+
+  state.projectHistory.forEach((projectPath) => {
+    const button = document.createElement('button');
+    button.className = 'project-chip';
+    button.type = 'button';
+    button.textContent = projectPath;
+    button.title = projectPath;
+    button.disabled = projectPath === state.projectPath;
+    button.addEventListener('click', async () => {
+      elements.projectPath.value = projectPath;
+      await loadState({ button: null, feedback: true });
+    });
+    elements.projectHistory.append(button);
+  });
+}
+
+function addCurrentProject() {
+  const projectPath = elements.projectPath.value.trim();
+  if (!projectPath) {
+    setMessage('请输入项目路径后再添加', true);
+    return;
+  }
+
+  rememberProject(projectPath);
+  renderProjectHistory();
+  setMessage(`已添加项目：${projectPath}`);
+}
+
+function rememberProject(projectPath) {
+  const value = projectPath.trim();
+  if (!value) return;
+  state.projectHistory = [value, ...state.projectHistory.filter((item) => item !== value)].slice(0, MAX_PROJECT_HISTORY);
+  localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
+}
+
+function readProjectHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROJECT_HISTORY_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string' && item.trim()).slice(0, MAX_PROJECT_HISTORY) : [];
+  } catch {
+    return [];
+  }
+}
+
+function initializeProjectPathFromUrl() {
+  const projectPath = new URLSearchParams(window.location.search).get('projectPath');
+  if (projectPath) elements.projectPath.value = projectPath;
+}
+
+function syncProjectPathToUrl(projectPath) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('projectPath', projectPath);
+  window.history.replaceState({}, '', url);
 }
 
 function renderAdvice() {
@@ -113,23 +182,30 @@ function renderSkills() {
     const groupElement = document.createElement('section');
     groupElement.className = `skill-group${isCollapsed ? ' is-collapsed' : ''}`;
     groupElement.innerHTML = `
-      <button class="group-head" type="button" aria-expanded="${!isCollapsed}">
-        <div>
-          <h3>
-            <span class="chevron" aria-hidden="true">▾</span>
-            <span class="title"></span>
-          </h3>
+      <div class="group-bar">
+        <div class="group-head">
+          <button class="group-toggle" type="button" aria-expanded="${!isCollapsed}">
+            <h3>
+              <span class="chevron" aria-hidden="true">▾</span>
+              <span class="title"></span>
+            </h3>
+          </button>
+          <button class="icon-button group-enable-all" type="button" title="启用该库全部 skill" aria-label="启用该库全部 skill">+</button>
           <p></p>
         </div>
         <span class="badge"></span>
-      </button>
+      </div>
       <div class="group-items"></div>
     `;
 
     groupElement.querySelector('h3 .title').textContent = group.collection;
     groupElement.querySelector('p').textContent = group.collectionPath;
     groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}`;
-    groupElement.querySelector('.group-head').addEventListener('click', () => toggleGroup(group.key));
+    groupElement.querySelector('.group-toggle').addEventListener('click', () => toggleGroup(group.key));
+    const enableAllButton = groupElement.querySelector('.group-enable-all');
+    const pendingSkills = group.skills.filter((skill) => skill.source !== 'archived' && !enabledTargets.has(skill.path));
+    enableAllButton.disabled = pendingSkills.length === 0;
+    enableAllButton.addEventListener('click', () => enableGroup(group));
 
     const items = groupElement.querySelector('.group-items');
     group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets)));
@@ -206,6 +282,39 @@ async function enable(skill) {
     body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
   });
   setMessage(enableMessage(skill.name, result));
+  await loadState({ button: null });
+}
+
+async function enableGroup(group) {
+  const enabledTargets = new Set(state.enabled.map((item) => item.targetPath).filter(Boolean));
+  const skills = group.skills.filter((skill) => skill.source !== 'archived' && !enabledTargets.has(skill.path));
+
+  if (skills.length === 0) {
+    setMessage(`${group.collection} 没有需要启用的 skill`);
+    return;
+  }
+
+  let enabled = 0;
+  let unchanged = 0;
+  let failed = 0;
+
+  for (const skill of skills) {
+    try {
+      const result = await api('/api/enable', {
+        method: 'POST',
+        body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
+      });
+      result.unchanged ? unchanged += 1 : enabled += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  const parts = [`已处理 ${group.collection}`];
+  if (enabled) parts.push(`启用 ${enabled}`);
+  if (unchanged) parts.push(`已存在 ${unchanged}`);
+  if (failed) parts.push(`失败 ${failed}`);
+  setMessage(parts.join('，'), failed > 0);
   await loadState({ button: null });
 }
 

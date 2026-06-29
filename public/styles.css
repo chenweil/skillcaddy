@@ -277,7 +277,7 @@ h3 {
 
 .controls {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   gap: 12px;
   align-items: end;
   margin-bottom: 24px;
@@ -285,6 +285,32 @@ h3 {
   border-radius: var(--radius-lg);
   background: var(--surface-soft);
   padding: 16px;
+}
+
+.project-history {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-chip {
+  max-width: min(100%, 360px);
+  min-height: 32px;
+  overflow: hidden;
+  border-color: var(--hairline);
+  background: var(--canvas);
+  color: var(--body);
+  padding: 0 12px;
+  font: 12px/1.4 var(--mono);
+  text-overflow: ellipsis;
+}
+
+.project-chip:active,
+.project-chip:hover {
+  background: var(--surface-card);
+  color: var(--ink);
 }
 
 label span {
@@ -332,7 +358,7 @@ button:hover {
 }
 
 button:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   background: var(--primary-disabled);
   color: var(--muted);
 }
@@ -444,30 +470,61 @@ button.danger:hover,
   background: var(--canvas);
 }
 
+.group-bar {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-card);
+  padding: 16px 20px;
+}
+
 .group-head {
   display: flex;
+  flex: 1 1 auto;
   width: 100%;
   min-height: 0;
+  min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 0;
-  border-bottom: 1px solid var(--hairline);
-  border-radius: 0;
-  background: var(--surface-card);
-  color: var(--ink);
-  cursor: pointer;
-  padding: 16px 20px;
+  justify-content: flex-start;
+  column-gap: 8px;
+  row-gap: 5px;
   text-align: left;
 }
 
-.group-head:active,
-.group-head:hover {
-  background: var(--surface-cream-strong);
+.group-toggle {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  padding: 0;
+  text-align: left;
 }
 
-.group-head > div {
-  min-width: 0;
+.group-toggle:active,
+.group-toggle:hover {
+  background: transparent;
+  color: var(--primary-active);
+}
+
+.group-enable-all {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 18px;
+}
+
+.group-enable-all:active,
+.group-enable-all:hover {
+  background: var(--primary-active);
+}
+
+.group-enable-all:disabled {
+  background: var(--primary-disabled);
+  color: var(--muted);
 }
 
 .group-head h3 {
@@ -484,7 +541,9 @@ button.danger:hover,
 }
 
 .group-head p {
+  flex: 0 0 100%;
   margin: 5px 0 0;
+  min-width: 0;
   color: var(--muted);
   font: 12px/1.4 var(--mono);
   overflow-wrap: anywhere;

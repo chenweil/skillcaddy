@@ -33,7 +33,15 @@ cd skillcaddy
 npm start
 ```
 
-Requires Node.js >= 20. Open the local URL printed in the console, fill in the target project path on the page, and enable/disable skills.
+Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
+
+You can also pass the project path through the URL:
+
+```text
+http://127.0.0.1:4173/?projectPath=<encoded-project-path>
+```
+
+The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button.
 
 ## Platform compatibility
 

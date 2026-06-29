@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-29
+
+### Added
+- Web 管理器支持通过 `?projectPath=<encoded-project-path>` 直接打开指定项目，并在切换项目后同步 URL。
+- 项目路径输入区新增本地历史项目记录和"添加项目"入口，方便在多个项目之间切换。
+- Skill 原件库的每个库标题旁新增 `+` 批量启用入口，可一次启用该库内尚未启用且非 archived 的 skills。
+- `skillcaddy-manager` skill 新增"打开 Web 管理器"工作流，指导 Agent 使用 URL 传递项目路径。
+
+### Changed
+- Web 管理器默认固定使用 `http://127.0.0.1:4173`；仅在端口冲突或显式指定时通过 `PORT=<other-port>` 临时覆盖。
+- 首页统计文案统一为 `Agents 启用`、`Claude Code 启用`。
+- 禁用按钮和不可操作控件的鼠标样式改为 `not-allowed`，避免误导成加载状态。
+- README / README_CN 补充固定端口、项目路径 URL 传参、历史项目和批量启用说明。
+
 ## [0.5.0] - 2026-06-29
 
 ### Added

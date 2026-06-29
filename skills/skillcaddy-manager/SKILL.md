@@ -22,10 +22,33 @@ Treat Skillcaddy as a central skill library plus per-project symlink manager.
 Prefer the existing Skillcaddy implementation over ad hoc filesystem logic:
 
 - Use `npm start` or `GET /api/state?projectPath=...` for UI/API inspection.
+- Treat `http://127.0.0.1:4173` as the fixed default web manager URL.
 - Treat `/api/state` as the preferred summary because it returns `skills`, `enabled`, `global`, `claude`, and `advice`.
 - Use `POST /api/enable` and `POST /api/disable` when the server is already running.
 - Use `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` behavior as the source of truth when editing code.
 - Use `npm run pull:github` to update GitHub-backed skill repositories.
+
+## Open Web Manager
+
+When the user asks to open Skillcaddy for the current project:
+
+1. Resolve the project path from the current working directory unless the user provides another path.
+2. Start Skillcaddy from the Skillcaddy repository with `npm start`, or reuse an existing running server if the user already has one. This uses the fixed default port `4173`; use `PORT=<other-port> npm start` only when the port is occupied or the user explicitly asks for another port.
+3. Open the web UI with the project path encoded in the URL:
+
+```text
+http://127.0.0.1:4173/?projectPath=<encoded-project-path>
+```
+
+The page reads `projectPath` from the URL, loads that project immediately, records it in browser history, and keeps the URL in sync with the active project.
+
+If manually constructing the URL in shell, encode the path safely. For example:
+
+```bash
+node -e "console.log(encodeURIComponent(process.argv[1]))" "/path/to/project"
+```
+
+Do not invent a separate file picker workflow for this; pass the path through the URL unless the user specifically asks for a native picker.
 
 ## Safety Rules
 
