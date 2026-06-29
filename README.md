@@ -244,19 +244,27 @@ Skillcaddy includes a built-in recommendation system to help users discover and 
 ### Quick View
 
 ```bash
-cd references
-node view-recommendations.cjs workflows      # View core workflow recommendations
-node view-recommendations.cjs scenario new-project  # View scenario-based recommendations
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs onboarding
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-project
 ```
 
 ### Recommendation Principles
 
-- **Less is more**: Maximum 3 libraries per recommendation
-- **Golden combo**: mattpocock + lencx covers the full development workflow
+- **Analyze first**: Inspect the current library and project context before recommending
+- **Platform first**: Empty libraries should start with discovery platforms, not a fixed starter library
+- **Scenario split**: mattpocock + lencx is for clear development workflows, not the blank default
 - **Conflict detection**: Auto-detect overlapping libraries (e.g., mattpocock vs superpowers)
 - **Global detection**: Detect global skills directories and suggest unified management
 
-### Core Recommendations
+### Empty-Library Default
+
+When the library is empty, the default recommendation is:
+
+1. Discovery platforms: `skillsmp`, `skills.sh`
+2. Then classify the use case: development, writing, research, design
+3. Only after that, choose a starter library
+
+### Development Starter
 
 **Development workflow golden combo:**
 
@@ -271,9 +279,9 @@ node view-recommendations.cjs scenario new-project  # View scenario-based recomm
 ### Utility Scripts
 
 ```bash
-node check-conflicts.cjs superpowers    # Detect conflicts
-node check-global-skills.cjs            # Detect global skills
-node version-manager.cjs check          # Check version sync
+node skills/skillcaddy-manager/scripts/check-conflicts.cjs superpowers
+node skills/skillcaddy-manager/scripts/check-global-skills.cjs
+node skills/skillcaddy-manager/scripts/version-manager.cjs check
 ```
 
 See [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md) for detailed documentation.

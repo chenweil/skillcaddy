@@ -4,6 +4,7 @@
  * 用法: node view-recommendations.js [command] [args]
  *
  * Commands:
+ *   onboarding         - 查看空库引导
  *   workflows          - 查看核心工作流推荐
  *   scenario <name>    - 查看特定场景推荐
  *   category <name>    - 查看特定分类
@@ -29,7 +30,7 @@ function loadJSON(filePath) {
 
 function printEssentialWorkflows(workflows) {
   console.log('\n## 🎯 核心工作流推荐\n');
-  console.log('开发流程黄金组合 (少而精):\n');
+  console.log('仅在明确开发场景时使用:\n');
 
   for (const [key, workflow] of Object.entries(workflows)) {
     console.log(`### ${workflow.label}`);
@@ -102,7 +103,31 @@ function printScenarioRecommendation(scenarios, scenarioName) {
       console.log(`  ${step}`);
     });
   }
+
+  if (scenario.followUp) {
+    console.log('\n**后续判断:**');
+    scenario.followUp.forEach(step => {
+      console.log(`  - ${step}`);
+    });
+  }
   console.log('');
+}
+
+function printOnboarding(data, platforms) {
+  console.log('\n## 🧭 空库引导\n');
+  console.log('当用户库里还没有任何 skills 时,先做发现入口推荐,不要直接默认安装具体库。\n');
+
+  if (data.scenarios?.['empty-library']) {
+    printScenarioRecommendation(data.scenarios, 'empty-library');
+  }
+
+  console.log('**推荐平台:**\n');
+  printPlatforms(platforms);
+
+  console.log('**分流原则:**');
+  console.log('  - 无法判断场景: 只给平台和分类入口');
+  console.log('  - 明确是开发项目: 再推荐 mattpocock-workflow 或 lencx-control');
+  console.log('  - 已有少量库: 优先补短板,不要重复推荐同类能力');
 }
 
 function printCollections(collections, category = null, priority = null) {
@@ -191,6 +216,10 @@ if (data.recommendationStrategy) {
 }
 
 switch (command) {
+  case 'onboarding':
+    printOnboarding(data, platforms);
+    break;
+
   case 'workflows':
     if (data.essentialWorkflows) {
       printEssentialWorkflows(data.essentialWorkflows);
@@ -236,13 +265,11 @@ switch (command) {
     break;
 
   default:
-    // 默认显示核心工作流
-    if (data.essentialWorkflows) {
-      printEssentialWorkflows(data.essentialWorkflows);
-    }
+    printOnboarding(data, platforms);
 
     console.log('\n---\n');
     console.log('Usage:');
+    console.log('  node view-recommendations.cjs onboarding         - 空库引导');
     console.log('  node view-recommendations.cjs workflows          - 核心工作流');
     console.log('  node view-recommendations.cjs scenario new-project - 特定场景');
     console.log('  node view-recommendations.cjs category development - 特定分类');

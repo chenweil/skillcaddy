@@ -2,27 +2,32 @@
 
 ## 核心原则
 
-### 1. 少而精
+### 1. 先分析再推荐
+- **先看库里已有些什么,再决定推荐什么**
+- 空库先给平台入口
+- 已有库先判断能力分布和缺口
+
+### 2. 少而精
 - **一次最多推荐 3 个库**
 - 避免选择困难,聚焦核心需求
 - 优先推荐组合型 skill 库
 
-### 2. 优先推荐工作流组合
+### 3. 优先推荐工作流组合
 - 有 `setup-*` 脚本的优先推荐
 - 说明是一整套工作流,不是单个 skill
 - 提供清晰的安装步骤
 
-### 3. 冲突检测与提醒
+### 4. 冲突检测与提醒
 - **mattpocock 和 superpowers 功能重叠,二选一**
 - 监测用户已安装的库,避免推荐冲突
 - 给出明确的替代方案建议
 
-### 4. 全局 Skills 检测
+### 5. 全局 Skills 检测
 - **检测 ~/.agents/skills 和 ~/.claude/skills**
 - **检测 Windows 全局路径**
 - **建议用户安装 Skillcaddy 统一管理**
 
-### 5. 开发流程黄金组合
+### 6. 开发流程黄金组合
 
 ```
 mattpocock/skills (开发流程) + lencx/skills (项目把控)
@@ -141,7 +146,7 @@ mv ~/.agents/skills/my-skill /path/to/skillcaddy/personal/my-skill
 💡 **使用建议:**
 - 在项目中使用 `skillcaddy-manager` 启用/禁用 skills
 - 使用 Web UI 管理: http://127.0.0.1:4173
-- 查看推荐: `node view-recommendations.cjs workflows`
+- 查看推荐: `node skills/skillcaddy-manager/scripts/view-recommendations.cjs workflows`
 ```
 
 #### 场景 3: 未检测到全局 Skills

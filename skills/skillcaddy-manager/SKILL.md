@@ -24,8 +24,8 @@ skills/skillcaddy-manager/
 
 ### When to Use Recommendations
 
-1. **User asks for skill recommendations** → Read `references/featured-skills.json`
-2. **User asks "推荐一些库"** → Use `scripts/view-recommendations.cjs workflows`
+1. **User asks for skill recommendations** → Read `/api/state` first, then read `references/featured-skills.json`
+2. **User asks "推荐一些库"** → Start from `scripts/view-recommendations.cjs onboarding` unless the scenario is already clear
 3. **Detecting potential conflicts** → Use `scripts/check-conflicts.cjs`
 4. **Detecting global skills** → Use `scripts/check-global-skills.cjs`
 5. **Checking version sync** → Use `scripts/version-manager.cjs check`
@@ -34,14 +34,18 @@ skills/skillcaddy-manager/
 
 From `references/RECOMMENDATION_GUIDE.md`:
 
-1. **Less is more**: Maximum 3 libraries per recommendation
-2. **Golden combo**: mattpoclock + lencx for development workflow
-3. **Conflict detection**: mattpocock vs superpowers (choose one)
-4. **Global detection**: Suggest Skillcaddy when global skills detected
+1. **Analyze first**: Inspect existing library, enabled skills, global skills, and current project before recommending
+2. **Platform first**: When the library is empty or the scenario is unclear, recommend discovery platforms instead of a fixed starter library
+3. **Scenario split**: Recommend mattpocock only for clear development scenarios; do not use it as the default for empty libraries
+4. **Gap-based expansion**: When some skills already exist, recommend missing categories rather than another same-shape library
+5. **Conflict detection**: mattpocock vs superpowers (choose one)
 
 ### Quick Commands
 
 ```bash
+# View empty-library onboarding
+node scripts/view-recommendations.cjs onboarding
+
 # View core workflow recommendations
 node scripts/view-recommendations.cjs workflows
 
@@ -60,7 +64,24 @@ node scripts/version-manager.cjs check
 
 ### Data Version
 
-The `references/featured-skills.json` version syncs with Skillcaddy main project version. Current: **0.7.0**
+The `references/featured-skills.json` version syncs with Skillcaddy main project version. Current: **0.8.0**
+
+### Recommendation Flow
+
+When the user asks for recommendations, follow this order:
+
+1. Read `/api/state?projectPath=...` and inspect:
+   - whether the library is empty,
+   - which skills are already enabled,
+   - which skills exist globally,
+   - tags / notes / source distribution,
+   - advice such as duplicates or global conflicts.
+2. Classify the situation:
+   - **Empty library** → recommend discovery platforms first.
+   - **Clear development signals** → recommend a development starter, usually `mattpocock-workflow` plus `lencx-control`.
+   - **Existing mixed library** → recommend missing categories or quality-control gaps.
+3. Keep recommendations to at most 3 items.
+4. Explain why each recommendation matches the observed state.
 
 ## Core Model
 

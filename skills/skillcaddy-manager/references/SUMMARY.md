@@ -33,40 +33,44 @@ references/
 
 ### 4. 版本管理
 - 版本号与 Skillcaddy 主项目同步
-- 自动同步: `node version-manager.cjs sync`
+- 自动同步: `node skills/skillcaddy-manager/scripts/version-manager.cjs sync`
 
 ## 🚀 常用命令
 
 ```bash
+# 空库引导
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs onboarding
+
 # 查看核心工作流推荐
-node view-recommendations.cjs workflows
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs workflows
 
 # 查看场景推荐
-node view-recommendations.cjs scenario new-project
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-project
 
 # 检测冲突
-node check-conflicts.cjs superpowers
+node skills/skillcaddy-manager/scripts/check-conflicts.cjs superpowers
 
 # 检测全局 Skills
-node check-global-skills.cjs
+node skills/skillcaddy-manager/scripts/check-global-skills.cjs
 
 # 检查版本同步
-node version-manager.cjs check
+node skills/skillcaddy-manager/scripts/version-manager.cjs check
 
 # 同步版本号
-node version-manager.cjs sync
+node skills/skillcaddy-manager/scripts/version-manager.cjs sync
 
 # 查看更新日志
-node version-manager.cjs changelog
+node skills/skillcaddy-manager/scripts/version-manager.cjs changelog
 ```
 
 ## 📋 记住的关键点
 
 ### ✅ 推荐原则
 1. 少而精,不超过 3 个
-2. 开发项目: mattpocock + lencx
-3. 说明套件类型和 setup 方式
-4. 检测冲突并提醒用户
+2. 空库先推平台入口,不要默认推具体库
+3. 明确开发项目时再推荐 mattpocock + lencx
+4. 已有库时优先补短板
+5. 检测冲突并提醒用户
 
 ### ✅ 冲突处理
 - mattpocock vs superpowers (二选一)
@@ -95,7 +99,7 @@ node version-manager.cjs changelog
 
 ## 📊 数据版本
 
-**当前版本**: 0.7.0
+**当前版本**: 0.8.0
 **最后更新**: 2026-06-29
 
 ---

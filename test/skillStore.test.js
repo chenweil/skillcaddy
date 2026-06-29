@@ -232,6 +232,22 @@ test('reports unmanaged project skills and duplicate library names as advice', a
   assert.ok(adviceTypes.includes('library-duplicate-name'));
 });
 
+test('ignores hidden files and plain files when scanning enabled skills', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const agentsSkills = path.join(project, '.agents', 'skills');
+
+  await ensureSourceFolders(root);
+  await mkdir(agentsSkills, { recursive: true });
+  await writeFile(path.join(agentsSkills, '.DS_Store'), 'ignored');
+  await writeFile(path.join(agentsSkills, 'README.txt'), 'ignored');
+  await mkdir(path.join(agentsSkills, 'manual'), { recursive: true });
+
+  const state = await getState(root, project);
+  assert.deepEqual(state.enabled.map((skill) => skill.alias), ['manual']);
+  assert.deepEqual(state.advice.map((advice) => advice.alias), ['manual']);
+});
+
 test('disable only removes symlinks and keeps original files', async () => {
   const root = await makeTempDir('skills-root-');
   const project = await makeTempDir('skills-project-');

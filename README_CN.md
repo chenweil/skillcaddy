@@ -244,19 +244,27 @@ Skillcaddy 内置推荐系统,帮助用户发现和选择合适的 skills。
 ### 快速查看推荐
 
 ```bash
-cd references
-node view-recommendations.cjs workflows      # 查看核心工作流推荐
-node view-recommendations.cjs scenario new-project  # 查看场景推荐
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs onboarding
+node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-project
 ```
 
 ### 推荐原则
 
-- **少而精**: 一次最多推荐 3 个库
-- **黄金组合**: mattpocock + lencx 覆盖开发全流程
+- **先分析再推荐**: 先看当前库、当前项目和已有 skill
+- **平台优先**: 空库时先推荐发现平台,不要固定推某个库
+- **场景分流**: mattpocock + lencx 只用于明确开发场景,不是空白默认态
 - **冲突检测**: 自动检测功能重叠的库 (如 mattpocock vs superpowers)
 - **全局检测**: 检测全局 skills 目录,建议统一管理
 
-### 核心推荐
+### 空库默认推荐
+
+当用户库里还没有任何 skill 时,默认推荐是:
+
+1. 先看平台入口: `skillsmp`、`skills.sh`
+2. 再判断当前需求属于开发、写作、研究还是设计
+3. 场景明确后再选 starter 库
+
+### 开发场景 starter
 
 **开发流程黄金组合:**
 
@@ -271,9 +279,9 @@ node view-recommendations.cjs scenario new-project  # 查看场景推荐
 ### 相关脚本
 
 ```bash
-node check-conflicts.cjs superpowers    # 检测冲突
-node check-global-skills.cjs            # 检测全局 Skills
-node version-manager.cjs check          # 检查版本同步
+node skills/skillcaddy-manager/scripts/check-conflicts.cjs superpowers
+node skills/skillcaddy-manager/scripts/check-global-skills.cjs
+node skills/skillcaddy-manager/scripts/version-manager.cjs check
 ```
 
 详细文档请查看 [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md)。

@@ -1,8 +1,20 @@
 {
-  "version": "0.8.0",
+  "version": "0.9.0",
   "lastUpdated": "2026-06-29",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
+    {
+      "version": "0.9.0",
+      "date": "2026-06-29",
+      "changes": [
+        "优化推荐流程: 先分析 API state 再推荐",
+        "新增 onboarding 场景: 空库时推荐发现平台",
+        "完善推荐原则: 分析优先、平台优先、场景分层",
+        "更新 SKILL.md: 添加推荐流程说明",
+        "更新文档: README 和 RECOMMENDATION_GUIDE 同步更新",
+        "增加测试: skillStore 测试覆盖"
+      ]
+    },
     {
       "version": "0.8.0",
       "date": "2026-06-29",
@@ -27,12 +39,53 @@
     }
   ],
   "recommendationStrategy": {
-    "principle": "少而精,一次不推荐太多,优先推荐组合型 skill 库",
+    "principle": "先分析库和项目上下文,再做分层推荐;平台优先,场景分流,最后补短板",
     "maxRecommendations": 3,
     "notes": [
       "推荐要精准,避免选择困难",
-      "优先推荐有 setup 脚本的组合库",
-      "开发流程用 mattpocock + lencx 基本足够"
+      "空库时先给平台入口,不要默认塞具体库",
+      "只有明确开发场景时,才把 mattpocock 作为 starter 候选",
+      "已有库时优先补短板,不要重复推荐同类能力"
+    ]
+  },
+  "recommendationModes": {
+    "discovery": {
+      "label": "发现入口",
+      "when": "用户库为空,或暂时无法判断用户主要场景",
+      "goal": "先帮助用户浏览平台和分类,不要直接推默认库",
+      "recommend": [
+        "skillsmp",
+        "skills-sh"
+      ]
+    },
+    "starter": {
+      "label": "场景起步库",
+      "when": "能从当前项目、已有 skill、用户需求判断出明确场景",
+      "goal": "只推荐 1 个 starter 库,必要时再加 1 个质量控制库"
+    },
+    "gap-based": {
+      "label": "补短板推荐",
+      "when": "用户已经有一些 skills,需要继续扩展能力",
+      "goal": "先识别已有能力分布,再补缺失类别,避免重复"
+    }
+  },
+  "analysisSignals": {
+    "development": [
+      "当前项目是代码仓库",
+      "已有 coding-protocol / keel / tdd / debugging 类 skills",
+      "用户明确提到开发、重构、测试、调试"
+    ],
+    "writing": [
+      "已有 writing / article / social-card / docs 类 skills",
+      "用户明确提到写作、排版、内容整理"
+    ],
+    "research": [
+      "已有 search / tavily / exa / knowledge 类 skills",
+      "用户明确提到研究、检索、资料整理"
+    ],
+    "design": [
+      "已有 design / ui / presentation 类 skills",
+      "用户明确提到设计、PPT、页面风格"
     ]
   },
   "conflicts": {
@@ -334,6 +387,22 @@
         "2. 启用 coding-protocol (风险控制)",
         "3. 启用 keel (架构治理)",
         "4. 开始开发"
+      ]
+    },
+    "empty-library": {
+      "label": "空库引导",
+      "description": "用户库里还没有任何 skill,先做发现和分流",
+      "recommend": {
+        "primary": [
+          "skillsmp",
+          "skills-sh"
+        ],
+        "why": "先给平台入口,收集用户偏好和场景,再决定 starter 库"
+      },
+      "followUp": [
+        "先问或分析当前项目主要属于开发、写作、研究还是设计",
+        "如果明确是开发项目,再推荐 mattpocock-workflow 或 lencx-control",
+        "如果场景仍不明确,继续停留在平台和分类层,不要默认推具体库"
       ]
     },
     "typescript": {
