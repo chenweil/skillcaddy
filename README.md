@@ -41,7 +41,21 @@ You can also pass the project path through the URL:
 http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 ```
 
-The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button.
+The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button. If a library was enabled by mistake, use the library-level `×` button to clean that library from both Agents and Claude Code.
+
+## Skill metadata
+
+`SKILL.md` remains the Agent-facing contract. For human-facing notes and categorization, add an optional `skillcaddy.json` next to `SKILL.md`:
+
+```json
+{
+  "note": "Useful before and after code changes to keep execution disciplined.",
+  "tags": ["Developer Tools", "Quality", "Workflow"],
+  "autoEnable": true
+}
+```
+
+The web UI reads and edits this file directly. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream `SKILL.md` files clean while still making a large local library easier to browse.
 
 ## Platform compatibility
 

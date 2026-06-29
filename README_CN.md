@@ -41,7 +41,21 @@ npm start
 http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 ```
 
-页面会立即加载该项目，把最近使用的项目路径保存在浏览器本地历史中，并支持通过库标题旁的 `+` 一次启用该库内可用的全部 skills。
+页面会立即加载该项目，把最近使用的项目路径保存在浏览器本地历史中，并支持通过库标题旁的 `+` 一次启用该库内可用的全部 skills。如果误点启用了整个库，可以用库标题旁的 `×` 同时清理该库在 Agents 和 Claude Code 中的启用入口。
+
+## Skill 元数据
+
+`SKILL.md` 仍然是给 Agent 使用的契约。面向人的备注和分类放在同目录可选的 `skillcaddy.json`：
+
+```json
+{
+  "note": "适合在代码修改前后做执行协议检查，避免漏测和误改。",
+  "tags": ["Developer Tools", "Quality", "Workflow"],
+  "autoEnable": true
+}
+```
+
+Web UI 会直接读取和编辑这个文件。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游 `SKILL.md`，也能让大型本地 skill 库更容易浏览。
 
 ## 平台兼容性
 

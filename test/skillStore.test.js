@@ -15,6 +15,7 @@ import {
   unlinkClaudeSkills
 } from '../lib/claudeStore.js';
 import { enableProjectSkill } from '../lib/projectActions.js';
+import { updateSkillMetadata } from '../lib/skillMetadata.js';
 
 test('scans source folders and enables a skill with a symlink', async () => {
   const root = await makeTempDir('skills-root-');
@@ -154,6 +155,55 @@ test('scans repository-provided root skills', async () => {
     alias: 'skillcaddy-manager'
   });
   assert.equal(result.targetPath, skill);
+});
+
+test('reads and writes skillcaddy metadata for notes and tags', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(root, 'personal', 'metadata-skill');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '---\ndescription: Agent trigger text\n---\n');
+  await writeFile(path.join(skill, 'skillcaddy.json'), JSON.stringify({
+    note: 'Human readable note',
+    tags: ['Developer Tools', 'Quality']
+  }));
+
+  const state = await getState(root, project);
+  assert.equal(state.skills[0].note, 'Human readable note');
+  assert.deepEqual(state.skills[0].tags, ['Developer Tools', 'Quality']);
+  assert.equal(state.skills[0].autoEnable, true);
+  assert.equal(state.skills[0].hasMetadata, true);
+
+  const result = await updateSkillMetadata(root, {
+    skillPath: skill,
+    note: '  Updated note  ',
+    tags: ['Productivity', 'Developer Tools', 'Productivity', ''],
+    autoEnable: false
+  });
+
+  assert.equal(result.metadata.note, 'Updated note');
+  assert.deepEqual(result.metadata.tags, ['Productivity', 'Developer Tools']);
+  assert.equal(result.metadata.autoEnable, false);
+
+  const nextState = await getState(root, project);
+  assert.equal(nextState.skills[0].note, 'Updated note');
+  assert.deepEqual(nextState.skills[0].tags, ['Productivity', 'Developer Tools']);
+  assert.equal(nextState.skills[0].autoEnable, false);
+});
+
+test('rejects metadata writes outside configured source directories', async () => {
+  const root = await makeTempDir('skills-root-');
+  const outsideSkill = await makeTempDir('outside-skill-');
+
+  await ensureSourceFolders(root);
+  await writeFile(path.join(outsideSkill, 'SKILL.md'), '# Outside\n');
+
+  await assert.rejects(
+    () => updateSkillMetadata(root, { skillPath: outsideSkill, note: 'Nope', tags: ['Risk'] }),
+    /skillPath 必须位于当前 AISkills 的来源目录或仓库 skills 目录内/
+  );
 });
 
 test('reports unmanaged project skills and duplicate library names as advice', async () => {

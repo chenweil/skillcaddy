@@ -15,6 +15,8 @@ const state = {
   claude: null,
   collapsedGroups: new Set(),
   knownGroups: new Set(),
+  activeTag: '',
+  editingSkillId: '',
   stats: { total: 0, enabled: 0, available: 0 }
 };
 
@@ -35,6 +37,7 @@ const elements = {
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   adviceList: document.querySelector('#adviceList'),
+  tagTabs: document.querySelector('#tagTabs'),
   message: document.querySelector('#message'),
   versionTag: document.querySelector('#versionTag'),
   heroTotalSkills: document.querySelector('#heroTotalSkills'),
@@ -84,6 +87,7 @@ function render() {
   renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
   renderAdvice();
   renderProjectHistory();
+  renderTagTabs();
   renderSkills();
 }
 
@@ -168,8 +172,10 @@ function renderAdvice() {
 
 function renderSkills() {
   const filter = elements.sourceFilter.value;
-  const enabledTargets = new Set(state.enabled.map((item) => item.targetPath).filter(Boolean));
-  const skills = filter ? state.skills.filter((skill) => skill.source === filter) : state.skills;
+  const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
+  const enabledTargets = new Set(enabledByTarget.keys());
+  const sourceSkills = filter ? state.skills.filter((skill) => skill.source === filter) : state.skills;
+  const skills = state.activeTag ? sourceSkills.filter((skill) => (skill.tags || []).includes(state.activeTag)) : sourceSkills;
   const groups = groupSkills(skills);
 
   elements.skillList.replaceChildren();
@@ -190,7 +196,10 @@ function renderSkills() {
               <span class="title"></span>
             </h3>
           </button>
-          <button class="icon-button group-enable-all" type="button" title="启用该库全部 skill" aria-label="启用该库全部 skill">+</button>
+          <div class="group-actions">
+            <button class="icon-button group-enable-all" type="button" title="启用该库全部 skill" aria-label="启用该库全部 skill">+</button>
+            <button class="icon-button group-disable-all danger" type="button" title="清理该库已启用 skill" aria-label="清理该库已启用 skill">×</button>
+          </div>
           <p></p>
         </div>
         <span class="badge"></span>
@@ -203,9 +212,13 @@ function renderSkills() {
     groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}`;
     groupElement.querySelector('.group-toggle').addEventListener('click', () => toggleGroup(group.key));
     const enableAllButton = groupElement.querySelector('.group-enable-all');
-    const pendingSkills = group.skills.filter((skill) => skill.source !== 'archived' && !enabledTargets.has(skill.path));
+    const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
     enableAllButton.disabled = pendingSkills.length === 0;
     enableAllButton.addEventListener('click', () => enableGroup(group));
+    const disableAllButton = groupElement.querySelector('.group-disable-all');
+    const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
+    disableAllButton.disabled = enabledSkills.length === 0;
+    disableAllButton.addEventListener('click', () => disableGroup(group));
 
     const items = groupElement.querySelector('.group-items');
     group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets)));
@@ -229,16 +242,34 @@ function renderSkill(skill, enabledTargets) {
         <span class="name"></span>
         <span class="badge">${skill.source}</span>
       </div>
+      <div class="skill-tags"></div>
+      <div class="bulk-status"></div>
+      <p class="note"></p>
       <div class="meta"></div>
       <div class="path"></div>
+      <div class="metadata-editor"></div>
       <div class="actions"></div>
     `;
 
     item.querySelector('.name').textContent = skill.name;
+    renderSkillTags(item.querySelector('.skill-tags'), skill.tags || []);
+    renderBulkStatus(item.querySelector('.bulk-status'), skill);
+    item.querySelector('.note').textContent = skill.note || '未填写备注';
+    item.querySelector('.note').classList.toggle('is-empty', !skill.note);
     item.querySelector('.meta').textContent = skill.description || (skill.hasSkillFile ? '未填写 description' : '缺少 SKILL.md');
     item.querySelector('.path').textContent = skill.path;
+    if (state.editingSkillId === skill.id) renderMetadataEditor(item.querySelector('.metadata-editor'), skill);
 
     const actions = item.querySelector('.actions');
+    const editButton = document.createElement('button');
+    editButton.className = 'secondary';
+    editButton.textContent = state.editingSkillId === skill.id ? '收起备注' : '编辑备注';
+    editButton.addEventListener('click', () => {
+      state.editingSkillId = state.editingSkillId === skill.id ? '' : skill.id;
+      renderSkills();
+    });
+    actions.append(editButton);
+
     const button = document.createElement('button');
     button.textContent = isEnabled ? '已启用' : '启用 agents skill';
     button.disabled = isEnabled || skill.source === 'archived';
@@ -246,6 +277,90 @@ function renderSkill(skill, enabledTargets) {
     actions.append(button);
 
     return item;
+}
+
+function renderTagTabs() {
+  const tags = [...new Set(state.skills.flatMap((skill) => skill.tags || []))].sort((left, right) => left.localeCompare(right));
+  elements.tagTabs.replaceChildren();
+  if (tags.length === 0) return;
+
+  const allButton = tagTabButton('全部标签', state.activeTag === '');
+  allButton.addEventListener('click', () => {
+    state.activeTag = '';
+    render();
+  });
+  elements.tagTabs.append(allButton);
+
+  tags.forEach((tag) => {
+    const button = tagTabButton(tag, state.activeTag === tag);
+    button.addEventListener('click', () => {
+      state.activeTag = tag;
+      render();
+    });
+    elements.tagTabs.append(button);
+  });
+}
+
+function tagTabButton(text, isActive) {
+  const button = document.createElement('button');
+  button.className = `category-tab${isActive ? ' is-active' : ''}`;
+  button.type = 'button';
+  button.textContent = text;
+  return button;
+}
+
+function renderSkillTags(container, tags) {
+  container.replaceChildren();
+  tags.forEach((tag) => {
+    const badge = document.createElement('span');
+    badge.className = 'tag-pill';
+    badge.textContent = tag;
+    container.append(badge);
+  });
+}
+
+function renderBulkStatus(container, skill) {
+  container.replaceChildren();
+  if (skill.autoEnable !== false) return;
+  const badge = document.createElement('span');
+  badge.className = 'tag-pill is-muted';
+  badge.textContent = '不参与一键加入';
+  container.append(badge);
+}
+
+function renderMetadataEditor(container, skill) {
+  const form = document.createElement('form');
+  form.className = 'metadata-form';
+  form.innerHTML = `
+    <label>
+      <span>备注</span>
+      <textarea name="note" rows="3" maxlength="500"></textarea>
+    </label>
+    <label>
+      <span>Tags</span>
+      <input name="tags" type="text" placeholder="Developer Tools, Productivity">
+    </label>
+    <label class="toggle-field">
+      <input name="autoEnable" type="checkbox">
+      <span>参与库级一键加入</span>
+    </label>
+    <div class="metadata-actions">
+      <button type="submit">保存</button>
+      <button class="secondary" type="button">取消</button>
+    </div>
+  `;
+  form.elements.note.value = skill.note || '';
+  form.elements.tags.value = (skill.tags || []).join(', ');
+  form.elements.autoEnable.checked = skill.autoEnable !== false;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveMetadata(skill, form);
+  });
+  form.querySelector('button[type="button"]').addEventListener('click', () => {
+    state.editingSkillId = '';
+    renderSkills();
+  });
+  container.append(form);
 }
 
 function groupSkills(skills) {
@@ -287,10 +402,11 @@ async function enable(skill) {
 
 async function enableGroup(group) {
   const enabledTargets = new Set(state.enabled.map((item) => item.targetPath).filter(Boolean));
-  const skills = group.skills.filter((skill) => skill.source !== 'archived' && !enabledTargets.has(skill.path));
+  const skipped = group.skills.filter((skill) => skill.autoEnable === false && !enabledTargets.has(skill.path));
+  const skills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
 
   if (skills.length === 0) {
-    setMessage(`${group.collection} 没有需要启用的 skill`);
+    setMessage(skipped.length ? `${group.collection} 没有需要启用的 skill，已跳过 ${skipped.length} 个不参与一键加入` : `${group.collection} 没有需要启用的 skill`);
     return;
   }
 
@@ -313,9 +429,73 @@ async function enableGroup(group) {
   const parts = [`已处理 ${group.collection}`];
   if (enabled) parts.push(`启用 ${enabled}`);
   if (unchanged) parts.push(`已存在 ${unchanged}`);
+  if (skipped.length) parts.push(`跳过 ${skipped.length}`);
   if (failed) parts.push(`失败 ${failed}`);
   setMessage(parts.join('，'), failed > 0);
   await loadState({ button: null });
+}
+
+function canBulkEnableSkill(skill, enabledTargets) {
+  return skill.source !== 'archived' && skill.autoEnable !== false && !enabledTargets.has(skill.path);
+}
+
+async function disableGroup(group) {
+  const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
+  const aliases = group.skills
+    .map((skill) => enabledByTarget.get(skill.path)?.alias)
+    .filter(Boolean);
+
+  if (aliases.length === 0) {
+    setMessage(`${group.collection} 没有可清理的 agents skill`);
+    return;
+  }
+
+  let removed = 0;
+  let claudeRemoved = 0;
+  let unchanged = 0;
+  let failed = 0;
+
+  for (const alias of aliases) {
+    try {
+      const result = await api('/api/disable', {
+        method: 'POST',
+        body: { projectPath: elements.projectPath.value, alias }
+      });
+      result.removed ? removed += 1 : unchanged += 1;
+
+      const claudeResult = await api('/api/unlink-claude-skill', {
+        method: 'POST',
+        body: { projectPath: elements.projectPath.value, alias }
+      });
+      if (claudeResult.removed) claudeRemoved += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  const parts = [`已清理 ${group.collection}`];
+  if (removed) parts.push(`${removed} 个 agents skill`);
+  if (claudeRemoved) parts.push(`${claudeRemoved} 个 Claude Code skill`);
+  if (unchanged) parts.push(`已不存在 ${unchanged}`);
+  if (failed) parts.push(`失败 ${failed}`);
+  setMessage(parts.join('，'), failed > 0);
+  await loadState({ button: null });
+}
+
+async function saveMetadata(skill, form) {
+  const result = await api('/api/skill-metadata', {
+    method: 'POST',
+    body: {
+      skillPath: skill.path,
+      note: form.elements.note.value,
+      tags: form.elements.tags.value,
+      autoEnable: form.elements.autoEnable.checked
+    }
+  });
+  state.editingSkillId = '';
+  setMessage(`已保存备注：${skill.name}`);
+  await loadState({ button: null });
+  return result;
 }
 
 function enableMessage(skillName, result) {

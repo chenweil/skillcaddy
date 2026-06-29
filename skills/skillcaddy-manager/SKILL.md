@@ -25,6 +25,7 @@ Prefer the existing Skillcaddy implementation over ad hoc filesystem logic:
 - Treat `http://127.0.0.1:4173` as the fixed default web manager URL.
 - Treat `/api/state` as the preferred summary because it returns `skills`, `enabled`, `global`, `claude`, and `advice`.
 - Use `POST /api/enable` and `POST /api/disable` when the server is already running.
+- Use `POST /api/skill-metadata` or edit `<skill>/skillcaddy.json` when maintaining human-facing notes and tags.
 - Use `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` behavior as the source of truth when editing code.
 - Use `npm run pull:github` to update GitHub-backed skill repositories.
 
@@ -50,6 +51,45 @@ node -e "console.log(encodeURIComponent(process.argv[1]))" "/path/to/project"
 
 Do not invent a separate file picker workflow for this; pass the path through the URL unless the user specifically asks for a native picker.
 
+## Skill Metadata
+
+Treat `SKILL.md` as the agent-facing execution contract. Treat `skillcaddy.json` as Skillcaddy's human-facing catalog metadata.
+
+Optional metadata file location:
+
+```text
+<skill-dir>/skillcaddy.json
+```
+
+Supported shape:
+
+```json
+{
+  "note": "Short human-readable usage note.",
+  "tags": ["Developer Tools", "Productivity"],
+  "autoEnable": true
+}
+```
+
+Use metadata this way:
+
+1. Keep `note` short and user-facing. Explain what the skill helps with, not how the trigger matcher works.
+2. Keep `tags` broad and reusable. Prefer product-style categories such as `Developer Tools`, `Productivity`, `Creativity`, `Research`, `Writing`, `Data`, `Design`, `Operations`, `Quality`, `Automation`, and `Workflow`.
+3. Do not rewrite upstream `SKILL.md` only to improve Skillcaddy browsing.
+4. When the user asks to classify, tag, annotate, or make skills easier to browse, update `skillcaddy.json`.
+5. When auto-generating metadata, read the `SKILL.md` frontmatter and first useful body sections, then propose or write a concise `note` and 1-4 tags.
+6. Use `autoEnable: false` for deprecated, abandoned, risky, heavyweight, or highly situational skills that should not be included by library-level one-click enable. Single-skill manual enable remains allowed.
+7. Preserve existing tags and `autoEnable` unless they are clearly wrong or the user asks for a cleanup.
+8. If a skill belongs to an external GitHub clone with local changes, show the changed metadata files before committing or pulling.
+
+Use the existing API when possible:
+
+```bash
+curl -sS -X POST http://127.0.0.1:4173/api/skill-metadata \
+  -H 'Content-Type: application/json' \
+  -d '{"skillPath":"/path/to/skill","note":"Short note","tags":["Developer Tools"],"autoEnable":true}'
+```
+
 ## Safety Rules
 
 Before any operation that changes project state, produce a dry-run style summary:
@@ -59,6 +99,7 @@ Before any operation that changes project state, produce a dry-run style summary
 - Source, collection, name, alias, and path for each affected skill.
 - Conflicts that require user confirmation.
 - Existing `advice` from `/api/state`, especially unmanaged project entries, broken symlinks, duplicate names, and global/project alias conflicts.
+- Metadata files that will be created or changed, including `note` and `tags`.
 
 Stop and ask for confirmation when:
 
@@ -92,6 +133,9 @@ For each skill, include:
 - `name`: skill folder name.
 - `path`: absolute path.
 - `description`: the `description:` value from `SKILL.md` when available.
+- `note`: the human-facing `skillcaddy.json` note when available.
+- `tags`: the human-facing `skillcaddy.json` tags when available.
+- `autoEnable`: whether the skill participates in library-level one-click enable; defaults to `true`.
 - `enabled alias`: project alias when already enabled.
 
 When the user asks "agent 还有哪些 skill 可加载", answer from the repository and central sources, then mark which ones are already enabled in the current project, which ones exist globally, and which ones have advice.
@@ -163,9 +207,10 @@ When enabling a source or collection:
 
 1. Expand the request to the matching set of skills.
 2. Skip archived skills by default.
-3. Read advice and group it by affected alias.
-4. Show the full list before changing anything, including aliases that conflict with project/global skills.
-5. Enable each skill independently and report enabled, unchanged, skipped, failed, and advised items.
+3. Skip skills whose metadata has `autoEnable: false` unless the user explicitly names that skill or asks to include disabled-auto-enable skills.
+4. Read advice and group it by affected alias.
+5. Show the full list before changing anything, including aliases that conflict with project/global skills and skills skipped by `autoEnable: false`.
+6. Enable each skill independently and report enabled, unchanged, skipped, failed, and advised items.
 
 Use the existing API when possible:
 
@@ -194,8 +239,9 @@ When disabling a source or collection:
 1. Map each enabled symlink target back to a source path.
 2. Select only aliases whose target path belongs to the requested source or collection.
 3. Exclude non-symlink and unmanaged entries unless the user explicitly confirms a manual cleanup workflow.
-4. Show the list before removal.
-5. Remove project symlinks only; do not delete source skill directories.
+4. Show the list before removal. In the Web UI, use the library-level `×` button when the user wants to clean a collection that was bulk-enabled by mistake.
+5. Remove project `.agents/skills/<alias>` symlinks and the matching `.claude/skills/<alias>` compatibility entries for that collection.
+6. Do not delete source skill directories.
 
 ## Initialize Or Audit Project Setup
 

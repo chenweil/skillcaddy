@@ -21,13 +21,23 @@
       "reason": "Leaf module — no internal dependencies"
     },
     {
+      "from": "lib/sourcePolicy.js",
+      "allow": [],
+      "reason": "Leaf module — shared source boundary policy"
+    },
+    {
+      "from": "lib/skillMetadata.js",
+      "allow": ["lib/projectPath.js", "lib/sourcePolicy.js"],
+      "reason": "Metadata store — can validate inputs and source boundaries through leaf modules"
+    },
+    {
       "from": "lib/claudeStore.js",
       "allow": ["lib/projectPath.js"],
       "reason": "Store layer — can only depend on leaf modules"
     },
     {
       "from": "lib/skillStore.js",
-      "allow": ["lib/projectPath.js", "lib/claudeStore.js"],
+      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/skillMetadata.js", "lib/sourcePolicy.js"],
       "reason": "Store layer — currently imports claudeStore for getState aggregation; dept probe: decouple via aggregator layer"
     },
     {

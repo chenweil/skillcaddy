@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-29
+
+### Added
+- 新增 `skillcaddy.json` skill 管理元数据：支持为每个 skill 保存人可读 `note` 和 `tags`，不污染上游 `SKILL.md`。
+- `/api/state` 现在会返回每个 skill 的 `note`、`tags`、`autoEnable`、`metadataPath`、`hasMetadata`。
+- 新增 `POST /api/skill-metadata`，用于安全写入 skill 目录内的 `skillcaddy.json`。
+- Web UI 新增 tag tabs 过滤、tag pill 展示、备注展示、内联编辑表单、单 skill 是否参与库级一键加入开关，以及库级一键清理 Agents / Claude Code 已启用 skills。
+- `skillcaddy-manager` 增加 metadata 自动维护规则，指导 Agent 根据 `SKILL.md` 内容生成或更新 `skillcaddy.json`。
+
+### Changed
+- 导入边界规则新增 `lib/sourcePolicy.js` 和 `lib/skillMetadata.js`，复用来源边界检查，避免 metadata 写入绕过 Skillcaddy 来源目录。
+
 ## [0.6.0] - 2026-06-29
 
 ### Added
