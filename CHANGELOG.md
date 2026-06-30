@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-30
+
+### Added
+- 历史项目列表支持单独移除：每个项目 chip 右侧新增 `×` 删除按钮，hover 时显示移除提示。
+- 项目路径输入框新增 placeholder 示例和字段提示文案"请输入项目路径添加"，引导用户操作。
+
+### Changed
+- 重构项目历史 chip 样式：改用 grid 布局分离路径按钮与删除按钮，增强交互独立性。
+- 删除按钮 hover 状态：深色背景 + 白色图标，视觉反馈更明确。
+- 禁用项目（当前已加载）的路径按钮改为灰色不可点击样式，避免混淆。
+
 ## [0.7.0] - 2026-06-29
 
 ### Added

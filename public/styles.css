@@ -297,21 +297,60 @@ h3 {
 }
 
 .project-chip {
+  display: inline-grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
   max-width: min(100%, 360px);
   min-height: 32px;
   overflow: hidden;
-  border-color: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
   background: var(--canvas);
   color: var(--body);
-  padding: 0 12px;
   font: 12px/1.4 var(--mono);
-  text-overflow: ellipsis;
 }
 
-.project-chip:active,
 .project-chip:hover {
   background: var(--surface-card);
   color: var(--ink);
+}
+
+.project-chip-path,
+.project-chip-remove {
+  min-height: 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.project-chip-path {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 10px 0 12px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-chip-path:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+}
+
+.project-chip-remove {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  padding: 0;
+  border-left: 1px solid var(--hairline);
+  color: var(--muted);
+}
+
+.project-chip-remove:hover {
+  background: var(--ink);
+  color: var(--canvas);
 }
 
 label span {
@@ -319,6 +358,13 @@ label span {
   margin-bottom: 8px;
   color: var(--muted);
   font: 500 13px/1.4 var(--sans);
+}
+
+.field-hint {
+  display: block;
+  margin: -4px 0 8px;
+  color: var(--muted-soft);
+  font: 12px/1.4 var(--sans);
 }
 
 input,

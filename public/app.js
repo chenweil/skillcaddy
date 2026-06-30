@@ -96,17 +96,30 @@ function renderProjectHistory() {
   if (state.projectHistory.length === 0) return;
 
   state.projectHistory.forEach((projectPath) => {
+    const item = document.createElement('div');
+    item.className = 'project-chip';
+    item.title = projectPath;
+
     const button = document.createElement('button');
-    button.className = 'project-chip';
+    button.className = 'project-chip-path';
     button.type = 'button';
     button.textContent = projectPath;
-    button.title = projectPath;
     button.disabled = projectPath === state.projectPath;
     button.addEventListener('click', async () => {
       elements.projectPath.value = projectPath;
       await loadState({ button: null, feedback: true });
     });
-    elements.projectHistory.append(button);
+
+    const removeButton = document.createElement('button');
+    removeButton.className = 'project-chip-remove';
+    removeButton.type = 'button';
+    removeButton.textContent = '×';
+    removeButton.title = `移除项目：${projectPath}`;
+    removeButton.setAttribute('aria-label', `移除项目：${projectPath}`);
+    removeButton.addEventListener('click', () => forgetProject(projectPath));
+
+    item.append(button, removeButton);
+    elements.projectHistory.append(item);
   });
 }
 
@@ -127,6 +140,13 @@ function rememberProject(projectPath) {
   if (!value) return;
   state.projectHistory = [value, ...state.projectHistory.filter((item) => item !== value)].slice(0, MAX_PROJECT_HISTORY);
   localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
+}
+
+function forgetProject(projectPath) {
+  state.projectHistory = state.projectHistory.filter((item) => item !== projectPath);
+  localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
+  renderProjectHistory();
+  setMessage(`已移除项目：${projectPath}`);
 }
 
 function readProjectHistory() {
