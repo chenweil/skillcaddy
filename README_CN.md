@@ -37,6 +37,15 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
+如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
+
+```bash
+npm run install:manager
+npm run check:manager
+```
+
+这会创建受 Skillcaddy 管理的全局软链接：`~/.agents/skills/skillcaddy-manager` 指向本仓库的 `skills/skillcaddy-manager`。如果目标位置已经存在文件、目录，或指向其它位置的软链接，命令会停止，不会覆盖。
+
 也可以通过 URL 直接传递项目路径：
 
 ```text
@@ -47,7 +56,7 @@ http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 
 ## Skill 元数据
 
-`SKILL.md` 仍然是给 Agent 使用的契约。面向人的备注和分类放在同目录可选的 `skillcaddy.json`：
+`SKILL.md` 仍然是给 Agent 使用的契约。面向人的备注和分类由 Skillcaddy 存到 `.skillcaddy/metadata/.../skillcaddy.json`，避免污染外部原件库：
 
 ```json
 {
@@ -57,7 +66,7 @@ http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 }
 ```
 
-Web UI 会直接读取和编辑这个文件。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游 `SKILL.md`，也能让大型本地 skill 库更容易浏览。
+Web UI 会兼容读取旧的 `<skill-dir>/skillcaddy.json`，但新的编辑会写到本地 sidecar 元数据存储。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游原件库，也能让大型本地 skill 库更容易浏览。
 
 ## 平台兼容性
 

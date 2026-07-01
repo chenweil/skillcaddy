@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-01
+
+### Added
+- 新增 `npm run install:manager`：将仓库自带的 `skills/skillcaddy-manager` 以受控软链接安装到 `~/.agents/skills/skillcaddy-manager`，方便 AI Agent 在任意项目中发现 Skillcaddy 管理能力。
+- 新增 `npm run check:manager`：检查全局 `skillcaddy-manager` 是否已安装、是否断链或是否指向其它位置。
+- 新增 `lib/managerInstall.js`：封装 manager skill 安装与检查逻辑。
+
+### Changed
+- **Metadata 存储位置重构**：`skillcaddy.json` 从每个 skill 目录内迁移到集中存储目录 `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json`，不再污染上游 SKILL.md，gitignore 更友好。
+- `readSkillMetadata()` 现在优先读取 sidecar metadata，回退到 legacy（skill 目录内）并标记 `metadataStorage: 'legacy'`。
+- `updateSkillMetadata()` 统一写入 sidecar 位置。
+- `lib/sourcePolicy.js` 新增 `resolveAllowedSkillSource()`：返回来源目录与相对路径信息，供 sidecar 路径计算使用。
+- README / README_CN 补充首次安装 `skillcaddy-manager` 的 bootstrap 说明，并明确不会覆盖已有非受控目标。
+
 ## [0.10.0] - 2026-06-30
 
 ### Added

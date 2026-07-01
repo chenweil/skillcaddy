@@ -161,11 +161,12 @@ test('reads and writes skillcaddy metadata for notes and tags', async () => {
   const root = await makeTempDir('skills-root-');
   const project = await makeTempDir('skills-project-');
   const skill = path.join(root, 'personal', 'metadata-skill');
+  const legacyMetadataPath = path.join(skill, 'skillcaddy.json');
 
   await ensureSourceFolders(root);
   await mkdir(skill, { recursive: true });
   await writeFile(path.join(skill, 'SKILL.md'), '---\ndescription: Agent trigger text\n---\n');
-  await writeFile(path.join(skill, 'skillcaddy.json'), JSON.stringify({
+  await writeFile(legacyMetadataPath, JSON.stringify({
     note: 'Human readable note',
     tags: ['Developer Tools', 'Quality']
   }));
@@ -186,11 +187,41 @@ test('reads and writes skillcaddy metadata for notes and tags', async () => {
   assert.equal(result.metadata.note, 'Updated note');
   assert.deepEqual(result.metadata.tags, ['Productivity', 'Developer Tools']);
   assert.equal(result.metadata.autoEnable, false);
+  assert.match(result.metadata.metadataPath, /\.skillcaddy\/metadata\/personal\/metadata-skill\/skillcaddy\.json$/);
+  assert.equal(JSON.parse(await readFile(legacyMetadataPath, 'utf8')).note, 'Human readable note');
 
   const nextState = await getState(root, project);
   assert.equal(nextState.skills[0].note, 'Updated note');
   assert.deepEqual(nextState.skills[0].tags, ['Productivity', 'Developer Tools']);
   assert.equal(nextState.skills[0].autoEnable, false);
+});
+
+test('writes new skillcaddy metadata outside source repositories', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(root, 'github', 'toolbox', 'skills', 'review');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Review\n');
+
+  const result = await updateSkillMetadata(root, {
+    skillPath: skill,
+    note: 'Review before merging.',
+    tags: ['Quality'],
+    autoEnable: false
+  });
+
+  assert.equal(result.metadataPath, path.join(root, '.skillcaddy', 'metadata', 'github', 'toolbox', 'skills', 'review', 'skillcaddy.json'));
+  await assert.rejects(
+    () => readFile(path.join(skill, 'skillcaddy.json'), 'utf8'),
+    /ENOENT/
+  );
+
+  const state = await getState(root, project);
+  assert.equal(state.skills[0].note, 'Review before merging.');
+  assert.deepEqual(state.skills[0].tags, ['Quality']);
+  assert.equal(state.skills[0].autoEnable, false);
 });
 
 test('rejects metadata writes outside configured source directories', async () => {

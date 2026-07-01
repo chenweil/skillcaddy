@@ -21,6 +21,11 @@
       "reason": "Leaf module — no internal dependencies"
     },
     {
+      "from": "lib/managerInstall.js",
+      "allow": [],
+      "reason": "Leaf module — global manager skill install check"
+    },
+    {
       "from": "lib/sourcePolicy.js",
       "allow": [],
       "reason": "Leaf module — shared source boundary policy"

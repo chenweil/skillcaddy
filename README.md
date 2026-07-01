@@ -37,6 +37,15 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
+To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
+
+```bash
+npm run install:manager
+npm run check:manager
+```
+
+This creates a managed symlink at `~/.agents/skills/skillcaddy-manager` pointing back to `skills/skillcaddy-manager`. It will not overwrite an existing file, directory, or symlink that points somewhere else.
+
 You can also pass the project path through the URL:
 
 ```text
@@ -47,7 +56,7 @@ The page loads that project immediately, keeps recently used project paths in br
 
 ## Skill metadata
 
-`SKILL.md` remains the Agent-facing contract. For human-facing notes and categorization, add an optional `skillcaddy.json` next to `SKILL.md`:
+`SKILL.md` remains the Agent-facing contract. Human-facing notes and categorization are stored by Skillcaddy under `.skillcaddy/metadata/.../skillcaddy.json` so external source repositories stay clean:
 
 ```json
 {
@@ -57,7 +66,7 @@ The page loads that project immediately, keeps recently used project paths in br
 }
 ```
 
-The web UI reads and edits this file directly. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream `SKILL.md` files clean while still making a large local library easier to browse.
+The web UI reads legacy `<skill-dir>/skillcaddy.json` files for compatibility, but new edits are written to the local sidecar metadata store. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream source repositories clean while still making a large local library easier to browse.
 
 ## Platform compatibility
 

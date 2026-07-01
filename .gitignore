@@ -17,6 +17,7 @@ npm-debug.log*
 # 本机状态（使用本工具产生的用户级配置，不入库）
 .agents/
 .claude/
+.skillcaddy/
 
 # skill 原件库（本地内容不进入版本控制；克隆后自行填充）
 official/*

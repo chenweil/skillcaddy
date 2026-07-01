@@ -101,11 +101,35 @@ Prefer the existing Skillcaddy implementation over ad hoc filesystem logic:
 
 - Use `npm start` or `GET /api/state?projectPath=...` for UI/API inspection.
 - Treat `http://127.0.0.1:4173` as the fixed default web manager URL.
+- Use `npm run check:manager` to verify whether this manager skill is globally available to agents.
+- Use `npm run install:manager` when the user explicitly wants to install the bundled manager skill globally.
 - Treat `/api/state` as the preferred summary because it returns `skills`, `enabled`, `global`, `claude`, and `advice`.
 - Use `POST /api/enable` and `POST /api/disable` when the server is already running.
 - Use `POST /api/skill-metadata` or edit `<skill>/skillcaddy.json` when maintaining human-facing notes and tags.
 - Use `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` behavior as the source of truth when editing code.
 - Use `npm run pull:github` to update GitHub-backed skill repositories.
+
+## Global Manager Bootstrap
+
+If `skillcaddy-manager` is not installed globally, an agent in another project usually cannot discover this workflow by itself.
+
+Use this bootstrap path:
+
+1. Ask the user before installing because this writes to the user-level agents skill directory.
+2. From the Skillcaddy repository, run:
+
+```bash
+npm run install:manager
+npm run check:manager
+```
+
+3. Verify the target is a managed symlink:
+
+```text
+~/.agents/skills/skillcaddy-manager -> <skillcaddy>/skills/skillcaddy-manager
+```
+
+The install command must not overwrite existing files, directories, or symlinks that point somewhere else. Treat those as conflicts requiring user review.
 
 ## Open Web Manager
 
@@ -133,11 +157,13 @@ Do not invent a separate file picker workflow for this; pass the path through th
 
 Treat `SKILL.md` as the agent-facing execution contract. Treat `skillcaddy.json` as Skillcaddy's human-facing catalog metadata.
 
-Optional metadata file location:
+Current metadata file location:
 
 ```text
-<skill-dir>/skillcaddy.json
+.skillcaddy/metadata/<source>/<relative-skill-path>/skillcaddy.json
 ```
+
+Legacy `<skill-dir>/skillcaddy.json` files are read for compatibility only. New edits must use the API or sidecar path so GitHub-backed source repositories stay clean.
 
 Supported shape:
 
@@ -154,11 +180,11 @@ Use metadata this way:
 1. Keep `note` short and user-facing. Explain what the skill helps with, not how the trigger matcher works.
 2. Keep `tags` broad and reusable. Prefer product-style categories such as `Developer Tools`, `Productivity`, `Creativity`, `Research`, `Writing`, `Data`, `Design`, `Operations`, `Quality`, `Automation`, and `Workflow`.
 3. Do not rewrite upstream `SKILL.md` only to improve Skillcaddy browsing.
-4. When the user asks to classify, tag, annotate, or make skills easier to browse, update `skillcaddy.json`.
+4. When the user asks to classify, tag, annotate, or make skills easier to browse, update the sidecar `skillcaddy.json`.
 5. When auto-generating metadata, read the `SKILL.md` frontmatter and first useful body sections, then propose or write a concise `note` and 1-4 tags.
 6. Use `autoEnable: false` for deprecated, abandoned, risky, heavyweight, or highly situational skills that should not be included by library-level one-click enable. Single-skill manual enable remains allowed.
 7. Preserve existing tags and `autoEnable` unless they are clearly wrong or the user asks for a cleanup.
-8. If a skill belongs to an external GitHub clone with local changes, show the changed metadata files before committing or pulling.
+8. If a skill belongs to an external GitHub clone, keep Skillcaddy metadata outside that clone. Do not create `<skill-dir>/skillcaddy.json` in GitHub-backed repositories.
 
 Use the existing API when possible:
 
