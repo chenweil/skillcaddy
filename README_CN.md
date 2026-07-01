@@ -37,13 +37,29 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
-最小终端管理器可以这样启动：
+### 终端 UI（TUI）
+
+启动交互式终端管理器：
 
 ```bash
 npm run tui -- /path/to/project
+# 或显式指定原件库根目录
+npm run tui -- --root ~/AISkills /path/to/project
 ```
 
-TUI 复用 Web 管理器相同的核心动作，支持刷新项目状态、搜索 skill、启用 skill、清理已启用的项目 skill、同步 Claude Code、查看 advice，以及编辑 Skillcaddy metadata。
+TUI 提供完整的键盘驱动界面，无需浏览器：
+
+- **查看已启用 skill** — Agents 和 Claude Code 双列并排展示
+- **浏览/搜索 skill 库** — 关键词搜索、来源过滤、库级钻取
+- **启用 skill** — 创建 `.agents/skills/` 软链接并自动同步 Claude Code
+- **清理已启用 skill** — 仅删除项目软链接，原件安全
+- **同步 Claude Code** — 一键同步 `.claude/skills/` 与 `.agents/skills/`
+- **编辑 metadata** — 内联编辑备注、tags、一键加入开关
+- **查看诊断建议** — 检测重复名、断链、来源漂移等问题
+- **刷新项目** — 重载状态、切换项目路径
+- **更新 GitHub 源** — 批量 fast-forward pull `github/` 仓库
+
+菜单导航使用数字键（1-9）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
 
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 

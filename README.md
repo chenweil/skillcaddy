@@ -37,13 +37,29 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
-For the minimal terminal manager, run:
+### Terminal UI (TUI)
+
+For the interactive terminal manager, run:
 
 ```bash
 npm run tui -- /path/to/project
+# or with explicit root
+npm run tui -- --root ~/AISkills /path/to/project
 ```
 
-The TUI reuses the same core actions as the web manager. It can refresh project state, search skills, enable a skill, clear an enabled project skill, sync Claude Code, view advice, and edit Skillcaddy metadata.
+The TUI provides a full keyboard-driven interface without needing a browser:
+
+- **View enabled skills** — Agents and Claude Code columns side by side
+- **Browse/search skill library** — Keyword search, source filter, library drill-down
+- **Enable skill** — Creates symlink in `.agents/skills/` and auto-syncs Claude Code
+- **Clear enabled skill** — Removes project symlink only; source stays safe
+- **Sync Claude Code** — One-click sync `.claude/skills/` with `.agents/skills/`
+- **Edit metadata** — Inline note, tags, auto-enable toggle per skill
+- **View diagnostics** — Advice on duplicates, broken links, source drift
+- **Refresh project** — Reload state, switch project path
+- **Update GitHub sources** — Batch fast-forward pull `github/` repos
+
+Menu navigation uses number keys (1-9) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 

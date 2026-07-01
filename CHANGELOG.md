@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-02
+
+### Added
+- **TUI 终端管理器**：`npm run tui -- /path/to/project` 启动交互式终端界面，无需浏览器即可管理 skills。
+  - 查看已启用 skill（Agents + Claude Code 双列展示）
+  - 浏览/搜索 skill 库，支持关键词搜索和来源过滤
+  - 启用 skill 到 Agents 并自动同步 Claude Code
+  - 清理已启用的项目 skill
+  - 同步 Claude Code skills
+  - 编辑 skill metadata（备注、tags、一键加入开关）
+  - 查看项目诊断建议（advice）
+  - 刷新项目状态、切换项目
+  - 更新 GitHub skill 库（调用 `pull-github.sh`）
+- 新增 `scripts/tui.js`：TUI 主入口，实现完整的交互式菜单导航。
+- 新增 `lib/tuiActions.js`：TUI 核心操作逻辑，复用 Web 管理器相同的数据层和动作。
+- 新增 `test/tuiActions.test.js`：TUI 操作逻辑测试覆盖。
+
+### Changed
+- README / README_CN 补充 TUI 启动方式和功能说明。
+- `.import-rules.json` 新增 `lib/tuiActions.js` 导入规则。
+
 ## [0.11.0] - 2026-07-01
 
 ### Added
