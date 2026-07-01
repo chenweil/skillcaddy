@@ -37,6 +37,14 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
+For the minimal terminal manager, run:
+
+```bash
+npm run tui -- /path/to/project
+```
+
+The TUI reuses the same core actions as the web manager. It can refresh project state, search skills, enable a skill, clear an enabled project skill, sync Claude Code, view advice, and edit Skillcaddy metadata.
+
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
 ```bash

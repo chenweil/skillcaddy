@@ -51,6 +51,11 @@
       "reason": "Coordinator — can depend on all stores and leaves"
     },
     {
+      "from": "lib/tuiActions.js",
+      "allow": ["lib/skillStore.js", "lib/projectActions.js", "lib/claudeStore.js", "lib/skillMetadata.js"],
+      "reason": "TUI adapter — can depend on existing stores and coordinators without owning filesystem rules"
+    },
+    {
       "from": "server.js",
       "allow": true,
       "reason": "Entry point — can depend on any lib module"

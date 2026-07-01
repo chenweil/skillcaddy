@@ -37,6 +37,14 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
+最小终端管理器可以这样启动：
+
+```bash
+npm run tui -- /path/to/project
+```
+
+TUI 复用 Web 管理器相同的核心动作，支持刷新项目状态、搜索 skill、启用 skill、清理已启用的项目 skill、同步 Claude Code、查看 advice，以及编辑 Skillcaddy metadata。
+
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 
 ```bash
