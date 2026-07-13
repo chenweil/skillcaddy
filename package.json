@@ -1,6 +1,6 @@
 {
   "name": "skillcaddy",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "private": true,
   "description": "Local skill source library and per-project symlink manager.",
   "type": "module",

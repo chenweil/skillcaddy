@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-07-13
+
+### Fixed
+- TUI 紧凑表格：当 skill 名过长时正确截断，确保状态标签（可添加/已启用）始终可见。
+- TUI 已启用 skill 列表统一使用紧凑表格样式，与搜索结果保持一致。
+
 ## [0.13.0] - 2026-07-13
 
 ### Added

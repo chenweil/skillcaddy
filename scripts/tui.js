@@ -112,9 +112,7 @@ function printEnabledSkills() {
   if (state.enabled.length === 0) {
     console.log('当前项目没有启用 Agents skill');
   } else {
-    state.enabled.forEach((skill, index) => {
-      printEnabledSkillItem(index + 1, skill);
-    });
+    printSkillChoices(state.enabled.map(toEnabledSkillChoice));
   }
 
   console.log('\n已启用 skill / Claude Code');
@@ -122,22 +120,25 @@ function printEnabledSkills() {
   if (claudeSkills.length === 0) {
     console.log('当前项目没有启用 Claude Code skill');
   } else {
-    claudeSkills.forEach((skill, index) => {
+    printSkillChoices(claudeSkills.map((skill, index) => {
       const agentsSkill = state.enabled.find((item) => item.alias === skill.alias);
-      printEnabledSkillItem(index + 1, agentsSkill || skill);
-    });
+      return toEnabledSkillChoice(agentsSkill || skill, index);
+    }));
   }
 }
 
-function printEnabledSkillItem(index, enabledSkill) {
+function toEnabledSkillChoice(enabledSkill, index) {
   const sourceSkill = findSourceSkillForEnabled(enabledSkill);
-  if (!sourceSkill) {
-    console.log(`${index}. ${enabledSkill.alias}${enabledSkill.isSymlink ? '' : ' (非软链接)'}`);
-    console.log(`   ${enabledSkill.targetPath || enabledSkill.linkPath}`);
-    return;
-  }
-
-  console.log(`${index}. ${sourceSkill.name} [${sourceSkill.source}/${sourceSkill.collection}]`);
+  return {
+    index: index + 1,
+    enabled: true,
+    skill: sourceSkill || {
+      name: enabledSkill.alias,
+      note: enabledSkill.isSymlink ? '' : '非软链接',
+      path: enabledSkill.targetPath || enabledSkill.linkPath,
+      autoEnable: true
+    }
+  };
 }
 
 function findSourceSkillForEnabled(enabledSkill) {
@@ -441,11 +442,7 @@ async function chooseSkill(prompt) {
 }
 
 function printSkillChoices(choices) {
-  choices.forEach((choice) => {
-    const marker = choice.enabled ? ' enabled' : '';
-    console.log(`${choice.index}. ${choice.skill.name}${marker} [${choice.skill.source}/${choice.skill.collection}]`);
-    console.log(`   ${getSkillIntroduction(choice.skill)}`);
-  });
+  printCompactSkillChoices(getSkillPage(choices, 1, Math.max(choices.length, 1)));
 }
 
 function printCompactSkillChoices(skillPage) {

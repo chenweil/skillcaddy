@@ -48,3 +48,36 @@ test('aligns a Chinese introduction column and truncates it to terminal width', 
   assert.equal(getDisplayWidth(row.split(' | ')[1]), layout.introductionWidth);
   assert.equal(truncateDisplayWidth('中文介绍很长', 7), '中文介…');
 });
+
+test('uses the same compact row style for search and enabled choices', () => {
+  const layout = getSkillTableLayout(100);
+  const available = formatCompactSkillChoice({
+    index: 1,
+    enabled: false,
+    skill: { name: 'ask-matt', note: '帮助选择合适的 skill 或工作流。' }
+  }, 1, layout);
+  const enabled = formatCompactSkillChoice({
+    index: 2,
+    enabled: true,
+    skill: { name: 'coding-protocol', note: '按风险等级执行可靠编码流程。' }
+  }, 1, layout);
+
+  assert.match(available, /^1\. ask-matt  可添加/);
+  assert.match(available, /\| 帮助选择合适的 skill 或工作流。$/);
+  assert.match(enabled, /^2\. coding-protocol  已启用/);
+  assert.match(enabled, /\| 按风险等级执行可靠编码流程。$/);
+});
+
+test('keeps status visible when a search result name is too long', () => {
+  const row = formatCompactSkillChoice({
+    index: 1,
+    enabled: false,
+    skill: {
+      name: 'guizang-social-card-skill-with-a-long-name',
+      note: '生成社交卡片图片集。'
+    }
+  }, 1, getSkillTableLayout(80));
+
+  assert.match(row, /^1\. guizang-social-c…  可添加/);
+  assert.match(row, /\| 生成社交卡片图片集。$/);
+});
