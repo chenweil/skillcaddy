@@ -56,6 +56,11 @@
       "reason": "TUI adapter — can depend on existing stores and coordinators without owning filesystem rules"
     },
     {
+      "from": "lib/tuiLayout.js",
+      "allow": [],
+      "reason": "TUI display formatting — leaf module with no store dependencies"
+    },
+    {
       "from": "server.js",
       "allow": true,
       "reason": "Entry point — can depend on any lib module"

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-13
+
+### Added
+- **TUI 批量生成中文 note**：新增菜单选项 10，交互式流程为仅有英文 `description`、缺少中文 `note` 的 skill 补全中文介绍，支持分批（5/10/全部）处理与跳过。
+- **TUI 库浏览分页**：库详情改为紧凑表格展示，支持 `n`/`p` 翻页、`a` 一键加入该库。
+- 新增 `lib/tuiLayout.js`：TUI 展示排版与紧凑表格格式化（叶子模块，无 store 依赖）。
+- 新增 `skills/skillcaddy-manager/scripts/translate-skill-notes.cjs`：批量中文 note 生成辅助脚本，支持 `list` / `apply`（默认 dry-run，需 `--yes` 才写入），保护已有 note 并校验 manifest 来源。
+- `skills/skillcaddy-manager/SKILL.md` 补充 Batch Chinese Note Generation 用法与规则。
+
+### Changed
+- TUI 中 skill 介绍优先使用 metadata `note`，回退到 `description`，最后回退到路径（`.import-rules.json` 为 `lib/tuiLayout.js` 新增导入规则）。
+- `.import-rules.json` 新增 `lib/tuiLayout.js` 导入规则。
+- README / README_CN 补充 TUI 分页与批量中文 note 说明。
+
 ## [0.12.0] - 2026-07-02
 
 ### Added

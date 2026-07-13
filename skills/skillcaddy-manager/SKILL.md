@@ -66,6 +66,39 @@ node scripts/version-manager.cjs check
 
 The `references/featured-skills.json` version syncs with Skillcaddy main project version. Current: **0.8.0**
 
+### Batch Chinese Note Generation
+
+The TUI shows `note || description || path` as the human-facing introduction. Skills with only an English `description` in `SKILL.md` (and no `note`) display the raw English text. Use this helper to fill the gap.
+
+The script does filesystem + API only; the LLM (you) does the translation:
+
+```bash
+# 以下命令从 Skillcaddy 仓库根目录执行。
+# 1. 生成带 libraryRoot 的待翻译 manifest；中文 description、无效描述和 archived 默认跳过
+node skills/skillcaddy-manager/scripts/translate-skill-notes.cjs list --project=. > /tmp/skill-note-manifest.json
+
+# 2. 读取 manifest.entries，为每条 description 生成中文 note 并填回同一条目。
+#    保留 schemaVersion 和 libraryRoot；tags / autoEnable 留空则保留旧值。
+
+# 3. 先预检，不写入
+node skills/skillcaddy-manager/scripts/translate-skill-notes.cjs apply /tmp/skill-note-manifest.json --project=.
+
+# 4. 确认预检结果后，显式写入 sidecar skillcaddy.json
+node skills/skillcaddy-manager/scripts/translate-skill-notes.cjs apply /tmp/skill-note-manifest.json --project=. --yes
+```
+
+Rules for the generated `note`:
+
+- One short sentence in Chinese, user-facing, not agent-facing.
+- Mention what the skill helps with, not when to trigger it.
+- Preserve existing `tags` and `autoEnable`; only change fields you explicitly set.
+- Existing notes are protected at apply time. Only use `--force-rewrite` after explicitly confirming a rewrite.
+- Keep the manifest `libraryRoot`; apply refuses a manifest created from another Skillcaddy checkout.
+- Never write to GitHub-backed `<skill-dir>/skillcaddy.json`; always rely on sidecar via API.
+- Never edit upstream `SKILL.md` only to add Chinese text.
+
+If the Skillcaddy server is not running, start it with `npm start` first. Apply validates every manifest entry before the first write, defaults to dry-run, and exits non-zero if an API write fails.
+
 ### Recommendation Flow
 
 When the user asks for recommendations, follow this order:

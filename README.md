@@ -58,6 +58,9 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **View diagnostics** — Advice on duplicates, broken links, source drift
 - **Refresh project** — Reload state, switch project path
 - **Update GitHub sources** — Batch fast-forward pull `github/` repos
+- **Batch Chinese notes** — Interactive flow (option 10) to fill missing Chinese `note` fields for skills that only have an English description
+
+Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
 Menu navigation uses number keys (1-9) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
