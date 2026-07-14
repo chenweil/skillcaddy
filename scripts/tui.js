@@ -313,11 +313,12 @@ async function skillDetailFlow(skillId) {
     printSkillDetail(skill);
     console.log([
       '1. 启用到 Agents，并同步 Claude Code',
-      '2. 清理当前项目 skill',
-      '3. 编辑备注',
-      '4. 编辑 tags',
-      `5. ${skill.autoEnable === false ? '开启' : '关闭'}参与一键加入`,
-      '6. 编辑全部 metadata',
+      '2. 使用其他名称启用',
+      '3. 清理当前项目 skill',
+      '4. 编辑备注',
+      '5. 编辑 tags',
+      `6. ${skill.autoEnable === false ? '开启' : '关闭'}参与一键加入`,
+      '7. 编辑全部 metadata',
       'b. 返回列表'
     ].join('\n'));
 
@@ -325,11 +326,12 @@ async function skillDetailFlow(skillId) {
     if (isBack(choice)) return;
 
     if (choice === '1') await enableSkillById(skill.id);
-    else if (choice === '2') await disableSkillAlias(skill);
-    else if (choice === '3') await editNote(skill);
-    else if (choice === '4') await editTags(skill);
-    else if (choice === '5') await toggleAutoEnable(skill);
-    else if (choice === '6') await editAllMetadata(skill.id);
+    else if (choice === '2') await enableSkillWithAlias(skill);
+    else if (choice === '3') await disableSkillAlias(skill);
+    else if (choice === '4') await editNote(skill);
+    else if (choice === '5') await editTags(skill);
+    else if (choice === '6') await toggleAutoEnable(skill);
+    else if (choice === '7') await editAllMetadata(skill.id);
     else console.log('未知操作');
   }
 }
@@ -350,11 +352,30 @@ function printSkillDetail(skill) {
 
 async function enableSkillById(skillId) {
   const result = await enableSkillChoice(rootDir, state, skillId);
+  await reportEnableResult(result);
+}
+
+async function enableSkillWithAlias(skill) {
+  const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
+  const alias = await ask(`项目中的 skill 名称 [${suggestedAlias}]`) || suggestedAlias;
+  const result = await enableSkillChoice(rootDir, state, skill.id, { alias });
+  await reportEnableResult(result);
+}
+
+async function reportEnableResult(result) {
   state = await loadTuiState(rootDir, state.projectPath);
   console.log(result.unchanged ? `已存在：${result.alias}` : `已启用：${result.alias}`);
   if (result.claudeSync?.ok === false) {
     console.log(`Claude Code 同步失败：${result.claudeSync.error}`);
   }
+}
+
+function findSuggestedAlias(skillId) {
+  for (const advice of state.advice) {
+    const action = (advice.actions || []).find((item) => item.type === 'enable-with-alias' && item.skillId === skillId);
+    if (action) return action.alias;
+  }
+  return '';
 }
 
 async function disableSkillAlias(skill) {

@@ -196,7 +196,16 @@ Current metadata file location:
 .skillcaddy/metadata/<source>/<relative-skill-path>/skillcaddy.json
 ```
 
-Legacy `<skill-dir>/skillcaddy.json` files are read for compatibility only. New edits must use the API or sidecar path so GitHub-backed source repositories stay clean.
+Legacy `<skill-dir>/skillcaddy.json` files are read for compatibility only. Runtime fallback ends in v0.15.0, and the migration command is removed in v0.16.0. New edits must use the API or sidecar path so GitHub-backed source repositories stay clean.
+
+Before the cutoff, preview and explicitly apply migration with:
+
+```bash
+npm run migrate:metadata
+npm run migrate:metadata -- --yes
+```
+
+Apply writes the equivalent sidecar metadata and retains the legacy file for rollback. Once the sidecar exists, Skillcaddy reads it instead of the legacy copy.
 
 Supported shape:
 
@@ -288,7 +297,8 @@ Important advice types:
 - `project-broken-link`: a project skill symlink points to a missing target.
 - `global-shadowed-by-project`: a project skill and global skill share the same alias; project-level loading may win depending on the agent.
 - `global-alias-conflict`: enabling a source skill would create an alias already present globally.
-- `library-duplicate-name`: multiple source skills share the same name; require source/collection disambiguation before enabling.
+- `library-duplicate-name`: multiple source skills share the same name; require source/collection disambiguation and prefer the returned `enable-with-alias` action instead of renaming source directories.
+- `legacy-metadata-deprecated`: legacy metadata still needs migration before v0.15.0 stops runtime fallback reads.
 
 Use advice this way:
 
@@ -297,6 +307,8 @@ Use advice this way:
 3. During project initialization, summarize all warning-level advice first, then informational duplicate/global advice.
 4. For broken links, suggest cleanup or re-enable only after showing the missing target path.
 5. For unmanaged entries, avoid automatic cleanup; ask the user whether they want to leave, move, or manually inspect them.
+6. For duplicate library names, enable the selected full skill ID with its suggested or user-confirmed alias; never rename a GitHub-backed source directory.
+7. For legacy metadata, run the migration preview first and require explicit confirmation before `--yes`.
 
 If `/api/state` is not available, reproduce the minimum check manually:
 

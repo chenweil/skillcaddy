@@ -56,13 +56,14 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **Sync Claude Code** — One-click sync `.claude/skills/` with `.agents/skills/`
 - **Edit metadata** — Inline note, tags, auto-enable toggle per skill
 - **View diagnostics** — Advice on duplicates, broken links, source drift
+- **Resolve duplicate names** — Enable a selected source skill under a suggested or custom project alias without renaming the source
 - **Refresh project** — Reload state, switch project path
 - **Update GitHub sources** — Batch fast-forward pull `github/` repos
 - **Batch Chinese notes** — Interactive flow (option 10) to fill missing Chinese `note` fields for skills that only have an English description
 
 Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
-Menu navigation uses number keys (1-9) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
+Menu navigation uses number keys (1-10) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
@@ -94,6 +95,15 @@ The page loads that project immediately, keeps recently used project paths in br
 ```
 
 The web UI reads legacy `<skill-dir>/skillcaddy.json` files for compatibility, but new edits are written to the local sidecar metadata store. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream source repositories clean while still making a large local library easier to browse.
+
+Legacy metadata fallback is deprecated. Runtime reading ends in v0.15.0, while the migration command remains available through v0.15.x and is removed in v0.16.0. Preview and apply the migration with:
+
+```bash
+npm run migrate:metadata
+npm run migrate:metadata -- --yes
+```
+
+The apply command writes equivalent sidecar metadata and retains the legacy file for rollback. Once the sidecar exists, Skillcaddy no longer uses the legacy copy.
 
 ## Platform compatibility
 

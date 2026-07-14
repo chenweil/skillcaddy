@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Active deprecations
+
+| Legacy feature | Replacement | Deprecated | Runtime support ends | Migration code removed |
+| --- | --- | --- | --- | --- |
+| `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
+
+## [0.14.0] - 2026-07-14
+
+### Added
+- 新增 `npm run migrate:metadata`：默认仅预检 legacy metadata；确认后使用 `npm run migrate:metadata -- --yes` 写入 sidecar。该命令补充 v0.11.0 的 metadata 存储迁移，并计划在 v0.16.0 删除。
+- `library-duplicate-name` advice 现在返回每个冲突 skill 的稳定建议 alias 和结构化 `enable-with-alias` 动作。
+- TUI skill 详情新增“使用其他名称启用”，将重复名诊断从仅警告扩展为可执行修复，同时不重命名原件库目录。
+
+### Changed
+- `/api/state` 中的 skill 现在返回 `metadataStorage`；检测到 legacy metadata 时会生成带迁移命令的 warning advice。
+
+### Deprecated
+- Legacy `<skill-dir>/skillcaddy.json` 运行时读取已弃用：v0.15.0 将停止 fallback 读取；迁移命令会保留至 v0.15.x，并在 v0.16.0 删除。新写入继续统一使用 sidecar 路径。
+
 ## [0.13.1] - 2026-07-13
 
 ### Fixed

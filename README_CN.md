@@ -56,13 +56,14 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **同步 Claude Code** — 一键同步 `.claude/skills/` 与 `.agents/skills/`
 - **编辑 metadata** — 内联编辑备注、tags、一键加入开关
 - **查看诊断建议** — 检测重复名、断链、来源漂移等问题
+- **处理重复名** — 使用建议名称或自定义名称启用指定来源的 skill，不重命名原件
 - **刷新项目** — 重载状态、切换项目路径
 - **更新 GitHub 源** — 批量 fast-forward pull `github/` 仓库
 - **批量生成中文 note** — 交互式流程（选项 10），为仅有英文 `description`、缺少中文 `note` 的 skill 补全中文介绍
 
 浏览库时改为紧凑分页表格展示（`n`/`p` 翻页，`a` 一键加入该库）。skill 介绍优先使用 metadata 中的 `note`，而非原始英文 `description`。
 
-菜单导航使用数字键（1-9）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
+菜单导航使用数字键（1-10）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
 
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 
@@ -94,6 +95,15 @@ http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 ```
 
 Web UI 会兼容读取旧的 `<skill-dir>/skillcaddy.json`，但新的编辑会写到本地 sidecar 元数据存储。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游原件库，也能让大型本地 skill 库更容易浏览。
+
+Legacy metadata fallback 已进入退役期：v0.15.0 停止运行时读取，迁移命令保留至 v0.15.x，并在 v0.16.0 删除。可先预检，再显式执行迁移：
+
+```bash
+npm run migrate:metadata
+npm run migrate:metadata -- --yes
+```
+
+执行迁移会写入等价的 sidecar metadata，并保留 legacy 文件用于回滚；sidecar 存在后，Skillcaddy 不再使用 legacy 副本。
 
 ## 平台兼容性
 

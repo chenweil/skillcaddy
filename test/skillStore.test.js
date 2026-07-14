@@ -15,7 +15,7 @@ import {
   unlinkClaudeSkills
 } from '../lib/claudeStore.js';
 import { enableProjectSkill } from '../lib/projectActions.js';
-import { updateSkillMetadata } from '../lib/skillMetadata.js';
+import { migrateLegacySkillMetadata, updateSkillMetadata } from '../lib/skillMetadata.js';
 
 test('scans source folders and enables a skill with a symlink', async () => {
   const root = await makeTempDir('skills-root-');
@@ -176,6 +176,8 @@ test('reads and writes skillcaddy metadata for notes and tags', async () => {
   assert.deepEqual(state.skills[0].tags, ['Developer Tools', 'Quality']);
   assert.equal(state.skills[0].autoEnable, true);
   assert.equal(state.skills[0].hasMetadata, true);
+  assert.equal(state.skills[0].metadataStorage, 'legacy');
+  assert.equal(state.advice[0].type, 'legacy-metadata-deprecated');
 
   const result = await updateSkillMetadata(root, {
     skillPath: skill,
@@ -194,6 +196,35 @@ test('reads and writes skillcaddy metadata for notes and tags', async () => {
   assert.equal(nextState.skills[0].note, 'Updated note');
   assert.deepEqual(nextState.skills[0].tags, ['Productivity', 'Developer Tools']);
   assert.equal(nextState.skills[0].autoEnable, false);
+  assert.equal(nextState.skills[0].metadataStorage, 'sidecar');
+});
+
+test('previews and applies legacy metadata migration without deleting the source file', async () => {
+  const root = await makeTempDir('skills-root-');
+  const project = await makeTempDir('skills-project-');
+  const skill = path.join(root, 'personal', 'legacy-note');
+  const legacyMetadataPath = path.join(skill, 'skillcaddy.json');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Legacy note\n');
+  await writeFile(legacyMetadataPath, JSON.stringify({ note: '旧备注', tags: ['Legacy'], autoEnable: false }));
+
+  let state = await getState(root, project);
+  const preview = await migrateLegacySkillMetadata(root, state.skills);
+  assert.equal(preview.dryRun, true);
+  assert.equal(preview.migrated, 0);
+  assert.deepEqual(preview.pending.map((item) => item.id), ['personal/legacy-note']);
+
+  const applied = await migrateLegacySkillMetadata(root, state.skills, { write: true });
+  assert.equal(applied.dryRun, false);
+  assert.equal(applied.migrated, 1);
+  assert.equal(JSON.parse(await readFile(legacyMetadataPath, 'utf8')).note, '旧备注');
+
+  state = await getState(root, project);
+  assert.equal(state.skills[0].metadataStorage, 'sidecar');
+  assert.equal(state.skills[0].note, '旧备注');
+  assert.equal(state.advice.some((item) => item.type === 'legacy-metadata-deprecated'), false);
 });
 
 test('writes new skillcaddy metadata outside source repositories', async () => {
@@ -261,6 +292,9 @@ test('reports unmanaged project skills and duplicate library names as advice', a
   assert.ok(adviceTypes.includes('project-unmanaged-symlink'));
   assert.ok(adviceTypes.includes('project-unmanaged-entry'));
   assert.ok(adviceTypes.includes('library-duplicate-name'));
+  const duplicate = state.advice.find((item) => item.type === 'library-duplicate-name');
+  assert.deepEqual(duplicate.skills.map((skill) => skill.suggestedAlias), ['personal-review', 'toolbox-review']);
+  assert.deepEqual(duplicate.actions.map((action) => action.type), ['enable-with-alias', 'enable-with-alias']);
 });
 
 test('ignores hidden files and plain files when scanning enabled skills', async () => {

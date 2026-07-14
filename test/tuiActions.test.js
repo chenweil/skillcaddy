@@ -75,6 +75,20 @@ test('enables and disables a skill by TUI choice', async () => {
   assert.deepEqual(state.enabled, []);
 });
 
+test('enables a duplicate-name skill with a custom alias', async () => {
+  const root = await makeTempDir('tui-root-');
+  const project = await makeTempDir('tui-project-');
+  await createSkill(root, 'personal', 'review', 'Personal review');
+  await createSkill(root, 'github/toolbox/skills', 'review', 'Toolbox review');
+
+  let state = await loadTuiState(root, project);
+  const result = await enableSkillChoice(root, state, 'github/toolbox/skills/review', { alias: 'toolbox-review' });
+  assert.equal(result.alias, 'toolbox-review');
+
+  state = await loadTuiState(root, project);
+  assert.deepEqual(listEnabledAliases(state).map((item) => item.alias), ['toolbox-review']);
+});
+
 test('saves metadata through sidecar storage', async () => {
   const root = await makeTempDir('tui-root-');
   const project = await makeTempDir('tui-project-');
