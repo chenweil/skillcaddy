@@ -301,7 +301,7 @@ node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-pro
 - **Analyze first**: Inspect the current library and project context before recommending
 - **Platform first**: Empty libraries should start with discovery platforms, not a fixed starter library
 - **Scenario split**: mattpocock + lencx is for clear development workflows, not the blank default
-- **Conflict detection**: Auto-detect overlapping libraries (e.g., mattpocock vs superpowers)
+- **Overlap review**: Compare collection names, capability lists, and descriptions before enabling similar libraries
 - **Global detection**: Detect global skills directories and suggest unified management
 
 ### Empty-Library Default
@@ -327,12 +327,12 @@ When the library is empty, the default recommendation is:
 ### Utility Scripts
 
 ```bash
-node skills/skillcaddy-manager/scripts/check-conflicts.cjs superpowers
+node skills/skillcaddy-manager/scripts/check-conflicts.cjs <collection-id> --against <installed-id,installed-id>
 node skills/skillcaddy-manager/scripts/check-global-skills.cjs
 node skills/skillcaddy-manager/scripts/version-manager.cjs check
 ```
 
-See [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md) for detailed documentation.
+See [the Skillcaddy manager recommendation branch](skills/skillcaddy-manager/references/RECOMMENDATION_GUIDE.md) for detailed documentation.
 
 
 ## Tests

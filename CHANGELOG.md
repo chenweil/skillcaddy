@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | --- | --- | --- | --- | --- |
 | `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
 
+## [0.14.1] - 2026-07-17
+
+### Changed
+- **skillcaddy-manager 重构**：按 writing-great-skills 原则精简结构，引入 Core Loop (`state → route → preflight → act → verify`) 作为 leading concept，信息分层到 `OPERATIONS.md`、`RECOMMENDATION_GUIDE.md`、`METADATA.md`。
+- description 从 107 词压缩到 32 词，删除重复内容（3 处重复的冲突检测逻辑合并为单一引用）。
+- 每个步骤添加明确的 "Complete when" 完成标准。
+- 删除冗余的 `references/README.md` 和 `references/SUMMARY.md`。
+
 ## [0.14.0] - 2026-07-14
 
 ### Added

@@ -301,7 +301,7 @@ node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-pro
 - **先分析再推荐**: 先看当前库、当前项目和已有 skill
 - **平台优先**: 空库时先推荐发现平台,不要固定推某个库
 - **场景分流**: mattpocock + lencx 只用于明确开发场景,不是空白默认态
-- **冲突检测**: 自动检测功能重叠的库 (如 mattpocock vs superpowers)
+- **重叠审查**: 启用前根据库名、能力清单和功能描述识别可能重复的库
 - **全局检测**: 检测全局 skills 目录,建议统一管理
 
 ### 空库默认推荐
@@ -327,12 +327,12 @@ node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-pro
 ### 相关脚本
 
 ```bash
-node skills/skillcaddy-manager/scripts/check-conflicts.cjs superpowers
+node skills/skillcaddy-manager/scripts/check-conflicts.cjs <collection-id> --against <installed-id,installed-id>
 node skills/skillcaddy-manager/scripts/check-global-skills.cjs
 node skills/skillcaddy-manager/scripts/version-manager.cjs check
 ```
 
-详细文档请查看 [references/RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md)。
+详细文档请查看 [Skillcaddy manager 推荐分支](skills/skillcaddy-manager/references/RECOMMENDATION_GUIDE.md)。
 
 
 ## 测试

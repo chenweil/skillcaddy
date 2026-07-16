@@ -1,8 +1,27 @@
 {
-  "version": "0.9.0",
-  "lastUpdated": "2026-06-29",
+  "version": "0.14.1",
+  "lastUpdated": "2026-07-17",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
+    {
+      "version": "0.14.1",
+      "date": "2026-07-17",
+      "changes": [
+        "skillcaddy-manager 按 writing-great-skills 原则重构",
+        "引入 Core Loop 作为 leading concept",
+        "信息分层到 OPERATIONS/RECOMMENDATION_GUIDE/METADATA",
+        "删除冗余的 SUMMARY.md 和 README.md"
+      ]
+    },
+    {
+      "version": "0.14.0",
+      "date": "2026-07-17",
+      "changes": [
+        "冲突判断改为基于名称、能力清单和功能描述的相似度候选",
+        "移除固定库名冲突规则，最终结论由当前 skill 内容决定",
+        "精简 skillcaddy-manager 并按操作、推荐和 metadata 分支披露"
+      ]
+    },
     {
       "version": "0.9.0",
       "date": "2026-06-29",
@@ -20,7 +39,7 @@
       "date": "2026-06-29",
       "changes": [
         "添加完整推荐系统 (references + scripts)",
-        "实现冲突检测 (mattpocock vs superpowers)",
+        "实现目录冲突检测（后续改为相似度候选审查）",
         "实现全局 Skills 检测和建议",
         "实现版本管理和同步",
         "更新 README 文档",
@@ -32,7 +51,7 @@
       "date": "2026-06-29",
       "changes": [
         "添加全局 Skills 检测功能",
-        "添加冲突检测逻辑 (mattpocock vs superpowers)",
+        "添加目录冲突检测逻辑（后续改为相似度候选审查）",
         "优化推荐策略: 少而精,一次最多3个",
         "版本号与 Skillcaddy 主项目同步"
       ]
@@ -88,32 +107,6 @@
       "用户明确提到设计、PPT、页面风格"
     ]
   },
-  "conflicts": {
-    "mattpocock-vs-superpowers": {
-      "collections": [
-        "mattpocock-workflow",
-        "superpowers-workflow"
-      ],
-      "reason": "两者都是开发工作流套件,功能重叠",
-      "skills": {
-        "mattpocock": [
-          "tdd",
-          "diagnosing-bugs",
-          "implement"
-        ],
-        "superpowers": [
-          "test-driven-development",
-          "systematic-debugging"
-        ]
-      },
-      "recommendation": "推荐 mattpocock (更完整,有 setup 脚本),二选一",
-      "advice": "检测到您已安装 {existing},建议不要同时安装 {conflicting},避免工作流冲突"
-    },
-    "coding-protocol-overlap": {
-      "note": "coding-protocol 与其他风险控制 skill 可能冲突",
-      "check": "如果已有其他风险控制类 skill,需评估是否重复"
-    }
-  },
   "essentialWorkflows": {
     "development": {
       "label": "开发流程",
@@ -152,14 +145,13 @@
           "installs": null
         }
       ],
-      "whyThisCombo": "mattpocock 负责开发流程执行,lencx 负责质量把控,两者配合覆盖开发全流程",
-      "conflictNote": "mattpocock 和 superpowers 有功能重叠,二选一即可,推荐 mattpocock"
+      "whyThisCombo": "mattpocock 负责开发流程执行,lencx 负责质量把控,两者配合覆盖开发全流程"
     }
   },
   "alternatives": {
     "superpowers": {
       "label": "Superpowers 工作流",
-      "description": "另一个开发工作流选择,与 mattpocock 二选一",
+      "description": "另一个开发工作流选择",
       "collections": [
         {
           "id": "superpowers-workflow",
@@ -181,10 +173,7 @@
           "description": "项目质量把控"
         }
       ],
-      "whyThisCombo": "superpowers 做提效,lencx 做把控",
-      "conflictWith": [
-        "mattpocock-workflow"
-      ]
+      "whyThisCombo": "superpowers 做提效,lencx 做把控"
     }
   },
   "featured": {
@@ -216,10 +205,7 @@
           "priority": "essential",
           "installs": "6.7K+",
           "isSuite": true,
-          "setupGuide": "先启用 setup-matt-pocock-skills,它会自动配置整个工作流环境",
-          "conflictWith": [
-            "superpowers"
-          ]
+          "setupGuide": "先启用 setup-matt-pocock-skills,它会自动配置整个工作流环境"
         },
         {
           "id": "superpowers",
@@ -240,11 +226,7 @@
           "reason": "AI 协作提效: 头脑风暴、验证完成、系统化调试、TDD",
           "priority": "alternative",
           "installs": "1.2K+",
-          "isSuite": true,
-          "conflictWith": [
-            "mattpocock"
-          ],
-          "note": "与 mattpocock 功能重叠,二选一"
+          "isSuite": true
         },
         {
           "id": "lencx-core",

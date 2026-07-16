@@ -1,7 +1,7 @@
 interface:
   display_name: "Skillcaddy Manager"
   short_description: "Manage project and global skills."
-  default_prompt: "Use $skillcaddy-manager to audit project/global skills, resolve conflicts, and enable or disable skills safely."
+  default_prompt: "Use $skillcaddy-manager to audit project/global skills, review capability overlaps, and enable or disable skills safely."
 
 policy:
   allow_implicit_invocation: true
