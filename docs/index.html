@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Skillcaddy — Local AI Skills Library</title>
+    <meta name="description" content="One local AISkills directory. Symlink skills into any project. Works with Claude Code, Codex, OpenCode, and Pi.">
+    <meta property="og:title" content="Skillcaddy">
+    <meta property="og:description" content="Local AI skills central library + per-project symlink enablement.">
+    <meta property="og:image" content="assets/skillcaddy_EN.png">
+    <meta name="theme-color" content="#faf9f5">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        color-scheme: light;
+        --primary: #cc785c;
+        --primary-active: #a9583e;
+        --ink: #141413;
+        --body: #3d3d3a;
+        --muted: #6c6a64;
+        --hairline: #e6dfd8;
+        --canvas: #faf9f5;
+        --surface-soft: #f5f0e8;
+        --surface-card: #efe9de;
+        --surface-dark: #181715;
+        --on-dark: #faf9f5;
+        --on-dark-soft: #a09d96;
+        --success: #5db872;
+        --radius: 8px;
+        --display: "Cormorant Garamond", "EB Garamond", Georgia, serif;
+        --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        --max: 1120px;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+      }
+
+      a { color: inherit; text-decoration: none; }
+      button, a.btn {
+        font: inherit;
+        cursor: pointer;
+        border: 0;
+        background: none;
+      }
+
+      .wrap {
+        width: min(var(--max), calc(100vw - 40px));
+        margin: 0 auto;
+      }
+
+      /* Nav */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(12px);
+        background: color-mix(in srgb, var(--canvas) 88%, transparent);
+        border-bottom: 1px solid var(--hairline);
+      }
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 64px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+        letter-spacing: 0;
+      }
+      .brand-mark {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+      }
+      .brand-mark::before,
+      .brand-mark::after {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 18px;
+        height: 2px;
+        border-radius: 999px;
+        background: var(--ink);
+        content: "";
+        transform: translate(-50%, -50%);
+      }
+      .brand-mark::after { transform: translate(-50%, -50%) rotate(90deg); }
+      .brand-name {
+        font-family: var(--display);
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .nav-links a {
+        padding: 8px 12px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 6px;
+      }
+      .nav-links a:hover { color: var(--ink); background: var(--surface-soft); }
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .lang-toggle {
+        display: inline-flex;
+        border: 1px solid var(--hairline);
+        border-radius: 999px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .lang-toggle button {
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .lang-toggle button[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--on-dark);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-weight: 600;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover { background: var(--primary-active); }
+      .btn-ghost {
+        border: 1px solid var(--hairline);
+        background: #fff;
+        color: var(--ink);
+      }
+      .btn-ghost:hover { background: var(--surface-soft); }
+      .btn-dark {
+        background: var(--surface-dark);
+        color: var(--on-dark);
+      }
+      .btn-dark:hover { background: #2a2825; }
+      .btn svg { width: 16px; height: 16px; flex: 0 0 16px; }
+
+      /* Hero */
+      .hero {
+        padding: 56px 0 28px;
+        border-bottom: 1px solid var(--hairline);
+      }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+        gap: 40px;
+        align-items: end;
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .hero h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-size: clamp(44px, 6vw, 72px);
+        font-weight: 600;
+        line-height: 0.98;
+        letter-spacing: 0;
+      }
+      .lede {
+        margin: 18px 0 0;
+        max-width: 38ch;
+        color: var(--body);
+        font-size: 18px;
+      }
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .hero-meta strong {
+        display: block;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .hero-visual {
+        position: relative;
+        min-height: 320px;
+      }
+      .hero-visual img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--hairline);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 18px 40px rgba(20, 20, 19, 0.08);
+      }
+      .hero-hint {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      /* Sections */
+      section.band {
+        padding: 72px 0;
+        border-bottom: 1px solid var(--hairline);
+      }
+      .section-kicker {
+        margin: 0 0 8px;
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .section-title {
+        margin: 0;
+        max-width: 18ch;
+        font-family: var(--display);
+        font-size: clamp(32px, 4vw, 44px);
+        font-weight: 600;
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+      .section-lead {
+        margin: 14px 0 0;
+        max-width: 56ch;
+        color: var(--body);
+        font-size: 16px;
+      }
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 36px;
+      }
+
+      /* Problem */
+      .pain-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .pain {
+        padding: 18px 18px 20px;
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius);
+        background: #fff;
+      }
+      .pain h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .pain p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      /* How */
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0;
+        border: 1px solid var(--hairline);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .flow-step {
+        padding: 24px;
+        border-right: 1px solid var(--hairline);
+      }
+      .flow-step:last-child { border-right: 0; }
+      .flow-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-bottom: 14px;
+        border-radius: 999px;
+        background: var(--surface-dark);
+        color: var(--on-dark);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .flow-step h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .flow-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .flow-code {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: var(--surface-dark);
+        color: var(--on-dark);
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.45;
+        overflow-x: auto;
+      }
+      .flow-code .dim { color: var(--on-dark-soft); }
+
+      /* Features */
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .feature {
+        padding: 20px;
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius);
+        background: var(--surface-soft);
+      }
+      .feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 14px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--hairline);
+        color: var(--primary-active);
+      }
+      .feature-icon svg { width: 18px; height: 18px; }
+      .feature h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      /* Install */
+      .install-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .install-copy .section-title { max-width: 14ch; }
+      .install-list {
+        margin: 20px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .install-list li {
+        display: flex;
+        gap: 10px;
+        padding: 10px 0;
+        border-top: 1px solid var(--hairline);
+        color: var(--body);
+        font-size: 14px;
+      }
+      .install-list li:last-child { border-bottom: 1px solid var(--hairline); }
+      .install-list svg {
+        width: 16px;
+        height: 16px;
+        margin-top: 2px;
+        color: var(--success);
+        flex: 0 0 16px;
+      }
+      .terminal {
+        border: 1px solid #2a2825;
+        border-radius: 10px;
+        overflow: hidden;
+        background: var(--surface-dark);
+        color: var(--on-dark);
+        box-shadow: 0 16px 32px rgba(20, 20, 19, 0.12);
+      }
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 40px;
+        padding: 0 14px;
+        border-bottom: 1px solid #2f2d29;
+        color: var(--on-dark-soft);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .terminal-bar span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #3a3834;
+      }
+      .terminal-bar span:nth-child(1) { background: #c64545; }
+      .terminal-bar span:nth-child(2) { background: #d4a017; }
+      .terminal-bar span:nth-child(3) { background: #5db872; }
+      .terminal-bar strong {
+        margin-left: 8px;
+        font-weight: 500;
+      }
+      .terminal pre {
+        margin: 0;
+        padding: 18px 16px 20px;
+        overflow-x: auto;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.65;
+        white-space: pre;
+      }
+      .terminal .comment { color: var(--on-dark-soft); }
+      .terminal .cmd { color: #f2d2c4; }
+      .install-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      /* Platforms */
+      .platform-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid var(--hairline);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .platform-table th,
+      .platform-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--hairline);
+        text-align: left;
+        font-size: 14px;
+      }
+      .platform-table th {
+        background: var(--surface-soft);
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .platform-table tr:last-child td { border-bottom: 0; }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--success) 14%, #fff);
+        color: #2f7a45;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .badge.warn {
+        background: color-mix(in srgb, #d4a017 16%, #fff);
+        color: #8a6a10;
+      }
+
+      /* Agents strip */
+      .agents {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .agent-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--hairline);
+        border-radius: 999px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* CTA */
+      .cta-band {
+        padding: 80px 0;
+        background: var(--surface-dark);
+        color: var(--on-dark);
+      }
+      .cta-band .section-title {
+        max-width: 16ch;
+        color: var(--on-dark);
+      }
+      .cta-band .section-lead { color: var(--on-dark-soft); }
+      .cta-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      /* Footer */
+      footer {
+        padding: 28px 0 40px;
+        border-top: 1px solid var(--hairline);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .footer-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      .footer-links a:hover { color: var(--ink); }
+
+      [data-lang="zh"] .i18n-en,
+      [data-lang="en"] .i18n-zh { display: none; }
+
+      @media (max-width: 960px) {
+        .hero-grid,
+        .section-head,
+        .install-panel,
+        .flow,
+        .feature-grid,
+        .pain-grid {
+          grid-template-columns: 1fr;
+        }
+        .flow-step { border-right: 0; border-bottom: 1px solid var(--hairline); }
+        .flow-step:last-child { border-bottom: 0; }
+        .nav-links { display: none; }
+        .hero { padding-top: 36px; }
+        .hero h1 { font-size: clamp(40px, 11vw, 56px); }
+      }
+
+      @media (max-width: 560px) {
+        .wrap { width: min(var(--max), calc(100vw - 28px)); }
+        .hero-meta { gap: 14px; }
+        .nav-actions .btn-ghost { display: none; }
+      }
+    </style>
+  </head>
+  <body data-lang="en">
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="#top" aria-label="Skillcaddy">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">Skillcaddy</span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#why"><span class="i18n-en">Why</span><span class="i18n-zh">为什么</span></a>
+          <a href="#how"><span class="i18n-en">How</span><span class="i18n-zh">原理</span></a>
+          <a href="#features"><span class="i18n-en">Features</span><span class="i18n-zh">能力</span></a>
+          <a href="#install"><span class="i18n-en">Install</span><span class="i18n-zh">安装</span></a>
+        </nav>
+        <div class="nav-actions">
+          <div class="lang-toggle" role="group" aria-label="Language">
+            <button type="button" data-set-lang="en" aria-pressed="true">EN</button>
+            <button type="button" data-set-lang="zh" aria-pressed="false">中文</button>
+          </div>
+          <a class="btn btn-ghost" href="https://github.com/chenweil/skillcaddy" target="_blank" rel="noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+            GitHub
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <p class="eyebrow">
+              <span class="i18n-en">Local AI Skills Library</span>
+              <span class="i18n-zh">本地 AI Skills 中央库</span>
+            </p>
+            <h1>Skillcaddy</h1>
+            <p class="lede i18n-en">
+              One AISkills directory as the source of truth. Symlink what you need into any project — for Claude Code, Codex, OpenCode, and Pi.
+            </p>
+            <p class="lede i18n-zh">
+              一个 AISkills 目录作为单一事实来源。按需 symlink 到任意项目——同时服务 Claude Code、Codex、OpenCode 与 Pi。
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="#install">
+                <span class="i18n-en">Get started</span>
+                <span class="i18n-zh">开始使用</span>
+              </a>
+              <a class="btn btn-ghost" href="https://github.com/chenweil/skillcaddy" target="_blank" rel="noreferrer">
+                <span class="i18n-en">View on GitHub</span>
+                <span class="i18n-zh">在 GitHub 查看</span>
+              </a>
+            </div>
+            <div class="hero-meta">
+              <div>
+                <strong>Node.js ≥ 20</strong>
+                <span class="i18n-en">Zero npm dependencies</span>
+                <span class="i18n-zh">零外部依赖</span>
+              </div>
+              <div>
+                <strong>Web + TUI</strong>
+                <span class="i18n-en">Browser or terminal</span>
+                <span class="i18n-zh">浏览器或终端</span>
+              </div>
+              <div>
+                <strong>v0.14.1</strong>
+                <span class="i18n-en">MIT License</span>
+                <span class="i18n-zh">MIT 协议</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <img
+              id="heroImage"
+              src="assets/skillcaddy_EN.png"
+              width="1200"
+              height="900"
+              alt="Skillcaddy: load skills on demand instead of carrying every skill everywhere"
+            >
+            <p class="hero-hint i18n-en">Load skills on demand. Travel light. Grow fast.</p>
+            <p class="hero-hint i18n-zh">按需加载 skills。轻装上路，快速成长。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="why">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">
+                <span class="i18n-en">The problem</span>
+                <span class="i18n-zh">问题</span>
+              </p>
+              <h2 class="section-title">
+                <span class="i18n-en">Skills drift when every project keeps its own copy.</span>
+                <span class="i18n-zh">每个项目各自拷贝 skill，版本迟早会漂移。</span>
+              </h2>
+            </div>
+            <p class="section-lead i18n-en">
+              If you use multiple AI coding agents across repos, the same skill ends up in three places, slightly different each time. New projects mean more copies. Upstream updates never land.
+            </p>
+            <p class="section-lead i18n-zh">
+              当你在多个仓库里同时用 AI 编码 Agent，同一个 skill 会散落在三处，各自略微不同。新开项目就要再拷一遍；上游更新也跟不上。
+            </p>
+          </div>
+          <div class="pain-grid">
+            <article class="pain">
+              <h3 class="i18n-en">Copy-paste drift</h3>
+              <h3 class="i18n-zh">复制即漂移</h3>
+              <p class="i18n-en">The same skill lives in three repos, each a week behind the others.</p>
+              <p class="i18n-zh">同一个 skill 出现在三个 repo 里，彼此落后一周。</p>
+            </article>
+            <article class="pain">
+              <h3 class="i18n-en">New project tax</h3>
+              <h3 class="i18n-zh">新项目税</h3>
+              <p class="i18n-en">Every new repo starts with “which skills do I copy this time?”</p>
+              <p class="i18n-zh">每次新开仓库都要问：这次该拷哪些 skills？</p>
+            </article>
+            <article class="pain">
+              <h3 class="i18n-en">Agent path chaos</h3>
+              <h3 class="i18n-zh">Agent 路径混乱</h3>
+              <p class="i18n-en">Claude Code wants `.claude/skills`; others want `.agents/skills`.</p>
+              <p class="i18n-zh">Claude Code 要 `.claude/skills`，其他工具要 `.agents/skills`。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="how">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">
+                <span class="i18n-en">How it works</span>
+                <span class="i18n-zh">工作原理</span>
+              </p>
+              <h2 class="section-title">
+                <span class="i18n-en">One library. Per-project symlinks.</span>
+                <span class="i18n-zh">一个中央库。按项目软链接。</span>
+              </h2>
+            </div>
+            <p class="section-lead i18n-en">
+              Skillcaddy never copies skill files into projects. Enable creates a directory symlink; disable only removes that symlink. Sources stay safe.
+            </p>
+            <p class="section-lead i18n-zh">
+              Skillcaddy 从不把 skill 文件复制进项目。启用就是创建目录软链接；禁用只删链接，源文件始终安全。
+            </p>
+          </div>
+          <div class="flow">
+            <div class="flow-step">
+              <div class="flow-index">01</div>
+              <h3 class="i18n-en">Collect sources</h3>
+              <h3 class="i18n-zh">汇总来源</h3>
+              <p class="i18n-en">Aggregate official, github, personal, archived, and repo-bundled skills under one AISkills root.</p>
+              <p class="i18n-zh">把 official / github / personal / archived 与仓库内 skills 汇总到同一个 AISkills 根目录。</p>
+              <div class="flow-code">
+                <span class="dim">~/AISkills/</span><br>
+                official/  github/<br>
+                personal/  archived/
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-index">02</div>
+              <h3 class="i18n-en">Enable by symlink</h3>
+              <h3 class="i18n-zh">软链接启用</h3>
+              <p class="i18n-en">Point `<project>/.agents/skills/<alias>` at the library skill. Zero project pollution.</p>
+              <p class="i18n-zh">把 `<project>/.agents/skills/<alias>` 指到库中 skill。零项目污染。</p>
+              <div class="flow-code">
+                .agents/skills/tdd<br>
+                <span class="dim">→ ~/AISkills/github/.../tdd</span>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-index">03</div>
+              <h3 class="i18n-en">Sync Claude Code</h3>
+              <h3 class="i18n-zh">同步 Claude Code</h3>
+              <p class="i18n-en">Optionally mirror into `.claude/skills/` with independent enable/disable.</p>
+              <p class="i18n-zh">可选镜像到 `.claude/skills/`，并与 agents 侧独立开关。</p>
+              <div class="flow-code">
+                .claude/skills/tdd<br>
+                <span class="dim">→ .agents/skills/tdd</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">
+                <span class="i18n-en">Features</span>
+                <span class="i18n-zh">能力</span>
+              </p>
+              <h2 class="section-title">
+                <span class="i18n-en">Built for multi-agent workflows.</span>
+                <span class="i18n-zh">为多 Agent 工作流而建。</span>
+              </h2>
+            </div>
+            <div class="agents" aria-label="Supported agents">
+              <span class="agent-chip">Claude Code</span>
+              <span class="agent-chip">Codex</span>
+              <span class="agent-chip">OpenCode</span>
+              <span class="agent-chip">Pi</span>
+            </div>
+          </div>
+          <div class="feature-grid">
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>
+              </div>
+              <h3 class="i18n-en">One source of truth</h3>
+              <h3 class="i18n-zh">单一事实来源</h3>
+              <p class="i18n-en">All skills live in your library. Projects only hold symlinks.</p>
+              <p class="i18n-zh">所有 skill 住在库里；项目里只保留软链接。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <h3 class="i18n-en">Safe by default</h3>
+              <h3 class="i18n-zh">安全默认</h3>
+              <p class="i18n-en">Disable removes only the symlink. Archived skills need explicit naming.</p>
+              <p class="i18n-zh">禁用只删软链接；archived 必须显式点名才启用。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+              </div>
+              <h3 class="i18n-en">Web manager</h3>
+              <h3 class="i18n-zh">Web 管理器</h3>
+              <p class="i18n-en">Browse, bulk-enable, edit notes/tags, and review diagnostics in the browser.</p>
+              <p class="i18n-zh">在浏览器中浏览、批量启用、编辑备注/标签，并查看诊断建议。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+              </div>
+              <h3 class="i18n-en">Terminal UI</h3>
+              <h3 class="i18n-zh">终端 UI</h3>
+              <p class="i18n-en">Full keyboard-driven manager for headless or terminal-first workflows.</p>
+              <p class="i18n-zh">完整键盘驱动管理器，适合终端优先或无头环境。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+              </div>
+              <h3 class="i18n-en">Sidecar metadata</h3>
+              <h3 class="i18n-zh">Sidecar 元数据</h3>
+              <p class="i18n-en">Notes, tags, and autoEnable live outside upstream skill repos.</p>
+              <p class="i18n-zh">备注、标签与 autoEnable 存在源仓库之外，不污染上游。</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </div>
+              <h3 class="i18n-en">Diagnostics</h3>
+              <h3 class="i18n-zh">诊断建议</h3>
+              <p class="i18n-en">Detect broken links, unmanaged entries, shadows, and duplicate names.</p>
+              <p class="i18n-zh">检测断链、未管理条目、别名遮蔽与库内重名。</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="install">
+        <div class="wrap install-panel">
+          <div class="install-copy">
+            <p class="section-kicker">
+              <span class="i18n-en">Install</span>
+              <span class="i18n-zh">安装</span>
+            </p>
+            <h2 class="section-title">
+              <span class="i18n-en">Clone and run. No build step.</span>
+              <span class="i18n-zh">克隆即可运行。无需构建。</span>
+            </h2>
+            <p class="section-lead i18n-en">
+              Skillcaddy is pure Node.js with zero npm dependencies. Start the web manager, or use the terminal UI.
+            </p>
+            <p class="section-lead i18n-zh">
+              Skillcaddy 是纯 Node.js 实现，零 npm 依赖。可启动 Web 管理器，也可使用终端 UI。
+            </p>
+            <ul class="install-list">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="i18n-en">Web manager at <code>127.0.0.1:4173</code></span>
+                <span class="i18n-zh">Web 管理器默认 <code>127.0.0.1:4173</code></span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="i18n-en">TUI: <code>npm run tui -- /path/to/project</code></span>
+                <span class="i18n-zh">TUI：<code>npm run tui -- /path/to/project</code></span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                <span class="i18n-en">macOS / Linux native; Windows needs Developer Mode</span>
+                <span class="i18n-zh">macOS / Linux 原生支持；Windows 需开启开发者模式</span>
+              </li>
+            </ul>
+            <div class="install-actions">
+              <a class="btn btn-primary" href="https://github.com/chenweil/skillcaddy" target="_blank" rel="noreferrer">
+                <span class="i18n-en">Open repository</span>
+                <span class="i18n-zh">打开仓库</span>
+              </a>
+              <a class="btn btn-ghost" href="https://github.com/chenweil/skillcaddy#readme" target="_blank" rel="noreferrer">
+                <span class="i18n-en">Read the docs</span>
+                <span class="i18n-zh">阅读文档</span>
+              </a>
+            </div>
+          </div>
+          <div class="terminal" aria-label="Install commands">
+            <div class="terminal-bar">
+              <span></span><span></span><span></span>
+              <strong>terminal</strong>
+            </div>
+            <pre><span class="comment"># clone</span>
+<span class="cmd">git clone https://github.com/chenweil/skillcaddy.git</span>
+<span class="cmd">cd skillcaddy</span>
+
+<span class="comment"># web manager</span>
+<span class="cmd">npm start</span>
+
+<span class="comment"># terminal UI</span>
+<span class="cmd">npm run tui -- ~/code/my-project</span>
+
+<span class="comment"># optional: install manager skill globally</span>
+<span class="cmd">npm run install:manager</span></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="platforms">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">
+                <span class="i18n-en">Platforms</span>
+                <span class="i18n-zh">平台</span>
+              </p>
+              <h2 class="section-title">
+                <span class="i18n-en">Symlinks, done carefully.</span>
+                <span class="i18n-zh">认真对待软链接。</span>
+              </h2>
+            </div>
+            <p class="section-lead i18n-en">
+              Directory symlinks are native on macOS and Linux. On Windows, enable Developer Mode or run with elevated privileges.
+            </p>
+            <p class="section-lead i18n-zh">
+              macOS 与 Linux 原生支持目录软链接。Windows 需开启开发者模式，或以提升权限运行。
+            </p>
+          </div>
+          <table class="platform-table">
+            <thead>
+              <tr>
+                <th><span class="i18n-en">Platform</span><span class="i18n-zh">平台</span></th>
+                <th><span class="i18n-en">Status</span><span class="i18n-zh">状态</span></th>
+                <th><span class="i18n-en">Notes</span><span class="i18n-zh">说明</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>macOS</td>
+                <td><span class="badge i18n-en">Supported</span><span class="badge i18n-zh">支持</span></td>
+                <td><span class="i18n-en">Native directory symlinks</span><span class="i18n-zh">原生目录软链接</span></td>
+              </tr>
+              <tr>
+                <td>Linux</td>
+                <td><span class="badge i18n-en">Supported</span><span class="badge i18n-zh">支持</span></td>
+                <td><span class="i18n-en">Native directory symlinks</span><span class="i18n-zh">原生目录软链接</span></td>
+              </tr>
+              <tr>
+                <td>Windows</td>
+                <td><span class="badge warn i18n-en">Setup required</span><span class="badge warn i18n-zh">需额外配置</span></td>
+                <td><span class="i18n-en">Developer Mode or Admin for <code>fs.symlink</code></span><span class="i18n-zh">需开发者模式或管理员权限以使用 <code>fs.symlink</code></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div class="wrap">
+          <p class="section-kicker" style="color:#e0a48f">
+            <span class="i18n-en">Next step</span>
+            <span class="i18n-zh">下一步</span>
+          </p>
+          <h2 class="section-title">
+            <span class="i18n-en">Stop carrying every skill into every project.</span>
+            <span class="i18n-zh">别再把全部 skill 背进每个项目。</span>
+          </h2>
+          <p class="section-lead i18n-en">
+            Keep the library central. Enable only what the project needs. Update sources once, everywhere.
+          </p>
+          <p class="section-lead i18n-zh">
+            库集中管理，项目按需启用。源只更新一次，处处生效。
+          </p>
+          <div class="cta-actions">
+            <a class="btn btn-primary" href="https://github.com/chenweil/skillcaddy" target="_blank" rel="noreferrer">
+              <span class="i18n-en">Star on GitHub</span>
+              <span class="i18n-zh">在 GitHub 点 Star</span>
+            </a>
+            <a class="btn btn-ghost" href="#install" style="background:transparent;border-color:#3a3834;color:var(--on-dark)">
+              <span class="i18n-en">Install commands</span>
+              <span class="i18n-zh">安装命令</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap footer-inner">
+        <div>© 2026 Skillcaddy · MIT</div>
+        <div class="footer-links">
+          <a href="https://github.com/chenweil/skillcaddy" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://github.com/chenweil/skillcaddy/blob/main/README.md" target="_blank" rel="noreferrer">README</a>
+          <a href="https://github.com/chenweil/skillcaddy/blob/main/CHANGELOG.md" target="_blank" rel="noreferrer">Changelog</a>
+          <a href="https://github.com/chenweil/skillcaddy/blob/main/LICENSE" target="_blank" rel="noreferrer">License</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        const body = document.body;
+        const heroImage = document.getElementById("heroImage");
+        const buttons = document.querySelectorAll("[data-set-lang]");
+        const images = {
+          en: "assets/skillcaddy_EN.png",
+          zh: "assets/skillcaddy_CN.png"
+        };
+        const titles = {
+          en: "Skillcaddy — Local AI Skills Library",
+          zh: "Skillcaddy — 本地 AI Skills 中央库"
+        };
+
+        function setLang(lang) {
+          const next = lang === "zh" ? "zh" : "en";
+          body.setAttribute("data-lang", next);
+          document.documentElement.lang = next === "zh" ? "zh-CN" : "en";
+          document.title = titles[next];
+          if (heroImage) {
+            heroImage.src = images[next];
+            heroImage.alt = next === "zh"
+              ? "Skillcaddy：按需加载 skills，而不是处处背着全部技能"
+              : "Skillcaddy: load skills on demand instead of carrying every skill everywhere";
+          }
+          buttons.forEach((button) => {
+            button.setAttribute("aria-pressed", button.getAttribute("data-set-lang") === next ? "true" : "false");
+          });
+          try {
+            localStorage.setItem("skillcaddy.site.lang", next);
+          } catch (_) {}
+        }
+
+        buttons.forEach((button) => {
+          button.addEventListener("click", () => setLang(button.getAttribute("data-set-lang")));
+        });
+
+        let initial = "en";
+        try {
+          const saved = localStorage.getItem("skillcaddy.site.lang");
+          if (saved === "zh" || saved === "en") initial = saved;
+          else if (navigator.language && navigator.language.toLowerCase().startsWith("zh")) initial = "zh";
+        } catch (_) {
+          if (navigator.language && navigator.language.toLowerCase().startsWith("zh")) initial = "zh";
+        }
+        setLang(initial);
+      })();
+    </script>
+  </body>
+</html>
