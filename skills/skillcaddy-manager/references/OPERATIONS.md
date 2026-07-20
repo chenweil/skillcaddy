@@ -32,6 +32,9 @@ When multiple results remain, show their full IDs, paths, and descriptions for u
 | `global-alias-conflict` | Candidate alias exists globally | Surface before enabling |
 | `library-duplicate-name` | Multiple source skills share a name | Use full ID and confirmed alias |
 | `legacy-metadata-deprecated` | Metadata still uses legacy storage | Route to `METADATA.md` migration |
+| `collection-setup-required` | Enabled skills depend on incomplete required setup | Offer the declared setup skill; do not report the collection ready |
+| `collection-setup-recommended` | Enabled skills would benefit from optional setup | Surface without blocking activation |
+| `collection-setup-invalid` | The tracked setup contract is invalid | Report the contract path and error; never guess or execute commands |
 
 If the API is unavailable, inspect `<project>/.agents/skills`, `<project>/.claude/skills`, `~/.agents/skills`, and `~/.claude/skills`, then compare aliases and link targets.
 
@@ -62,9 +65,32 @@ Complete when the rescan reports the expected alias and target, with remaining a
 
 ### Source or collection
 
-Expand the collection, exclude archived skills, and skip `autoEnable: false` unless explicitly included. Preflight the full set, then enable items independently.
+Expand the collection and request the shared enable plan. Exclude archived skills and skip `autoEnable: false`, except for a setup skill added by the plan because affected skills require it. Before mutation, show every pending setup with its status, missing artifacts, and setup skill.
+
+For interactive setup, offer:
+
+1. enable and continue into setup guidance;
+2. enable only and keep the collection marked as pending;
+3. cancel.
+
+Activation remains reversible and may proceed without setup, but never report the collection as ready until `state.setups` reports `ready`.
 
 Complete when every candidate is classified as enabled, unchanged, skipped, or failed.
+
+## Collection Setup Lifecycle
+
+`GET /api/state` returns `setups`. The tracked contract under `collection-metadata/` is the policy source; project artifacts are the readiness source. Status meanings:
+
+| Status | Handling |
+|---|---|
+| `missing` | No required artifacts exist; offer the setup skill |
+| `partial` | Some artifacts exist; inspect and resume instead of blindly overwriting |
+| `ready` | Required artifacts exist; no setup warning |
+| `invalid` | Contract validation failed; report it and do not infer a fallback |
+
+When the user confirms setup in an Agent conversation, invoke the declared `setupSkillId` and follow that skill's own exploration and confirmation process. After it finishes, rescan state and require `ready`. Web or TUI surfaces without an Agent execution channel may only show the setup instruction; they must not claim to have run it.
+
+Setup contracts are declarative and may reference only a setup skill, affected skill IDs, and project-relative artifacts. Never execute shell commands supplied by collection metadata.
 
 ## Disable
 

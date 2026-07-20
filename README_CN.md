@@ -56,6 +56,7 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **同步 Claude Code** — 一键同步 `.claude/skills/` 与 `.agents/skills/`
 - **编辑 metadata** — 内联编辑备注、tags、一键加入开关
 - **查看诊断建议** — 检测重复名、断链、来源漂移等问题
+- **跟踪库初始化** — 区分“已启用软链接”和“项目配置已就绪”，并引导交互式 setup
 - **处理重复名** — 使用建议名称或自定义名称启用指定来源的 skill，不重命名原件
 - **刷新项目** — 重载状态、切换项目路径
 - **更新 GitHub 源** — 批量 fast-forward pull `github/` 仓库
@@ -104,6 +105,12 @@ npm run migrate:metadata -- --yes
 ```
 
 执行迁移会写入等价的 sidecar metadata，并保留 legacy 文件用于回滚；sidecar 存在后，Skillcaddy 不再使用 legacy 副本。
+
+## 库初始化生命周期
+
+部分 collection 在启用 skills 后，还需要针对每个项目执行一次 setup。Skillcaddy 把契约保存在第三方 clone 之外的 `collection-metadata/<source>/<collection>.json`，并通过 `/api/state` 把状态报告为 `missing`、`partial`、`ready` 或 `invalid`。
+
+库级一键启用通过 `POST /api/enable-plan` 在需要时把 setup skill 纳入启用计划；Web/TUI 随后展示初始化状态和明确的 Agent 操作指引。软链接仍可先启用，但配置不完整的库只显示为“待配置”，不会被宣称为“已就绪”。交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
 
 ## 平台兼容性
 
@@ -317,7 +324,7 @@ node skills/skillcaddy-manager/scripts/view-recommendations.cjs scenario new-pro
 **开发流程黄金组合:**
 
 1. **mattpocock/skills** (工作流套件)
-   - Setup: `setup-matt-pocock-skills` 一键配置
+   - Setup: 由 `setup-matt-pocock-skills` 引导项目配置并跟踪就绪状态
    - 包含: TDD、领域建模、调试、实现、质询
 
 2. **lencx/skills** (项目把控)

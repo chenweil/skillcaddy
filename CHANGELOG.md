@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | --- | --- | --- | --- | --- |
 | `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
 
+## [0.14.2] - 2026-07-20
+
+### Added
+- 新增 tracked collection setup contract：`collection-metadata/<source>/<collection>.json`，声明交互式 setup skill、适用 skills 和项目内就绪产物，不写入第三方 GitHub clone。
+- `/api/state` 新增 `setups`，区分 `missing`、`partial`、`ready`、`invalid`；新增 `collection-setup-required/recommended/invalid` advice。
+- 新增 `POST /api/enable-plan`，为 Web 和 TUI 提供统一库级预检，并在必要时自动把 setup skill 纳入启用计划。
+- 为 `github/mattpocock` 登记首个 setup contract，检测 issue tracker 与 domain docs 配置。
+
+### Changed
+- Web/TUI 库级启用现在会在变更前提示 setup 状态，启用后持续显示“待配置/配置不完整/已就绪”以及明确的 Agent 配置指引。
+- `skillcaddy-manager` 将“已启用”和“已就绪”分开处理；交互式 setup 必须获得用户确认，不会静默执行。
+
 ## [0.14.1] - 2026-07-17
 
 ### Changed

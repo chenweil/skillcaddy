@@ -31,6 +31,16 @@
       "reason": "Leaf module — shared source boundary policy"
     },
     {
+      "from": "lib/collectionSetup.js",
+      "allow": [],
+      "reason": "Collection setup policy — leaf module owning tracked contracts and read-only project readiness checks"
+    },
+    {
+      "from": "lib/enablePlan.js",
+      "allow": [],
+      "reason": "Enable preflight — pure projection shared by API and TUI"
+    },
+    {
       "from": "lib/skillMetadata.js",
       "allow": ["lib/projectPath.js", "lib/sourcePolicy.js"],
       "reason": "Metadata store — can validate inputs and source boundaries through leaf modules"
@@ -42,7 +52,7 @@
     },
     {
       "from": "lib/skillStore.js",
-      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/skillMetadata.js", "lib/sourcePolicy.js"],
+      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/collectionSetup.js", "lib/skillMetadata.js", "lib/sourcePolicy.js"],
       "reason": "Store layer — currently imports claudeStore for getState aggregation; dept probe: decouple via aggregator layer"
     },
     {

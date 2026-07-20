@@ -11,6 +11,7 @@ const state = {
   skills: [],
   enabled: [],
   global: [],
+  setups: [],
   advice: [],
   claude: null,
   collapsedGroups: new Set(),
@@ -186,6 +187,15 @@ function renderAdvice() {
     item.querySelector('strong').textContent = advice.title;
     item.querySelector('p').textContent = advice.detail;
     item.querySelector('span').textContent = advice.type;
+    const setupAction = (advice.actions || []).find((action) => action.type === 'run-setup-skill');
+    if (setupAction) {
+      const button = document.createElement('button');
+      button.className = 'secondary advice-action';
+      button.type = 'button';
+      button.textContent = '查看配置指引';
+      button.addEventListener('click', () => setMessage(setupAction.instruction));
+      item.querySelector('div').append(button);
+    }
     elements.adviceList.append(item);
   });
 }
@@ -229,11 +239,13 @@ function renderSkills() {
 
     groupElement.querySelector('h3 .title').textContent = group.collection;
     groupElement.querySelector('p').textContent = group.collectionPath;
-    groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}`;
+    const setup = findCollectionSetup(group.source, group.collection);
+    groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}${setup ? ` · ${setupStatusLabel(setup)}` : ''}`;
     groupElement.querySelector('.group-toggle').addEventListener('click', () => toggleGroup(group.key));
     const enableAllButton = groupElement.querySelector('.group-enable-all');
     const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
-    enableAllButton.disabled = pendingSkills.length === 0;
+    const pendingSetupSkill = setup?.status !== 'ready' && setup?.status !== 'invalid' && !setup?.setupSkillEnabled;
+    enableAllButton.disabled = pendingSkills.length === 0 && !pendingSetupSkill;
     enableAllButton.addEventListener('click', () => enableGroup(group));
     const disableAllButton = groupElement.querySelector('.group-disable-all');
     const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
@@ -412,6 +424,7 @@ function toggleGroup(key) {
 }
 
 async function enable(skill) {
+  if (!confirmSetupPreflight([skill.id])) return;
   const result = await api('/api/enable', {
     method: 'POST',
     body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
@@ -421,14 +434,20 @@ async function enable(skill) {
 }
 
 async function enableGroup(group) {
-  const enabledTargets = new Set(state.enabled.map((item) => item.targetPath).filter(Boolean));
-  const skipped = group.skills.filter((skill) => skill.autoEnable === false && !enabledTargets.has(skill.path));
-  const skills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
+  const plan = await api('/api/enable-plan', {
+    method: 'POST',
+    body: { projectPath: elements.projectPath.value, skillIds: group.skills.map((skill) => skill.id) }
+  });
+  const skills = plan.targetSkillIds.map((skillId) => state.skills.find((skill) => skill.id === skillId)).filter(Boolean);
+  const skipped = plan.skippedSkillIds;
+  const pendingSetups = plan.setups;
 
   if (skills.length === 0) {
     setMessage(skipped.length ? `${group.collection} 没有需要启用的 skill，已跳过 ${skipped.length} 个不参与一键加入` : `${group.collection} 没有需要启用的 skill`);
     return;
   }
+
+  if (pendingSetups.length > 0 && !confirmSetupPreflight(skills.map((skill) => skill.id))) return;
 
   let enabled = 0;
   let unchanged = 0;
@@ -451,8 +470,35 @@ async function enableGroup(group) {
   if (unchanged) parts.push(`已存在 ${unchanged}`);
   if (skipped.length) parts.push(`跳过 ${skipped.length}`);
   if (failed) parts.push(`失败 ${failed}`);
-  setMessage(parts.join('，'), failed > 0);
   await loadState({ button: null });
+  if (pendingSetups.length > 0) parts.push(`待配置：${pendingSetups.map((setup) => setup.setupSkillName).join('、')}`);
+  setMessage(parts.join('，'), failed > 0);
+}
+
+function findCollectionSetup(source, collection) {
+  return (state.setups || []).find((setup) => setup.id === `${source}/${collection}`);
+}
+
+function findSetupsForSkillIds(skillIds) {
+  const candidates = new Set(skillIds);
+  return (state.setups || []).filter((setup) =>
+    setup.status !== 'invalid' && setup.applicableSkillIds.some((skillId) => candidates.has(skillId))
+  );
+}
+
+function confirmSetupPreflight(skillIds) {
+  const setups = findSetupsForSkillIds(skillIds).filter((setup) => setup.status !== 'ready');
+  if (setups.length === 0) return true;
+  const detail = setups.map((setup) => {
+    const status = setup.status === 'partial' ? '配置不完整' : '尚未配置';
+    return `${setup.id}：${status}\n初始化 skill：${setup.setupSkillName}\n缺少：${setup.missingArtifacts.join('、')}`;
+  }).join('\n\n');
+  return window.confirm(`${detail}\n\n可以先启用，但完成配置前不能视为已就绪。启用后请在 Agent 中运行初始化 skill。`);
+}
+
+function setupStatusLabel(setup) {
+  if (setup.status === 'missing') return setup.affectedEnabledSkillIds.length > 0 ? '待配置' : '需初始化';
+  return { partial: '配置不完整', ready: '已就绪', invalid: '配置无效' }[setup.status] || setup.status;
 }
 
 function canBulkEnableSkill(skill, enabledTargets) {

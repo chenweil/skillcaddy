@@ -32,12 +32,15 @@ Treat Skillcaddy as a central skill library with project-level symlink activatio
 | Project | `<project>/.agents/skills/` | Codex-compatible activation symlinks |
 | Project Claude | `<project>/.claude/skills/` | Claude compatibility symlinks |
 | Global | `~/.agents/skills/`, `~/.claude/skills/` | User-level skills that may conflict or shadow |
+| Collection setup | `collection-metadata/<source>/<collection>.json` | Tracked, read-only setup contract and readiness checks |
 
 Preserve these invariants:
 
 - Enable and disable operations create or remove project symlinks; source skill directories remain intact.
 - `archived/` skills require an explicit user request.
 - GitHub-backed source directories remain free of Skillcaddy metadata; write catalog metadata to the sidecar store.
+- Collection activation and project readiness are separate: setup may be missing after links are enabled.
+- Interactive setup is never executed silently; obtain confirmation and let the declared setup skill own project edits.
 - Repository behavior in `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` is authoritative when documentation and implementation differ.
 - The fixed default Web manager URL is `http://127.0.0.1:4173`.
 
@@ -59,6 +62,7 @@ Require confirmation before proceeding when:
 - the request reaches into `archived/` without naming the archived target;
 - the request would delete a source skill rather than a project link;
 - an advice item exposes a destructive or ownership ambiguity.
+- an affected collection reports missing or partial interactive setup.
 
 Surface informational duplicate-name and global-shadowing advice, but do not block solely on it. Use the full skill ID and a confirmed alias to resolve duplicates.
 

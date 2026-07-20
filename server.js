@@ -10,6 +10,7 @@ import {
 import { syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
 import { readVersion } from './lib/version.js';
 import { enableProjectSkill } from './lib/projectActions.js';
+import { buildCollectionEnablePlan } from './lib/enablePlan.js';
 import { updateSkillMetadata } from './lib/skillMetadata.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,6 +62,13 @@ async function handleApi(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/api/enable') {
     const body = await readJson(req);
     sendJson(res, 200, await enableProjectSkill(rootDir, body));
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/enable-plan') {
+    const body = await readJson(req);
+    const state = await getState(rootDir, body.projectPath || rootDir);
+    sendJson(res, 200, buildCollectionEnablePlan(state, Array.isArray(body.skillIds) ? body.skillIds : []));
     return;
   }
 

@@ -16,6 +16,7 @@ import {
   summarizeState,
   syncClaude
 } from '../lib/tuiActions.js';
+import { buildCollectionEnablePlan } from '../lib/enablePlan.js';
 import {
   formatCompactSkillChoice,
   formatSkillTableDivider,
@@ -204,6 +205,7 @@ async function libraryFlow(library) {
     console.log(`\n库详情: ${library.source}/${library.collection}`);
     console.log(`路径: ${library.collectionPath}`);
     console.log(`Skills: ${currentLibrary.total}  可一键添加: ${currentLibrary.bulkable}  已启用: ${currentLibrary.enabled}  跳过一键: ${currentLibrary.skipped}`);
+    printCollectionSetupStatus(library.source, library.collection);
     const skillPage = getSkillPage(skills, page);
     page = skillPage.currentPage;
     printCompactSkillChoices(skillPage);
@@ -236,8 +238,11 @@ async function libraryFlow(library) {
 }
 
 async function enableLibraryFlow(library, choices) {
-  const targets = choices.filter((choice) => choice.skill.autoEnable !== false && !choice.enabled);
-  const skipped = choices.filter((choice) => choice.skill.autoEnable === false && !choice.enabled);
+  const plan = buildCollectionEnablePlan(state, choices.map((choice) => choice.skill.id));
+  const targetIds = new Set(plan.targetSkillIds);
+  const targets = choices.filter((choice) => targetIds.has(choice.skill.id));
+  const skipped = choices.filter((choice) => plan.skippedSkillIds.includes(choice.skill.id));
+  const pendingSetups = plan.setups;
   if (targets.length === 0) {
     console.log(skipped.length ? `没有需要启用的 skill，已跳过 ${skipped.length} 个不参与一键加入` : '没有需要启用的 skill');
     return;
@@ -245,8 +250,21 @@ async function enableLibraryFlow(library, choices) {
 
   console.log(`将启用 ${targets.length} 个 skill；跳过 ${skipped.length} 个不参与一键加入。`);
   targets.forEach((choice) => console.log(`- ${choice.skill.name}`));
-  const confirm = await ask(`确认一键添加 ${library.source}/${library.collection}? y/N`);
-  if (!['y', 'yes'].includes(confirm.toLowerCase())) return;
+  let showSetupGuidance = false;
+  if (pendingSetups.length > 0) {
+    printSetupPreflight(pendingSetups);
+    console.log('1. 启用并显示配置指引\n2. 仅启用，稍后配置\nb. 取消');
+    const setupChoice = await ask('选择');
+    if (isBack(setupChoice)) return;
+    if (!['1', '2'].includes(setupChoice)) {
+      console.log('请输入 1、2 或 b');
+      return;
+    }
+    showSetupGuidance = setupChoice === '1';
+  } else {
+    const confirm = await ask(`确认一键添加 ${library.source}/${library.collection}? y/N`);
+    if (!['y', 'yes'].includes(confirm.toLowerCase())) return;
+  }
 
   let enabled = 0;
   let unchanged = 0;
@@ -263,6 +281,28 @@ async function enableLibraryFlow(library, choices) {
   }
 
   console.log(`已处理 ${library.collection}: 启用 ${enabled}，已存在 ${unchanged}，跳过 ${skipped.length}，失败 ${failed}`);
+  if (pendingSetups.length > 0) {
+    showSetupGuidance ? printSetupGuidance(pendingSetups) : console.log(`库已启用但仍待配置；稍后请运行 ${pendingSetups.map((setup) => setup.setupSkillName).join('、')}。`);
+  }
+}
+
+function printCollectionSetupStatus(source, collection) {
+  const setup = (state.setups || []).find((item) => item.id === `${source}/${collection}`);
+  if (!setup) return;
+  const labels = { missing: setup.affectedEnabledSkillIds.length > 0 ? '待配置' : '启用后需配置', partial: '配置不完整', ready: '已就绪', invalid: '配置定义无效' };
+  console.log(`初始化: ${labels[setup.status] || setup.status}${setup.setupSkillName ? `（${setup.setupSkillName}）` : ''}`);
+}
+
+function printSetupPreflight(setups) {
+  setups.forEach((setup) => {
+    const status = setup.status === 'partial' ? '配置不完整' : '尚未配置';
+    console.log(`初始化提醒: ${setup.id} ${status}，缺少 ${setup.missingArtifacts.join('、')}`);
+    console.log(`初始化 skill: ${setup.setupSkillName}`);
+  });
+}
+
+function printSetupGuidance(setups) {
+  setups.forEach((setup) => console.log(`下一步: ${setup.instruction}`));
 }
 
 async function enableSkillFlow() {
@@ -514,6 +554,10 @@ function printLibraryChoices(libraries) {
     const parts = [`${library.total} 个 skill`];
     if (library.enabled) parts.push(`已启用 ${library.enabled}`);
     if (library.skipped) parts.push(`一键跳过 ${library.skipped}`);
+    const setup = (state.setups || []).find((item) => item.id === `${library.source}/${library.collection}`);
+    if (setup?.status === 'missing') parts.push(setup.affectedEnabledSkillIds.length > 0 ? '待配置' : '需初始化');
+    else if (setup?.status === 'partial') parts.push('配置不完整');
+    else if (setup?.status === 'ready') parts.push('已就绪');
     console.log(`${library.index}. ${library.source}/${library.collection} (${parts.join('，')})`);
   });
 }

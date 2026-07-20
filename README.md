@@ -56,6 +56,7 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **Sync Claude Code** — One-click sync `.claude/skills/` with `.agents/skills/`
 - **Edit metadata** — Inline note, tags, auto-enable toggle per skill
 - **View diagnostics** — Advice on duplicates, broken links, source drift
+- **Track collection setup** — Distinguish enabled links from project-ready configuration and guide interactive setup
 - **Resolve duplicate names** — Enable a selected source skill under a suggested or custom project alias without renaming the source
 - **Refresh project** — Reload state, switch project path
 - **Update GitHub sources** — Batch fast-forward pull `github/` repos
@@ -104,6 +105,12 @@ npm run migrate:metadata -- --yes
 ```
 
 The apply command writes equivalent sidecar metadata and retains the legacy file for rollback. Once the sidecar exists, Skillcaddy no longer uses the legacy copy.
+
+## Collection setup lifecycle
+
+Some collections require a one-time, per-project setup after their skills are enabled. Skillcaddy keeps these contracts outside third-party clones under `collection-metadata/<source>/<collection>.json`. `/api/state` reports each configured collection as `missing`, `partial`, `ready`, or `invalid`.
+
+Library-level enablement uses `POST /api/enable-plan` to include the declared setup skill when needed, then Web/TUI shows the setup status and next Agent instruction. Enabling links remains allowed, but an incomplete collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
 
 ## Platform compatibility
 
@@ -317,7 +324,7 @@ When the library is empty, the default recommendation is:
 **Development workflow golden combo:**
 
 1. **mattpocock/skills** (workflow suite)
-   - Setup: `setup-matt-pocock-skills` one-click configuration
+   - Setup: guided `setup-matt-pocock-skills` project configuration with readiness tracking
    - Includes: TDD, domain modeling, debugging, implementation, grilling
 
 2. **lencx/skills** (project control)

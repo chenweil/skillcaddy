@@ -276,6 +276,12 @@ h3 {
   font: 11px/1.4 var(--mono);
 }
 
+.advice-action {
+  margin-top: 8px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
 .controls {
   display: grid;
   grid-template-columns: 1fr auto auto;

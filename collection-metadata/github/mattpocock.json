@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "setup": {
+    "requirement": "required",
+    "scope": "project",
+    "mode": "interactive",
+    "skillId": "github/mattpocock/skills/engineering/setup-matt-pocock-skills",
+    "appliesTo": [
+      "github/mattpocock/skills/engineering/*"
+    ],
+    "requiredArtifacts": [
+      "docs/agents/issue-tracker.md",
+      "docs/agents/domain.md"
+    ]
+  }
+}
