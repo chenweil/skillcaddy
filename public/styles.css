@@ -622,7 +622,7 @@ button.danger:disabled,
   height: 36px;
   background: var(--primary);
   color: var(--on-primary);
-  font-size: 18px;
+  font-size: 13px;
 }
 
 .group-enable-all:active,
