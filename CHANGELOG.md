@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | --- | --- | --- | --- | --- |
 | `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
 
+## [0.14.3] - 2026-07-22
+
+### Fixed
+- Web UI 库级启用按钮现在显示启用数量（如 "2/5"），全部启用时显示绿色背景，更清晰地表达库级启用状态。
+- 单个 skill 启用按钮：已启用状态显示绿色边框 + 绿色文字 + 灰色背景，避免与未启用混淆。
+- 库级启用按钮字体缩小至 13px，确保两位数能正常显示在按钮背景内。
+
+### Changed
+- `skillcaddy-manager` SKILL.md 的 `description` 精简为更短且聚焦的触发词清单（discovery、enable/disable、audits、maintenance、bootstrap、Web/TUI access），降低触发歧义。
+
 ## [0.14.2] - 2026-07-20
 
 ### Added

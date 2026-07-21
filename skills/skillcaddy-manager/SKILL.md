@@ -1,6 +1,6 @@
 ---
 name: skillcaddy-manager
-description: Manage Skillcaddy libraries and project skill links. Use for discovery or recommendations, enable/disable actions, project audits and overlap checks, metadata maintenance, GitHub source updates, manager bootstrap, or Web/TUI access.
+description: Manage Skillcaddy libraries and project skill links. Use for discovery, enable/disable, audits, maintenance, bootstrap, or Web/TUI access.
 ---
 
 # Skillcaddy Manager
