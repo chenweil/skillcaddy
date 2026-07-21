@@ -220,12 +220,15 @@ h3 {
 .surface-grid strong {
   display: block;
   margin-top: 8px;
+  overflow: hidden;
   color: var(--on-dark);
   font-family: var(--display);
   font-size: 34px;
   font-weight: 500;
   letter-spacing: -0.02em;
   line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .surface-path {
@@ -617,12 +620,14 @@ button.danger:disabled,
 }
 
 .group-enable-all {
-  width: 36px;
-  min-width: 36px;
+  min-width: 44px;
   height: 36px;
   background: var(--primary);
   color: var(--on-primary);
-  font-size: 13px;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 .group-enable-all:active,
