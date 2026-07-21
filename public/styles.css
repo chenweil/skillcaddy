@@ -424,6 +424,12 @@ button:disabled {
   color: var(--muted);
 }
 
+button.is-enabled {
+  background: var(--surface-soft);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
 button.secondary {
   border-color: var(--hairline);
   background: var(--canvas);
@@ -627,6 +633,11 @@ button.danger:disabled,
 .group-enable-all:disabled {
   background: var(--primary-disabled);
   color: var(--muted);
+}
+
+.group-enable-all.is-complete {
+  background: var(--success);
+  color: var(--on-primary);
 }
 
 .group-disable-all {

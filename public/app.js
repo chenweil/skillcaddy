@@ -244,11 +244,14 @@ function renderSkills() {
     groupElement.querySelector('.group-toggle').addEventListener('click', () => toggleGroup(group.key));
     const enableAllButton = groupElement.querySelector('.group-enable-all');
     const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
+    const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
     const pendingSetupSkill = setup?.status !== 'ready' && setup?.status !== 'invalid' && !setup?.setupSkillEnabled;
     enableAllButton.disabled = pendingSkills.length === 0 && !pendingSetupSkill;
+    enableAllButton.textContent = enabledSkills.length > 0 ? `${enabledSkills.length}/${group.skills.length}` : '+';
+    enableAllButton.title = enabledSkills.length > 0 ? `已启用 ${enabledSkills.length}/${group.skills.length}` : '启用该库全部 skill';
+    if (enabledSkills.length === group.skills.length) enableAllButton.classList.add('is-complete');
     enableAllButton.addEventListener('click', () => enableGroup(group));
     const disableAllButton = groupElement.querySelector('.group-disable-all');
-    const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
     disableAllButton.disabled = enabledSkills.length === 0;
     disableAllButton.addEventListener('click', () => disableGroup(group));
 
@@ -305,6 +308,7 @@ function renderSkill(skill, enabledTargets) {
     const button = document.createElement('button');
     button.textContent = isEnabled ? '已启用' : '启用 agents skill';
     button.disabled = isEnabled || skill.source === 'archived';
+    if (isEnabled) button.classList.add('is-enabled');
     button.addEventListener('click', () => enable(skill));
     actions.append(button);
 
