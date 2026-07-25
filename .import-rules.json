@@ -72,12 +72,12 @@
     },
     {
       "from": "lib/sourceGitStaging.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
       "reason": "Git source staging — clones complete repositories and returns validated source facts"
     },
     {
       "from": "lib/sourceGitAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitStaging.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitStaging.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "reason": "Git source add orchestration — owns plans, collisions, staging, and atomic publication"
     },
     {

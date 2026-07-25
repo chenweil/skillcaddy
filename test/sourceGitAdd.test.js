@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  rm,
   writeFile
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -16,6 +17,10 @@ import {
   planAddSource
 } from '../lib/sourceManager.js';
 import { scanSkills } from '../lib/skillStore.js';
+import {
+  SOURCE_INSTALLING_MARKER,
+  SOURCE_INSTALLING_MARKER_CONTENT
+} from '../lib/sourcePolicy.js';
 import { runSourceCli } from '../scripts/source.js';
 import { makeTempDir } from './testHelpers.js';
 
@@ -192,6 +197,25 @@ test('declining a Git add plan leaves the library unchanged', async () => {
 
   assert.match(output.stdout(), /Outcome: cancelled/);
   assert.deepEqual(await readdir(root), []);
+});
+
+test('state scanning hides a Git source until publication is complete', async () => {
+  const root = await makeTempDir('source-git-publication-root-');
+  const source = path.join(root, 'github', 'publishing');
+  await mkdir(path.join(source, 'skills', 'review'), { recursive: true });
+  await writeFile(
+    path.join(source, 'skills', 'review', 'SKILL.md'),
+    '---\ndescription: Review code\n---\n'
+  );
+  const marker = path.join(source, SOURCE_INSTALLING_MARKER);
+  await writeFile(marker, SOURCE_INSTALLING_MARKER_CONTENT);
+
+  assert.deepEqual(await scanSkills(root), []);
+  await rm(marker);
+  assert.deepEqual(
+    (await scanSkills(root)).map((skill) => skill.id),
+    ['github/publishing/skills/review']
+  );
 });
 
 test('refuses changed Git content under an existing source identity', async () => {
