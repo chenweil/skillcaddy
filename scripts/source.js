@@ -62,7 +62,7 @@ function formatOrigin(origin) {
     const commit = origin.commit ? ` @ ${origin.commit}` : '';
     return `git ${origin.remote}${ref}${commit}`;
   }
-  if (origin.kind === 'https') return `https ${origin.display}`;
+  if (origin.kind === 'http' || origin.kind === 'https') return `${origin.kind} ${origin.display}`;
   if (origin.kind === 'local') return `local ${origin.name}`;
   return 'unknown';
 }

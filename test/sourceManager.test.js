@@ -42,6 +42,7 @@ test('lists registered and unmanaged source entries without changing skill disco
 
 test('inspects sanitized registered source provenance and source-owned facts', async () => {
   const root = await makeTempDir('source-inspect-');
+  const project = await makeTempDir('source-inspect-project-');
   const record = gitSourceRecord({
     origin: {
       kind: 'git',
@@ -57,8 +58,11 @@ test('inspects sanitized registered source provenance and source-owned facts', a
 
   await writeSkill(path.join(root, record.installPath), 'review');
   await writeSourceRecord(root, record);
+  await writeSkill(path.join(project, '.agents', 'skills', 'linked-review'), 'nested');
+  const rootFilesBefore = await snapshotFiles(root);
+  const projectFilesBefore = await snapshotFiles(project);
 
-  const result = await inspectSource({ rootDir: root }, record.sourceId);
+  const result = await inspectSource({ rootDir: root, projectPath: project }, record.sourceId);
 
   assert.deepEqual(result, {
     schemaVersion: 1,
@@ -80,6 +84,72 @@ test('inspects sanitized registered source provenance and source-owned facts', a
   });
   assert.equal(JSON.stringify(result).includes('secret'), false);
   assert.equal(JSON.stringify(result).includes('hidden'), false);
+  assert.deepEqual(await snapshotFiles(root), rootFilesBefore);
+  assert.deepEqual(await snapshotFiles(project), projectFilesBefore);
+});
+
+test('sanitizes SCP-style Git provenance and rejects unsafe refs', async () => {
+  const root = await makeTempDir('source-git-origin-');
+  await writeSourceRecord(root, gitSourceRecord({
+    origin: {
+      kind: 'git',
+      remote: 'token@example.com:org/review-skills.git?token=hidden#fragment',
+      ref: 'main'
+    }
+  }));
+
+  const result = await inspectSource({ rootDir: root }, 'github/example/review-skills');
+  assert.equal(result.origin.remote, 'example.com:org/review-skills.git');
+
+  const unsafeRoot = await makeTempDir('source-git-ref-');
+  await writeSourceRecord(unsafeRoot, gitSourceRecord({
+    origin: {
+      kind: 'git',
+      remote: 'git@example.com:org/review-skills.git',
+      ref: 'main?token=hidden'
+    }
+  }));
+  await assert.rejects(
+    () => inspectSource({ rootDir: unsafeRoot }, 'github/example/review-skills'),
+    /Invalid origin.ref/
+  );
+
+  const invalidRemoteRoot = await makeTempDir('source-git-remote-');
+  await writeSourceRecord(invalidRemoteRoot, gitSourceRecord({
+    origin: {
+      kind: 'git',
+      remote: '/tmp/local-repository',
+      ref: 'main'
+    }
+  }));
+  await assert.rejects(
+    () => inspectSource({ rootDir: invalidRemoteRoot }, 'github/example/review-skills'),
+    /Invalid Git source origin/
+  );
+});
+
+test('accepts sanitized HTTP Archive provenance', async () => {
+  const root = await makeTempDir('source-http-archive-');
+  const record = {
+    schemaVersion: 1,
+    sourceId: 'official/example-skills',
+    bucket: 'official',
+    type: 'archive',
+    installPath: 'official/example-skills',
+    origin: {
+      kind: 'http',
+      display: 'http://downloads.example.com/example.zip?signature=hidden#fragment'
+    },
+    integrity: {
+      algorithm: 'sha256',
+      value: 'c'.repeat(64)
+    },
+    skills: ['review']
+  };
+  await writeSourceRecord(root, record);
+
+  const result = await inspectSource({ rootDir: root }, record.sourceId);
+  assert.equal(result.origin.display, 'http://downloads.example.com/example.zip');
 });
 
 test('rejects unsupported registry schemas, invalid identities, and escaping install paths', async (t) => {
@@ -130,6 +200,27 @@ test('rejects an existing install path that resolves outside the central-library
 
   await assert.rejects(
     () => inspectSource({ rootDir: root }, 'personal/escaped-source'),
+    /installPath resolves outside the central-library root/
+  );
+});
+
+test('rejects a missing install path below a symlinked ancestor outside the root', async () => {
+  const root = await makeTempDir('source-ancestor-root-');
+  const outside = await makeTempDir('source-ancestor-outside-');
+
+  await symlink(outside, path.join(root, 'personal'), 'dir');
+  await writeSourceRecord(root, {
+    schemaVersion: 1,
+    sourceId: 'personal/missing-source',
+    bucket: 'personal',
+    type: 'legacy-local',
+    installPath: 'personal/missing-source',
+    origin: { kind: 'unknown' },
+    skills: ['review']
+  });
+
+  await assert.rejects(
+    () => listSources({ rootDir: root }),
     /installPath resolves outside the central-library root/
   );
 });
