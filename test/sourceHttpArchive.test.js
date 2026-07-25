@@ -4,7 +4,8 @@ import {
   mkdir,
   readFile,
   readdir,
-  symlink
+  symlink,
+  writeFile
 } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -407,6 +408,49 @@ test('requires explicit authorization before a remote update breaks a project li
       skillPath: 'skills/linked'
     }
   ]);
+});
+
+test('replaces a remote Archive from a local ZIP while retaining its provenance', async (t) => {
+  const firstArchive = buildZip([
+    { name: 'skill/SKILL.md', content: '# Remote version\n' }
+  ]);
+  const localArchive = buildZip([
+    { name: 'skill/SKILL.md', content: '# Local replacement\n' }
+  ]);
+  const fixture = await startHttpFixture(t, (request, response) => {
+    response.end(firstArchive);
+  });
+  const root = await makeTempDir('source-http-local-update-root-');
+  const localInputRoot = await makeTempDir('source-http-local-update-input-');
+  const localInput = path.join(localInputRoot, 'replacement.zip');
+  await writeFile(localInput, localArchive);
+  const input = `http://127.0.0.1:${fixture.port}/archive?token=sensitive`;
+  const addPlan = await planAddSource({ rootDir: root }, { input });
+  await applyAddSource({ rootDir: root }, addPlan);
+
+  const updatePlan = await planUpdateSource(
+    { rootDir: root },
+    {
+      sourceId: addPlan.sourceId,
+      input: localInput
+    }
+  );
+  assert.equal(updatePlan.input.type, 'local-zip');
+  await applyUpdateSource({ rootDir: root }, updatePlan);
+
+  assert.equal(
+    await readFile(
+      path.join(root, addPlan.installPath, 'SKILL.md'),
+      'utf8'
+    ),
+    '# Local replacement\n'
+  );
+  const record = await inspectSource({ rootDir: root }, addPlan.sourceId);
+  assert.equal(record.type, 'archive');
+  assert.deepEqual(record.origin, {
+    kind: 'http',
+    display: `http://127.0.0.1:${fixture.port}/archive`
+  });
 });
 
 test('CLI output never exposes remote credentials, fragments, or signed queries', async (t) => {

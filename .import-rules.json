@@ -72,12 +72,17 @@
     },
     {
       "from": "lib/sourceArchiveAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "reason": "Remote Archive add orchestration — owns Archive identities, plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceArchiveWorkspace.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceTree.js"],
+      "reason": "Remote Archive workspace — owns shared download, staging, and cleanup lifecycles"
+    },
+    {
       "from": "lib/sourceArchiveUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js"],
       "reason": "Remote Archive update orchestration — owns replacement plans and reuses the source replacement transaction"
     },
     {

@@ -5,6 +5,7 @@ import {
   readFile,
   readdir,
   rm,
+  symlink,
   writeFile
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -25,6 +26,34 @@ import { runSourceCli } from '../scripts/source.js';
 import { makeTempDir } from './testHelpers.js';
 
 const execFile = promisify(execFileCallback);
+
+test('acquires a suffixless HTTPS repository on a non-GitHub host', async () => {
+  const fixture = await createGitFixture('acme', 'suffixless');
+  const root = await makeTempDir('source-git-suffixless-root-');
+  await symlink(
+    fixture.remote,
+    path.join(fixture.remoteRoot, 'acme', 'suffixless'),
+    'dir'
+  );
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    const plan = await planAddSource(
+      {
+        rootDir: root,
+        httpLimits: {
+          connectionTimeoutMs: 5,
+          completeTimeoutMs: 100
+        },
+        httpLookup: () => {}
+      },
+      { input: 'https://fixtures.invalid/acme/suffixless' }
+    );
+
+    assert.equal(plan.input.type, 'git');
+    assert.equal(plan.sourceId, 'github/acme/suffixless');
+    assert.deepEqual(plan.skills, ['skills/review']);
+  });
+});
 
 test('acquires a complete HTTPS Git repository without enabling its skills', async () => {
   const fixture = await createGitFixture('acme', 'team-skills');
