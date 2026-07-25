@@ -111,6 +111,13 @@ test('normalizes a GitHub tree URL and retains its branch and subdirectory focus
     assert.deepEqual(plan.skills, ['skills/monitoring', 'skills/review']);
 
     await applyAddSource({ rootDir: root }, plan);
+    await assert.rejects(
+      () => planAddSource(
+        { rootDir: root },
+        { input: 'https://github.com/example/skills/tree/monitoring' }
+      ),
+      (error) => error.category === 'source-collision'
+    );
   });
 
   const record = await inspectSource({ rootDir: root }, 'github/example/skills');
