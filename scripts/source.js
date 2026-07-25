@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from 'node:url';
-import { inspectSource, listSources } from '../lib/sourceManager.js';
+import {
+  applySourceMigration,
+  inspectSource,
+  listSources,
+  planSourceMigration
+} from '../lib/sourceManager.js';
 
 export async function runSourceCli({
   argv = [],
@@ -9,16 +14,27 @@ export async function runSourceCli({
   stdout = process.stdout,
   stderr = process.stderr
 } = {}) {
-  const [command, sourceId, ...rest] = argv;
+  const [command, ...args] = argv;
 
   try {
-    if (command === 'list' && sourceId === undefined) {
+    if (command === 'list' && args.length === 0) {
       printList(await listSources({ rootDir }), stdout);
       return 0;
     }
 
-    if (command === 'inspect' && sourceId && rest.length === 0) {
-      printSource(await inspectSource({ rootDir }, sourceId), stdout);
+    if (command === 'inspect' && args.length === 1) {
+      printSource(await inspectSource({ rootDir }, args[0]), stdout);
+      return 0;
+    }
+
+    if (command === 'migrate' && (args.length === 0 || (args.length === 1 && args[0] === '--yes'))) {
+      const plan = await planSourceMigration({ rootDir });
+      printMigrationPlan(plan, stdout);
+      if (args[0] === '--yes') {
+        printMigrationResult(await applySourceMigration({ rootDir }, plan), stdout);
+      } else {
+        stdout.write('next: npm run source -- migrate --yes\n');
+      }
       return 0;
     }
 
@@ -56,6 +72,26 @@ function printSource(source, stdout) {
   for (const skillPath of source.skills) stdout.write(`  - ${skillPath}\n`);
 }
 
+function printMigrationPlan(plan, stdout) {
+  const recordLabel = plan.records.length === 1 ? 'source record' : 'source records';
+  stdout.write(`Migration plan: ${plan.records.length} ${recordLabel}, ${plan.unresolved.length} unresolved.\n`);
+  for (const record of plan.records) {
+    stdout.write(`[adopt] ${record.sourceId} -> ${record.installPath}\n`);
+  }
+  for (const issue of plan.unresolved) {
+    stdout.write(`[unresolved] ${issue.installPath}: ${issue.reason} — ${issue.detail}\n`);
+  }
+}
+
+function printMigrationResult(result, stdout) {
+  if (result.written.length === 0) {
+    stdout.write('Applied source migration: no source records to write.\n');
+    return;
+  }
+  const label = result.written.length === 1 ? 'record' : 'records';
+  stdout.write(`Applied source migration: ${result.written.length} ${label} written.\n`);
+}
+
 function formatOrigin(origin) {
   if (origin.kind === 'git') {
     const ref = origin.ref ? ` ${origin.ref}` : '';
@@ -70,6 +106,7 @@ function formatOrigin(origin) {
 function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
+  stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];

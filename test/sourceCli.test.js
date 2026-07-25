@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -55,6 +55,39 @@ test('source CLI inspects one registered source and rejects missing arguments', 
     2
   );
   assert.match(usageOutput.stderr(), /Usage: npm run source -- inspect <source-id>/);
+});
+
+test('source CLI keeps migration read-only until --yes and applies idempotently', async () => {
+  const root = await makeTempDir('source-cli-migrate-');
+  const sourcePath = path.join(root, 'personal', 'notes');
+  const recordPath = path.join(root, '.skillcaddy', 'sources', 'personal', 'notes.json');
+  await mkdir(sourcePath, { recursive: true });
+  await writeFile(path.join(sourcePath, 'SKILL.md'), '# Notes\n');
+
+  const previewOutput = captureOutput();
+  assert.equal(
+    await runSourceCli({ argv: ['migrate'], rootDir: root, ...previewOutput.streams }),
+    0
+  );
+  assert.match(previewOutput.stdout(), /Migration plan: 1 source record/);
+  assert.match(previewOutput.stdout(), /\[adopt\] personal\/notes -> personal\/notes/);
+  assert.match(previewOutput.stdout(), /next: npm run source -- migrate --yes/);
+  await assert.rejects(() => access(recordPath), /ENOENT/);
+
+  const applyOutput = captureOutput();
+  assert.equal(
+    await runSourceCli({ argv: ['migrate', '--yes'], rootDir: root, ...applyOutput.streams }),
+    0
+  );
+  assert.match(applyOutput.stdout(), /Applied source migration: 1 record written/);
+  await access(recordPath);
+
+  const repeatedOutput = captureOutput();
+  assert.equal(
+    await runSourceCli({ argv: ['migrate', '--yes'], rootDir: root, ...repeatedOutput.streams }),
+    0
+  );
+  assert.match(repeatedOutput.stdout(), /Applied source migration: no source records to write/);
 });
 
 function captureOutput() {

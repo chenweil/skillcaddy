@@ -41,8 +41,13 @@
       "reason": "Source registry — reads and validates sidecar records without changing central-library state"
     },
     {
+      "from": "lib/sourceMigration.js",
+      "allow": ["lib/sourceRegistry.js", "lib/sourceRecord.js", "lib/sourcePolicy.js", "lib/skillStore.js"],
+      "reason": "Source migration — derives adoption plans from registry, Git, filesystem, and existing state-scanner evidence"
+    },
+    {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceRegistry.js", "lib/sourcePolicy.js"],
+      "allow": ["lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js"],
       "reason": "Public source-management boundary — coordinates registry reads and central-library inventory"
     },
     {
