@@ -73,6 +73,11 @@ test('rejects unsafe ZIP paths, links, and special files without changing state'
     { name: 'traversal', entry: { name: '../escape/SKILL.md', content: '# Escape\n' }, error: /traversal/i },
     { name: 'absolute', entry: { name: '/escape/SKILL.md', content: '# Escape\n' }, error: /absolute/i },
     { name: 'drive', entry: { name: 'C:/escape/SKILL.md', content: '# Escape\n' }, error: /drive-letter/i },
+    {
+      name: 'drive-relative',
+      entry: { name: 'C:escape/SKILL.md', content: '# Escape\n' },
+      error: /drive-letter/i
+    },
     { name: 'backslash', entry: { name: '..\\escape\\SKILL.md', content: '# Escape\n' }, error: /backslash/i },
     {
       name: 'nul',

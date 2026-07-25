@@ -186,6 +186,30 @@ test('refuses unmanaged destination collisions and stale add plans without overw
   assert.deepEqual(await visibleLibraryState(cleanRoot), []);
 });
 
+test('rejects a symlinked personal bucket before publishing outside the library', async () => {
+  const root = await makeTempDir('source-add-bucket-root-');
+  const outside = await makeTempDir('source-add-bucket-outside-');
+  const input = await makeTempDir('source-add-bucket-input-');
+  await writeFile(path.join(input, 'SKILL.md'), '# Safe input\n');
+  await symlink(outside, path.join(root, 'personal'), 'dir');
+  const plan = await planAddSource({ rootDir: root }, { input });
+
+  await assert.rejects(
+    () => applyAddSource({ rootDir: root }, plan),
+    /not a safe directory/
+  );
+  assert.deepEqual(await readdir(outside), []);
+});
+
+test('warns when frontmatter declares an empty description', async () => {
+  const root = await makeTempDir('source-add-description-root-');
+  const input = await makeTempDir('source-add-description-input-');
+  await writeFile(path.join(input, 'SKILL.md'), '---\ndescription:\n---\n# Empty description\n');
+
+  const plan = await planAddSource({ rootDir: root }, { input });
+  assert.deepEqual(plan.warnings.map((warning) => warning.category), ['missing-description']);
+});
+
 async function writeDirectSkill(directory, content) {
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, 'SKILL.md'), content);

@@ -183,6 +183,7 @@ test('source CLI returns the collision exit category without overwriting', async
     }),
     3
   );
+  assert.match(output.stderr(), /Outcome: source-collision/);
   assert.match(output.stderr(), /Source destination collision/);
   assert.equal(
     await readFile(path.join(root, 'personal', 'shared', 'SKILL.md'), 'utf8'),

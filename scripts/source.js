@@ -66,6 +66,7 @@ export async function runSourceCli({
     printUsage(stderr);
     return 2;
   } catch (error) {
+    stderr.write(`Outcome: ${error.category || 'failure'}\n`);
     stderr.write(`${error.message}\n`);
     return error.exitCode || 1;
   }

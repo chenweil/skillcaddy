@@ -36,13 +36,18 @@
       "reason": "Source acquisition error — leaf error type for stable outcome categories"
     },
     {
+      "from": "lib/sourceSkillDiscovery.js",
+      "allow": [],
+      "reason": "Scanner-visible skill discovery — shared leaf policy for acquisition validation and runtime state"
+    },
+    {
       "from": "lib/sourceArchive.js",
       "allow": ["lib/sourceAcquisitionError.js"],
       "reason": "Local ZIP extraction — owns archive parsing, safety limits, and bounded extraction"
     },
     {
       "from": "lib/sourceValidation.js",
-      "allow": ["lib/sourceAcquisitionError.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceSkillDiscovery.js"],
       "reason": "Staged source validation — owns scanner-compatible skill discovery and quality warnings"
     },
     {
@@ -112,7 +117,7 @@
     },
     {
       "from": "lib/skillStore.js",
-      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/collectionSetup.js", "lib/skillMetadata.js", "lib/sourcePolicy.js"],
+      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/collectionSetup.js", "lib/skillMetadata.js", "lib/sourcePolicy.js", "lib/sourceSkillDiscovery.js"],
       "reason": "Store layer — currently imports claudeStore for getState aggregation; dept probe: decouple via aggregator layer"
     },
     {
