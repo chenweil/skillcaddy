@@ -9,6 +9,7 @@ import {
   inspectSource,
   listSources,
   planAddSource,
+  planBreakingUpdateSource,
   planSourceMigration,
   planUpdateSource
 } from '../lib/sourceManager.js';
@@ -37,11 +38,18 @@ export async function runSourceCli({
         return 2;
       }
       const context = { rootDir, projectPath };
-      const plan = await planUpdateSource(context, parsed.request);
+      const planUpdate = parsed.allowBreaking
+        ? planBreakingUpdateSource
+        : planUpdateSource;
+      const plan = await planUpdate(context, parsed.request);
       printUpdatePlan(plan, stdout);
       if (
         !parsed.yes &&
-        !await requestUpdateConfirmation({ confirm, stdin, stdout }, plan)
+        !await requestConfirmation(
+          { confirm, stdin, stdout },
+          plan,
+          'Apply this update plan? [y/N] '
+        )
       ) {
         stdout.write('Outcome: cancelled\n');
         return 0;
@@ -66,7 +74,11 @@ export async function runSourceCli({
       if (
         plan.status === 'ready' &&
         !parsed.yes &&
-        !await requestConfirmation({ confirm, stdin, stdout }, plan)
+        !await requestConfirmation(
+          { confirm, stdin, stdout },
+          plan,
+          'Apply this add plan? [y/N] '
+        )
       ) {
         stdout.write('Outcome: cancelled\n');
         return 0;
@@ -244,26 +256,14 @@ function parseUpdateArgs(args) {
     }
     return null;
   }
-  if (allowBreaking) request.allowBreaking = true;
-  return { request, yes };
+  return { request, yes, allowBreaking };
 }
 
-async function requestConfirmation({ confirm, stdin, stdout }, plan) {
+async function requestConfirmation({ confirm, stdin, stdout }, plan, prompt) {
   if (confirm) return Boolean(await confirm(plan));
   const readline = createInterface({ input: stdin, output: stdout });
   try {
-    const answer = await readline.question('Apply this add plan? [y/N] ');
-    return /^(?:y|yes)$/i.test(answer.trim());
-  } finally {
-    readline.close();
-  }
-}
-
-async function requestUpdateConfirmation({ confirm, stdin, stdout }, plan) {
-  if (confirm) return Boolean(await confirm(plan));
-  const readline = createInterface({ input: stdin, output: stdout });
-  try {
-    const answer = await readline.question('Apply this update plan? [y/N] ');
+    const answer = await readline.question(prompt);
     return /^(?:y|yes)$/i.test(answer.trim());
   } finally {
     readline.close();

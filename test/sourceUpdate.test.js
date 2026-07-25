@@ -17,6 +17,7 @@ import {
   applyUpdateSource,
   inspectSource,
   planAddSource,
+  planBreakingUpdateSource,
   planUpdateSource
 } from '../lib/sourceManager.js';
 import { makeTempDir } from './testHelpers.js';
@@ -95,13 +96,9 @@ test('blocks a replacement that removes a known current-project skill unless aut
     }
   );
 
-  const plan = await planUpdateSource(
+  const plan = await planBreakingUpdateSource(
     { rootDir: fixture.root, projectPath: project },
-    {
-      sourceId: fixture.sourceId,
-      input: replacement,
-      allowBreaking: true
-    }
+    { sourceId: fixture.sourceId, input: replacement }
   );
   assert.deepEqual(plan.affectedProjectLinks, [{
     alias: 'removed',
@@ -167,13 +164,9 @@ test('replaces a local source from a ZIP input', async () => {
     { name: 'bundle/skills/new/SKILL.md', content: '# New\n' }
   ]));
 
-  const plan = await planUpdateSource(
+  const plan = await planBreakingUpdateSource(
     { rootDir: fixture.root },
-    {
-      sourceId: fixture.sourceId,
-      input: archive,
-      allowBreaking: true
-    }
+    { sourceId: fixture.sourceId, input: archive }
   );
   const result = await applyUpdateSource({ rootDir: fixture.root }, plan);
 
@@ -195,9 +188,9 @@ test('validation failure leaves the active source and registry unchanged', async
   const replacement = await createSourceInput('source-update-invalid-', {
     'skills/replacement': '# Replacement\n'
   });
-  const plan = await planUpdateSource(
+  const plan = await planBreakingUpdateSource(
     { rootDir: fixture.root },
-    { sourceId: fixture.sourceId, input: replacement, allowBreaking: true }
+    { sourceId: fixture.sourceId, input: replacement }
   );
   const before = await snapshotTree(fixture.root);
   await fsRm(path.join(replacement, 'skills', 'replacement', 'SKILL.md'));
@@ -210,27 +203,40 @@ test('validation failure leaves the active source and registry unchanged', async
 });
 
 test('publication failures restore the previous source and registry', async (t) => {
-  for (const failAtRename of [2, 3, 4]) {
-    await t.test(`rename ${failAtRename}`, async () => {
+  for (const failure of [
+    { rename: 1, timing: 'before' },
+    { rename: 2, timing: 'before' },
+    { rename: 3, timing: 'before' },
+    { rename: 4, timing: 'before' },
+    { rename: 1, timing: 'after' },
+    { rename: 2, timing: 'after' },
+    { rename: 3, timing: 'after' },
+    { rename: 4, timing: 'after' }
+  ]) {
+    await t.test(`rename ${failure.rename} ${failure.timing}`, async () => {
       const fixture = await createInstalledSource({
         skills: { 'skills/current': '# Current\n' }
       });
       const replacement = await createSourceInput('source-update-failure-', {
         'skills/replacement': '# Replacement\n'
       });
-      const plan = await planUpdateSource(
+      const plan = await planBreakingUpdateSource(
         { rootDir: fixture.root },
-        { sourceId: fixture.sourceId, input: replacement, allowBreaking: true }
+        { sourceId: fixture.sourceId, input: replacement }
       );
       const before = await snapshotTree(fixture.root);
       let renameCount = 0;
       const fileOperations = {
         rename: async (...args) => {
           renameCount += 1;
-          if (renameCount === failAtRename) {
-            throw new Error(`injected rename failure ${failAtRename}`);
+          if (renameCount === failure.rename && failure.timing === 'before') {
+            throw new Error(`injected rename failure ${failure.rename} ${failure.timing}`);
           }
-          return fsRename(...args);
+          const result = await fsRename(...args);
+          if (renameCount === failure.rename && failure.timing === 'after') {
+            throw new Error(`injected rename failure ${failure.rename} ${failure.timing}`);
+          }
+          return result;
         },
         rm: fsRm
       };
@@ -240,11 +246,47 @@ test('publication failures restore the previous source and registry', async (t) 
           { rootDir: fixture.root, fileOperations },
           plan
         ),
-        new RegExp(`injected rename failure ${failAtRename}`)
+        new RegExp(`injected rename failure ${failure.rename} ${failure.timing}`)
       );
       assert.deepEqual(await snapshotTree(fixture.root), before);
     });
   }
+});
+
+test('backup cleanup failure never rolls the registry back over new source content', async () => {
+  const fixture = await createInstalledSource({
+    skills: { 'skills/current': '# Current\n' }
+  });
+  const replacement = await createSourceInput('source-update-cleanup-failure-', {
+    'skills/replacement': '# Replacement\n'
+  });
+  const plan = await planBreakingUpdateSource(
+    { rootDir: fixture.root },
+    { sourceId: fixture.sourceId, input: replacement }
+  );
+  let removeCount = 0;
+  const fileOperations = {
+    rename: fsRename,
+    rm: async (...args) => {
+      removeCount += 1;
+      if (removeCount === 2) throw new Error('injected backup cleanup failure');
+      return fsRm(...args);
+    }
+  };
+
+  await assert.rejects(
+    () => applyUpdateSource({ rootDir: fixture.root, fileOperations }, plan),
+    /injected backup cleanup failure/
+  );
+  assert.equal(
+    await readFile(path.join(fixture.root, fixture.installPath, 'skills', 'replacement', 'SKILL.md'), 'utf8'),
+    '# Replacement\n'
+  );
+  assert.deepEqual(
+    (await inspectSource({ rootDir: fixture.root }, fixture.sourceId)).skills,
+    ['skills/replacement']
+  );
+  assert.deepEqual(await transactionEntries(fixture.root), []);
 });
 
 async function createInstalledSource({ skills }) {
