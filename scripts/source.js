@@ -157,7 +157,11 @@ function printAddPlan(plan, stdout) {
   stdout.write(`Add plan: ${plan.status}\n`);
   stdout.write(`source: ${plan.sourceId}\n`);
   stdout.write(`install: ${plan.installPath}\n`);
-  stdout.write(`input: ${plan.input.type} ${plan.input.name || plan.input.remote}\n`);
+  stdout.write(
+    `input: ${plan.input.type} ${
+      plan.input.name || plan.input.remote || plan.input.display
+    }\n`
+  );
   if (plan.origin?.kind === 'git') {
     stdout.write(`origin: ${formatOrigin(plan.origin)}\n`);
     if (plan.focus) {
@@ -184,7 +188,7 @@ function printUpdatePlan(plan, stdout) {
   stdout.write(`Update plan: ${plan.status}\n`);
   stdout.write(`source: ${plan.sourceId}\n`);
   stdout.write(`install: ${plan.installPath}\n`);
-  stdout.write(`input: ${plan.input.type} ${plan.input.name}\n`);
+  stdout.write(`input: ${plan.input.type} ${plan.input.name || plan.input.display}\n`);
   printSkillPaths('unchanged', plan.changes.unchanged, stdout);
   printSkillPaths('added', plan.changes.added, stdout);
   printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);

@@ -66,6 +66,21 @@
       "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceHttp.js",
+      "allow": ["lib/sourceAcquisitionError.js"],
+      "reason": "Remote Archive transport — owns HTTP(S), redirects, streaming limits, timeouts, and sanitized URL facts"
+    },
+    {
+      "from": "lib/sourceArchiveAdd.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "reason": "Remote Archive add orchestration — owns Archive identities, plans, collisions, staging, and atomic publication"
+    },
+    {
+      "from": "lib/sourceArchiveUpdate.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js"],
+      "reason": "Remote Archive update orchestration — owns replacement plans and reuses the source replacement transaction"
+    },
+    {
       "from": "lib/sourceUpdate.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdateTransaction.js", "lib/skillStore.js"],
       "reason": "Local source update orchestration — owns replacement plans, current-project link checks, staging, and rollback"
@@ -122,7 +137,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
