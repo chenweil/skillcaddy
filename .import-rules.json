@@ -31,6 +31,21 @@
       "reason": "Leaf module — shared source boundary policy"
     },
     {
+      "from": "lib/sourceRecord.js",
+      "allow": ["lib/sourcePolicy.js"],
+      "reason": "Source record schema — validates source-owned facts against the shared source boundary policy"
+    },
+    {
+      "from": "lib/sourceRegistry.js",
+      "allow": ["lib/sourceRecord.js"],
+      "reason": "Source registry — reads and validates sidecar records without changing central-library state"
+    },
+    {
+      "from": "lib/sourceManager.js",
+      "allow": ["lib/sourceRegistry.js", "lib/sourcePolicy.js"],
+      "reason": "Public source-management boundary — coordinates registry reads and central-library inventory"
+    },
+    {
       "from": "lib/collectionSetup.js",
       "allow": [],
       "reason": "Collection setup policy — leaf module owning tracked contracts and read-only project readiness checks"
