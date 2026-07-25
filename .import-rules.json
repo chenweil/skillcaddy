@@ -41,8 +41,13 @@
       "reason": "Scanner-visible skill discovery — shared leaf policy for acquisition validation and runtime state"
     },
     {
+      "from": "lib/sourcePath.js",
+      "allow": [],
+      "reason": "Source path containment — shared leaf predicate for filesystem safety checks"
+    },
+    {
       "from": "lib/sourceArchive.js",
-      "allow": ["lib/sourceAcquisitionError.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourcePath.js"],
       "reason": "Local ZIP extraction — owns archive parsing, safety limits, and bounded extraction"
     },
     {
@@ -52,7 +57,7 @@
     },
     {
       "from": "lib/sourceLocal.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchive.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchive.js", "lib/sourcePath.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
       "reason": "Local source staging — copies directories, expands ZIP inputs, and returns validated source facts"
     },
     {
@@ -67,7 +72,7 @@
     },
     {
       "from": "lib/sourceRegistry.js",
-      "allow": ["lib/sourceRecord.js"],
+      "allow": ["lib/sourcePath.js", "lib/sourceRecord.js"],
       "reason": "Source registry — reads, validates, and atomically writes source-owned sidecar records"
     },
     {
@@ -82,7 +87,7 @@
     },
     {
       "from": "lib/sourceTree.js",
-      "allow": ["lib/sourceMigrationIssue.js", "lib/sourcePolicy.js"],
+      "allow": ["lib/sourceMigrationIssue.js", "lib/sourcePath.js", "lib/sourcePolicy.js"],
       "reason": "Source tree inspection — owns entry discovery, path safety, and deterministic integrity"
     },
     {
