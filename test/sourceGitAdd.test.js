@@ -3,6 +3,7 @@ import {
   access,
   mkdir,
   readFile,
+  readdir,
   writeFile
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -137,7 +138,7 @@ test('acquires SSH Git URLs and resolves destination collisions with the owner n
 
     const repeated = await planAddSource(
       { rootDir: root },
-      { input: 'https://fixtures.invalid/first-owner/shared.git' }
+      { input: 'ssh://git@fixtures.invalid/first-owner/shared' }
     );
     assert.equal(repeated.status, 'already-installed');
     assert.equal(
@@ -163,6 +164,27 @@ test('acquires SSH Git URLs and resolves destination collisions with the owner n
     await readFile(path.join(root, 'github', 'second-owner--shared', 'owner.txt'), 'utf8'),
     'second-owner\n'
   );
+});
+
+test('declining a Git add plan leaves the library unchanged', async () => {
+  const fixture = await createGitFixture('preview-owner', 'preview-skills');
+  const root = await makeTempDir('source-git-preview-root-');
+  const output = captureOutput();
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    assert.equal(
+      await runSourceCli({
+        argv: ['add', 'https://fixtures.invalid/preview-owner/preview-skills.git'],
+        rootDir: root,
+        confirm: async () => false,
+        ...output.streams
+      }),
+      0
+    );
+  });
+
+  assert.match(output.stdout(), /Outcome: cancelled/);
+  assert.deepEqual(await readdir(root), []);
 });
 
 test('refuses changed Git content under an existing source identity', async () => {
