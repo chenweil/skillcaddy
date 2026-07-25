@@ -66,6 +66,21 @@
       "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceGitUrl.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRecord.js"],
+      "reason": "Git URL normalization — derives sanitized repository identity and optional GitHub source focus"
+    },
+    {
+      "from": "lib/sourceGitStaging.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "reason": "Git source staging — clones complete repositories and returns validated source facts"
+    },
+    {
+      "from": "lib/sourceGitAdd.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitStaging.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "reason": "Git source add orchestration — owns plans, collisions, staging, and atomic publication"
+    },
+    {
       "from": "lib/sourceRecord.js",
       "allow": ["lib/sourcePolicy.js"],
       "reason": "Source record schema — validates source-owned facts against the shared source boundary policy"
@@ -97,8 +112,8 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
-      "reason": "Public source-management boundary — coordinates registry reads, local acquisition, and central-library inventory"
+      "allow": ["lib/sourceAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
+      "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
       "from": "lib/collectionSetup.js",

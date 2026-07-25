@@ -122,8 +122,15 @@ function printAddPlan(plan, stdout) {
   stdout.write(`Add plan: ${plan.status}\n`);
   stdout.write(`source: ${plan.sourceId}\n`);
   stdout.write(`install: ${plan.installPath}\n`);
-  stdout.write(`input: ${plan.input.type} ${plan.input.name}\n`);
-  stdout.write(`integrity: ${plan.integrity.algorithm} ${plan.integrity.value}\n`);
+  stdout.write(`input: ${plan.input.type} ${plan.input.name || plan.input.remote}\n`);
+  if (plan.origin?.kind === 'git') {
+    stdout.write(`origin: ${formatOrigin(plan.origin)}\n`);
+    if (plan.focus) {
+      stdout.write(`focus: ${plan.focus.ref}${plan.focus.path ? ` ${plan.focus.path}` : ''}\n`);
+    }
+  } else {
+    stdout.write(`integrity: ${plan.integrity.algorithm} ${plan.integrity.value}\n`);
+  }
   stdout.write(`skills (${plan.skills.length}):\n`);
   for (const skillPath of plan.skills) stdout.write(`  - ${skillPath}\n`);
   stdout.write(`warnings (${plan.warnings.length}):\n`);
