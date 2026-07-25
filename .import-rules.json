@@ -38,16 +38,31 @@
     {
       "from": "lib/sourceRegistry.js",
       "allow": ["lib/sourceRecord.js"],
-      "reason": "Source registry — reads and validates sidecar records without changing central-library state"
+      "reason": "Source registry — reads, validates, and atomically writes source-owned sidecar records"
+    },
+    {
+      "from": "lib/sourceMigrationIssue.js",
+      "allow": [],
+      "reason": "Source migration issue — leaf error type for reportable unresolved entries"
+    },
+    {
+      "from": "lib/sourceGit.js",
+      "allow": ["lib/sourceMigrationIssue.js", "lib/sourceRecord.js"],
+      "reason": "Git source inspection — derives sanitized origin identity and installed revision"
+    },
+    {
+      "from": "lib/sourceTree.js",
+      "allow": ["lib/sourceMigrationIssue.js", "lib/sourcePolicy.js"],
+      "reason": "Source tree inspection — owns entry discovery, path safety, and deterministic integrity"
     },
     {
       "from": "lib/sourceMigration.js",
-      "allow": ["lib/sourceRegistry.js", "lib/sourceRecord.js", "lib/sourcePolicy.js", "lib/skillStore.js"],
-      "reason": "Source migration — derives adoption plans from registry, Git, filesystem, and existing state-scanner evidence"
+      "allow": ["lib/sourceGit.js", "lib/sourceMigrationIssue.js", "lib/sourceRegistry.js", "lib/sourceRecord.js", "lib/skillStore.js", "lib/sourceTree.js"],
+      "reason": "Source migration — coordinates adoption planning and explicit registry-only application"
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js"],
+      "allow": ["lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
       "reason": "Public source-management boundary — coordinates registry reads and central-library inventory"
     },
     {

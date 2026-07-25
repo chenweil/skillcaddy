@@ -35,7 +35,7 @@ export async function runSourceCli({
       } else {
         stdout.write('next: npm run source -- migrate --yes\n');
       }
-      return 0;
+      return plan.unresolved.length > 0 ? 3 : 0;
     }
 
     printUsage(stderr);

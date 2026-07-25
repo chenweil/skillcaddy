@@ -1,9 +1,9 @@
-import { access, mkdir, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { access, mkdir, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSourceCli } from '../scripts/source.js';
+import { makeTempDir } from './testHelpers.js';
 
 test('source CLI lists inventory through the source-management boundary', async () => {
   const root = await makeTempDir('source-cli-list-');
@@ -90,6 +90,20 @@ test('source CLI keeps migration read-only until --yes and applies idempotently'
   assert.match(repeatedOutput.stdout(), /Applied source migration: no source records to write/);
 });
 
+test('source CLI returns the unresolved-identity exit category for incomplete migration', async () => {
+  const root = await makeTempDir('source-cli-unresolved-');
+  const outside = await makeTempDir('source-cli-unresolved-outside-');
+  await mkdir(path.join(root, 'personal'), { recursive: true });
+  await symlink(outside, path.join(root, 'personal', 'escaped'), 'dir');
+
+  const output = captureOutput();
+  assert.equal(
+    await runSourceCli({ argv: ['migrate'], rootDir: root, ...output.streams }),
+    3
+  );
+  assert.match(output.stdout(), /\[unresolved\] personal\/escaped: unsafe-path/);
+});
+
 function captureOutput() {
   const stdoutChunks = [];
   const stderrChunks = [];
@@ -101,10 +115,4 @@ function captureOutput() {
     stdout: () => stdoutChunks.join(''),
     stderr: () => stderrChunks.join('')
   };
-}
-
-async function makeTempDir(prefix) {
-  return mkdir(path.join(tmpdir(), `${prefix}${Date.now()}-${Math.random().toString(16).slice(2)}`), {
-    recursive: true
-  });
 }

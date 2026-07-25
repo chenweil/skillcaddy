@@ -1,10 +1,10 @@
 import { mkdir, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inspectSource, listSources } from '../lib/sourceManager.js';
 import { scanSkills } from '../lib/skillStore.js';
+import { makeTempDir } from './testHelpers.js';
 
 test('lists registered and unmanaged source entries without changing skill discovery', async () => {
   const root = await makeTempDir('source-list-');
@@ -277,10 +277,4 @@ async function snapshotFiles(root) {
 
   await walk(root);
   return files;
-}
-
-async function makeTempDir(prefix) {
-  return mkdir(path.join(tmpdir(), `${prefix}${Date.now()}-${Math.random().toString(16).slice(2)}`), {
-    recursive: true
-  });
 }

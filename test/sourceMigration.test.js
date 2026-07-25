@@ -1,6 +1,5 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import { mkdir, readFile, readdir, readlink, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import test from 'node:test';
@@ -10,6 +9,7 @@ import {
   inspectSource,
   planSourceMigration
 } from '../lib/sourceManager.js';
+import { makeTempDir } from './testHelpers.js';
 
 const execFile = promisify(execFileCallback);
 
@@ -119,7 +119,9 @@ test('reports ambiguous remotes, duplicate identities, nested repositories, and 
   const ambiguousPath = path.join(root, 'github', 'ambiguous');
   const duplicateOnePath = path.join(root, 'github', 'duplicate-one');
   const duplicateTwoPath = path.join(root, 'github', 'duplicate-two');
+  const gitLinkPath = path.join(root, 'github', 'git-link');
   const nestedPath = path.join(root, 'github', 'nested');
+  const outsideGitPath = path.join(outside, 'git-source');
 
   await createGitSource(ambiguousPath, {
     remote: 'https://github.com/example/ambiguous.git',
@@ -145,19 +147,45 @@ test('reports ambiguous remotes, duplicate identities, nested repositories, and 
     skillPath: 'skills/nested'
   });
   await mkdir(path.join(nestedPath, 'vendor', '.git'), { recursive: true });
+  await createGitSource(outsideGitPath, {
+    remote: 'https://github.com/example/outside.git',
+    skillPath: 'skills/outside'
+  });
+  await mkdir(gitLinkPath, { recursive: true });
+  await writeFile(path.join(gitLinkPath, 'SKILL.md'), '# Git link\n');
+  await symlink(path.join(outsideGitPath, '.git'), path.join(gitLinkPath, '.git'), 'dir');
   await mkdir(path.join(root, 'personal'), { recursive: true });
+  await mkdir(path.join(root, 'personal', '.hidden'), { recursive: true });
+  await writeFile(path.join(root, 'personal', '.hidden', 'SKILL.md'), '# Hidden\n');
+  await mkdir(path.join(root, 'personal', 'bad name'), { recursive: true });
+  await writeFile(path.join(root, 'personal', 'bad name', 'SKILL.md'), '# Invalid identity\n');
   await symlink(outside, path.join(root, 'personal', 'escaped'), 'dir');
 
   const plan = await planSourceMigration({ rootDir: root });
 
-  assert.deepEqual(plan.records, []);
+  assert.deepEqual(
+    plan.records.map(({ sourceId, installPath, type, skills }) => ({
+      sourceId,
+      installPath,
+      type,
+      skills
+    })),
+    [{
+      sourceId: 'personal/.hidden',
+      installPath: 'personal/.hidden',
+      type: 'legacy-local',
+      skills: ['.']
+    }]
+  );
   assert.deepEqual(
     plan.unresolved.map(({ installPath, reason }) => ({ installPath, reason })),
     [
       { installPath: 'github/ambiguous', reason: 'ambiguous-remote' },
       { installPath: 'github/duplicate-one', reason: 'duplicate-identity' },
       { installPath: 'github/duplicate-two', reason: 'duplicate-identity' },
+      { installPath: 'github/git-link', reason: 'unsafe-path' },
       { installPath: 'github/nested', reason: 'nested-repository' },
+      { installPath: 'personal/bad name', reason: 'invalid-identity' },
       { installPath: 'personal/escaped', reason: 'unsafe-path' }
     ]
   );
@@ -195,10 +223,4 @@ async function snapshotTree(root) {
 
   await walk(root);
   return entries;
-}
-
-async function makeTempDir(prefix) {
-  return mkdir(path.join(tmpdir(), `${prefix}${Date.now()}-${Math.random().toString(16).slice(2)}`), {
-    recursive: true
-  });
 }
