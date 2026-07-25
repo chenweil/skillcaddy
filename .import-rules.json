@@ -66,6 +66,16 @@
       "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceUpdate.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdateTransaction.js", "lib/skillStore.js"],
+      "reason": "Local source update orchestration — owns replacement plans, current-project link checks, staging, and rollback"
+    },
+    {
+      "from": "lib/sourceUpdateTransaction.js",
+      "allow": ["lib/sourceRegistry.js"],
+      "reason": "Local source replacement transaction — owns atomic publication, rollback, and transaction artifact cleanup"
+    },
+    {
       "from": "lib/sourceGitUrl.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRecord.js"],
       "reason": "Git URL normalization — derives sanitized repository identity and optional GitHub source focus"
@@ -112,7 +122,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

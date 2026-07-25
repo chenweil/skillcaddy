@@ -191,6 +191,88 @@ test('source CLI returns the collision exit category without overwriting', async
   );
 });
 
+test('source CLI replaces a registered local source through update', async () => {
+  const root = await makeTempDir('source-cli-update-root-');
+  const original = path.join(await makeTempDir('source-cli-update-original-'), 'bundle');
+  const replacement = path.join(await makeTempDir('source-cli-update-replacement-'), 'bundle-v2');
+  await mkdir(path.join(original, 'skills', 'old'), { recursive: true });
+  await writeFile(path.join(original, 'skills', 'old', 'SKILL.md'), '# Old\n');
+  await mkdir(path.join(replacement, 'skills', 'new'), { recursive: true });
+  await writeFile(path.join(replacement, 'skills', 'new', 'SKILL.md'), '# New\n');
+
+  assert.equal(
+    await runSourceCli({
+      argv: ['add', original, '--name', 'managed', '--yes'],
+      rootDir: root,
+      ...captureOutput().streams
+    }),
+    0
+  );
+
+  const output = captureOutput();
+  assert.equal(
+    await runSourceCli({
+      argv: [
+        'update',
+        'personal/managed',
+        replacement,
+        '--allow-breaking',
+        '--yes'
+      ],
+      rootDir: root,
+      ...output.streams
+    }),
+    0
+  );
+  assert.match(output.stdout(), /Update plan: ready/);
+  assert.match(output.stdout(), /added:\n  - skills\/new/);
+  assert.match(output.stdout(), /removed or relocated:\n  - skills\/old/);
+  assert.match(output.stdout(), /Outcome: updated/);
+  assert.equal(
+    await readFile(path.join(root, 'personal', 'managed', 'skills', 'new', 'SKILL.md'), 'utf8'),
+    '# New\n'
+  );
+});
+
+test('source CLI returns exit 4 when update would break a current-project link', async () => {
+  const root = await makeTempDir('source-cli-update-breaking-root-');
+  const project = await makeTempDir('source-cli-update-breaking-project-');
+  const original = path.join(await makeTempDir('source-cli-update-breaking-original-'), 'bundle');
+  const replacement = path.join(await makeTempDir('source-cli-update-breaking-replacement-'), 'bundle-v2');
+  await mkdir(path.join(original, 'skills', 'removed'), { recursive: true });
+  await writeFile(path.join(original, 'skills', 'removed', 'SKILL.md'), '# Removed\n');
+  await mkdir(path.join(replacement, 'skills', 'new'), { recursive: true });
+  await writeFile(path.join(replacement, 'skills', 'new', 'SKILL.md'), '# New\n');
+  await runSourceCli({
+    argv: ['add', original, '--name', 'managed', '--yes'],
+    rootDir: root,
+    ...captureOutput().streams
+  });
+  await mkdir(path.join(project, '.agents', 'skills'), { recursive: true });
+  await symlink(
+    path.join(root, 'personal', 'managed', 'skills', 'removed'),
+    path.join(project, '.agents', 'skills', 'removed'),
+    'dir'
+  );
+  const output = captureOutput();
+
+  assert.equal(
+    await runSourceCli({
+      argv: ['update', 'personal/managed', replacement, '--yes'],
+      rootDir: root,
+      projectPath: project,
+      ...output.streams
+    }),
+    4
+  );
+  assert.match(output.stderr(), /Outcome: breaking-replacement/);
+  assert.match(output.stderr(), /--allow-breaking/);
+  assert.equal(
+    await readFile(path.join(root, 'personal', 'managed', 'skills', 'removed', 'SKILL.md'), 'utf8'),
+    '# Removed\n'
+  );
+});
+
 function captureOutput() {
   const stdoutChunks = [];
   const stderrChunks = [];

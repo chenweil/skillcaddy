@@ -5,15 +5,18 @@ import { createInterface } from 'node:readline/promises';
 import {
   applyAddSource,
   applySourceMigration,
+  applyUpdateSource,
   inspectSource,
   listSources,
   planAddSource,
-  planSourceMigration
+  planSourceMigration,
+  planUpdateSource
 } from '../lib/sourceManager.js';
 
 export async function runSourceCli({
   argv = [],
   rootDir = process.cwd(),
+  projectPath = process.cwd(),
   stdin = process.stdin,
   stdout = process.stdout,
   stderr = process.stderr,
@@ -24,6 +27,26 @@ export async function runSourceCli({
   try {
     if (command === 'list' && args.length === 0) {
       printList(await listSources({ rootDir }), stdout);
+      return 0;
+    }
+
+    if (command === 'update') {
+      const parsed = parseUpdateArgs(args);
+      if (!parsed) {
+        printUsage(stderr);
+        return 2;
+      }
+      const context = { rootDir, projectPath };
+      const plan = await planUpdateSource(context, parsed.request);
+      printUpdatePlan(plan, stdout);
+      if (
+        !parsed.yes &&
+        !await requestUpdateConfirmation({ confirm, stdin, stdout }, plan)
+      ) {
+        stdout.write('Outcome: cancelled\n');
+        return 0;
+      }
+      printUpdateResult(await applyUpdateSource(context, plan), stdout);
       return 0;
     }
 
@@ -145,6 +168,31 @@ function printAddResult(result, stdout) {
   stdout.write(`install: ${result.installPath}\n`);
 }
 
+function printUpdatePlan(plan, stdout) {
+  stdout.write(`Update plan: ${plan.status}\n`);
+  stdout.write(`source: ${plan.sourceId}\n`);
+  stdout.write(`install: ${plan.installPath}\n`);
+  stdout.write(`input: ${plan.input.type} ${plan.input.name}\n`);
+  printSkillPaths('unchanged', plan.changes.unchanged, stdout);
+  printSkillPaths('added', plan.changes.added, stdout);
+  printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
+}
+
+function printUpdateResult(result, stdout) {
+  stdout.write(`Outcome: ${result.status}\n`);
+  stdout.write(`source: ${result.sourceId}\n`);
+  stdout.write(`install: ${result.installPath}\n`);
+}
+
+function printSkillPaths(label, skillPaths, stdout) {
+  stdout.write(`${label}:\n`);
+  if (skillPaths.length === 0) {
+    stdout.write('  (none)\n');
+    return;
+  }
+  for (const skillPath of skillPaths) stdout.write(`  - ${skillPath}\n`);
+}
+
 function parseAddArgs(args) {
   if (args.length === 0 || args[0].startsWith('--')) return null;
   const request = { input: args[0] };
@@ -170,11 +218,52 @@ function parseAddArgs(args) {
   return { request, yes };
 }
 
+function parseUpdateArgs(args) {
+  if (
+    args.length < 2 ||
+    args[0].startsWith('--') ||
+    args[1].startsWith('--')
+  ) {
+    return null;
+  }
+  const request = {
+    sourceId: args[0],
+    input: args[1]
+  };
+  let allowBreaking = false;
+  let yes = false;
+
+  for (const argument of args.slice(2)) {
+    if (argument === '--allow-breaking' && !allowBreaking) {
+      allowBreaking = true;
+      continue;
+    }
+    if (argument === '--yes' && !yes) {
+      yes = true;
+      continue;
+    }
+    return null;
+  }
+  if (allowBreaking) request.allowBreaking = true;
+  return { request, yes };
+}
+
 async function requestConfirmation({ confirm, stdin, stdout }, plan) {
   if (confirm) return Boolean(await confirm(plan));
   const readline = createInterface({ input: stdin, output: stdout });
   try {
     const answer = await readline.question('Apply this add plan? [y/N] ');
+    return /^(?:y|yes)$/i.test(answer.trim());
+  } finally {
+    readline.close();
+  }
+}
+
+async function requestUpdateConfirmation({ confirm, stdin, stdout }, plan) {
+  if (confirm) return Boolean(await confirm(plan));
+  const readline = createInterface({ input: stdin, output: stdout });
+  try {
+    const answer = await readline.question('Apply this update plan? [y/N] ');
     return /^(?:y|yes)$/i.test(answer.trim());
   } finally {
     readline.close();
@@ -196,6 +285,7 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
+  stderr.write('Usage: npm run source -- update <source-id> <input> [--allow-breaking] [--yes]\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 
