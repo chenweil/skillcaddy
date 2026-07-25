@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 
 import { fileURLToPath } from 'node:url';
+import { createInterface } from 'node:readline/promises';
 import {
+  applyAddSource,
   applySourceMigration,
   inspectSource,
   listSources,
+  planAddSource,
   planSourceMigration
 } from '../lib/sourceManager.js';
 
 export async function runSourceCli({
   argv = [],
   rootDir = process.cwd(),
+  stdin = process.stdin,
   stdout = process.stdout,
-  stderr = process.stderr
+  stderr = process.stderr,
+  confirm
 } = {}) {
   const [command, ...args] = argv;
 
@@ -24,6 +29,26 @@ export async function runSourceCli({
 
     if (command === 'inspect' && args.length === 1) {
       printSource(await inspectSource({ rootDir }, args[0]), stdout);
+      return 0;
+    }
+
+    if (command === 'add') {
+      const parsed = parseAddArgs(args);
+      if (!parsed) {
+        printUsage(stderr);
+        return 2;
+      }
+      const plan = await planAddSource({ rootDir }, parsed.request);
+      printAddPlan(plan, stdout);
+      if (
+        plan.status === 'ready' &&
+        !parsed.yes &&
+        !await requestConfirmation({ confirm, stdin, stdout }, plan)
+      ) {
+        stdout.write('Outcome: cancelled\n');
+        return 0;
+      }
+      printAddResult(await applyAddSource({ rootDir }, plan), stdout);
       return 0;
     }
 
@@ -42,7 +67,7 @@ export async function runSourceCli({
     return 2;
   } catch (error) {
     stderr.write(`${error.message}\n`);
-    return 1;
+    return error.exitCode || 1;
   }
 }
 
@@ -92,6 +117,62 @@ function printMigrationResult(result, stdout) {
   stdout.write(`Applied source migration: ${result.written.length} ${label} written.\n`);
 }
 
+function printAddPlan(plan, stdout) {
+  stdout.write(`Add plan: ${plan.status}\n`);
+  stdout.write(`source: ${plan.sourceId}\n`);
+  stdout.write(`install: ${plan.installPath}\n`);
+  stdout.write(`input: ${plan.input.type} ${plan.input.name}\n`);
+  stdout.write(`integrity: ${plan.integrity.algorithm} ${plan.integrity.value}\n`);
+  stdout.write(`skills (${plan.skills.length}):\n`);
+  for (const skillPath of plan.skills) stdout.write(`  - ${skillPath}\n`);
+  stdout.write(`warnings (${plan.warnings.length}):\n`);
+  for (const warning of plan.warnings) {
+    stdout.write(`  - [${warning.category}] ${warning.skillPath}: ${warning.message}\n`);
+  }
+}
+
+function printAddResult(result, stdout) {
+  stdout.write(`Outcome: ${result.status}\n`);
+  stdout.write(`source: ${result.sourceId}\n`);
+  stdout.write(`install: ${result.installPath}\n`);
+}
+
+function parseAddArgs(args) {
+  if (args.length === 0 || args[0].startsWith('--')) return null;
+  const request = { input: args[0] };
+  let yes = false;
+
+  for (let index = 1; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === '--yes') {
+      if (yes) return null;
+      yes = true;
+      continue;
+    }
+    if (argument === '--name' || argument === '--namespace') {
+      const key = argument.slice(2);
+      const value = args[index + 1];
+      if (!value || value.startsWith('--') || request[key] !== undefined) return null;
+      request[key] = value;
+      index += 1;
+      continue;
+    }
+    return null;
+  }
+  return { request, yes };
+}
+
+async function requestConfirmation({ confirm, stdin, stdout }, plan) {
+  if (confirm) return Boolean(await confirm(plan));
+  const readline = createInterface({ input: stdin, output: stdout });
+  try {
+    const answer = await readline.question('Apply this add plan? [y/N] ');
+    return /^(?:y|yes)$/i.test(answer.trim());
+  } finally {
+    readline.close();
+  }
+}
+
 function formatOrigin(origin) {
   if (origin.kind === 'git') {
     const ref = origin.ref ? ` ${origin.ref}` : '';
@@ -106,6 +187,7 @@ function formatOrigin(origin) {
 function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
+  stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 

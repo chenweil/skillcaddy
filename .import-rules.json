@@ -31,6 +31,31 @@
       "reason": "Leaf module — shared source boundary policy"
     },
     {
+      "from": "lib/sourceAcquisitionError.js",
+      "allow": [],
+      "reason": "Source acquisition error — leaf error type for stable outcome categories"
+    },
+    {
+      "from": "lib/sourceArchive.js",
+      "allow": ["lib/sourceAcquisitionError.js"],
+      "reason": "Local ZIP extraction — owns archive parsing, safety limits, and bounded extraction"
+    },
+    {
+      "from": "lib/sourceValidation.js",
+      "allow": ["lib/sourceAcquisitionError.js"],
+      "reason": "Staged source validation — owns scanner-compatible skill discovery and quality warnings"
+    },
+    {
+      "from": "lib/sourceLocal.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchive.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "reason": "Local source staging — copies directories, expands ZIP inputs, and returns validated source facts"
+    },
+    {
+      "from": "lib/sourceAdd.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
+    },
+    {
       "from": "lib/sourceRecord.js",
       "allow": ["lib/sourcePolicy.js"],
       "reason": "Source record schema — validates source-owned facts against the shared source boundary policy"
@@ -62,8 +87,8 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
-      "reason": "Public source-management boundary — coordinates registry reads and central-library inventory"
+      "allow": ["lib/sourceAdd.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js"],
+      "reason": "Public source-management boundary — coordinates registry reads, local acquisition, and central-library inventory"
     },
     {
       "from": "lib/collectionSetup.js",

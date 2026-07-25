@@ -1,4 +1,4 @@
-import { access, mkdir, symlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -102,6 +102,92 @@ test('source CLI returns the unresolved-identity exit category for incomplete mi
     3
   );
   assert.match(output.stdout(), /\[unresolved\] personal\/escaped: unsafe-path/);
+});
+
+test('source CLI prints an add plan and keeps it read-only when confirmation is declined', async () => {
+  const root = await makeTempDir('source-cli-add-preview-root-');
+  const input = await makeTempDir('source-cli-add-preview-input-');
+  await writeFile(path.join(input, 'SKILL.md'), '# Preview\n');
+  const output = captureOutput();
+
+  assert.equal(
+    await runSourceCli({
+      argv: ['add', input],
+      rootDir: root,
+      confirm: async () => false,
+      ...output.streams
+    }),
+    0
+  );
+  assert.match(output.stdout(), /Add plan: ready/);
+  assert.match(output.stdout(), /source: personal\/source-cli-add-preview-input-/);
+  assert.match(output.stdout(), /Outcome: cancelled/);
+  await assert.rejects(
+    () => access(path.join(root, 'personal', path.basename(input))),
+    /ENOENT/
+  );
+});
+
+test('source CLI --yes applies without prompting and reports stable outcomes', async () => {
+  const root = await makeTempDir('source-cli-add-yes-root-');
+  const inputParent = await makeTempDir('source-cli-add-yes-input-');
+  const input = path.join(inputParent, 'notes');
+  await mkdir(input, { recursive: true });
+  await writeFile(path.join(input, 'SKILL.md'), '# Notes\n');
+  const output = captureOutput();
+
+  assert.equal(
+    await runSourceCli({
+      argv: ['add', input, '--name', 'team-notes', '--namespace', 'team', '--yes'],
+      rootDir: root,
+      confirm: async () => {
+        throw new Error('confirmation must not run with --yes');
+      },
+      ...output.streams
+    }),
+    0
+  );
+  assert.match(output.stdout(), /source: personal\/team\/team-notes/);
+  assert.match(output.stdout(), /install: personal\/team--team-notes/);
+  assert.match(output.stdout(), /Outcome: added/);
+  await access(path.join(root, 'personal', 'team--team-notes', 'SKILL.md'));
+
+  const repeated = captureOutput();
+  assert.equal(
+    await runSourceCli({
+      argv: ['add', input, '--name', 'team-notes', '--namespace', 'team', '--yes'],
+      rootDir: root,
+      ...repeated.streams
+    }),
+    0
+  );
+  assert.match(repeated.stdout(), /Add plan: already-installed/);
+  assert.match(repeated.stdout(), /Outcome: already-installed/);
+});
+
+test('source CLI returns the collision exit category without overwriting', async () => {
+  const root = await makeTempDir('source-cli-add-collision-root-');
+  const inputParent = await makeTempDir('source-cli-add-collision-input-');
+  const input = path.join(inputParent, 'shared');
+  await mkdir(input, { recursive: true });
+  await writeFile(path.join(input, 'SKILL.md'), '# Incoming\n');
+  await mkdir(path.join(root, 'personal', 'shared'), { recursive: true });
+  await writeFile(path.join(root, 'personal', 'shared', 'SKILL.md'), '# Existing\n');
+  const output = captureOutput();
+
+  assert.equal(
+    await runSourceCli({
+      argv: ['add', input, '--yes'],
+      rootDir: root,
+      ...output.streams
+    }),
+    3
+  );
+  assert.match(output.stderr(), /Source destination collision/);
+  assert.equal(
+    await readFile(path.join(root, 'personal', 'shared', 'SKILL.md'), 'utf8'),
+    '# Existing\n'
+  );
 });
 
 function captureOutput() {
