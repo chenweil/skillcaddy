@@ -11,7 +11,8 @@ import {
   planAddSource,
   planBreakingUpdateSource,
   planSourceMigration,
-  planUpdateSource
+  planUpdateSource,
+  updateGitSources
 } from '../lib/sourceManager.js';
 
 export async function runSourceCli({
@@ -44,6 +45,7 @@ export async function runSourceCli({
       const plan = await planUpdate(context, parsed.request);
       printUpdatePlan(plan, stdout);
       if (
+        plan.status === 'ready' &&
         !parsed.yes &&
         !await requestConfirmation(
           { confirm, stdin, stdout },
@@ -56,6 +58,15 @@ export async function runSourceCli({
       }
       printUpdateResult(await applyUpdateSource(context, plan), stdout);
       return 0;
+    }
+
+    if (command === 'update-git' && args.length === 0) {
+      const result = await updateGitSources({ rootDir, projectPath });
+      printGitUpdateBatch(result, stdout);
+      return result.sources.some(
+        (source) => source.status === 'failed' ||
+          source.status === 'breaking' && source.applied === false
+      ) ? 1 : 0;
     }
 
     if (command === 'inspect' && args.length === 1) {
@@ -188,10 +199,35 @@ function printUpdatePlan(plan, stdout) {
   stdout.write(`Update plan: ${plan.status}\n`);
   stdout.write(`source: ${plan.sourceId}\n`);
   stdout.write(`install: ${plan.installPath}\n`);
-  stdout.write(`input: ${plan.input.type} ${plan.input.name || plan.input.display}\n`);
+  stdout.write(
+    `input: ${plan.input.type} ${
+      plan.input.name || plan.input.display || plan.input.remote
+    }\n`
+  );
   printSkillPaths('unchanged', plan.changes.unchanged, stdout);
   printSkillPaths('added', plan.changes.added, stdout);
   printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
+}
+
+function printGitUpdateBatch(result, stdout) {
+  const counts = {
+    updated: 0,
+    current: 0,
+    dirty: 0,
+    failed: 0,
+    breaking: 0
+  };
+  for (const source of result.sources) {
+    counts[source.status] += 1;
+    const detail = source.status === 'breaking'
+      ? ` (${source.applied ? 'updated' : 'blocked'})`
+      : '';
+    stdout.write(`[${source.status}] ${source.sourceId}${detail}\n`);
+  }
+  stdout.write(
+    `Git source summary: updated=${counts.updated} current=${counts.current} ` +
+    `dirty=${counts.dirty} breaking=${counts.breaking} failed=${counts.failed}\n`
+  );
 }
 
 function printUpdateResult(result, stdout) {
@@ -236,20 +272,20 @@ function parseAddArgs(args) {
 
 function parseUpdateArgs(args) {
   if (
-    args.length < 2 ||
-    args[0].startsWith('--') ||
-    args[1].startsWith('--')
+    args.length < 1 ||
+    args[0].startsWith('--')
   ) {
     return null;
   }
   const request = {
     sourceId: args[0],
-    input: args[1]
+    ...(args[1] && !args[1].startsWith('--') ? { input: args[1] } : {})
   };
   let allowBreaking = false;
   let yes = false;
 
-  for (const argument of args.slice(2)) {
+  const optionStart = request.input ? 2 : 1;
+  for (const argument of args.slice(optionStart)) {
     if (argument === '--allow-breaking' && !allowBreaking) {
       allowBreaking = true;
       continue;
@@ -289,7 +325,8 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
-  stderr.write('Usage: npm run source -- update <source-id> <input> [--allow-breaking] [--yes]\n');
+  stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes]\n');
+  stderr.write('Usage: npm run source -- update-git\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 
@@ -297,6 +334,7 @@ const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.arg
 if (isMain) {
   process.exitCode = await runSourceCli({
     argv: process.argv.slice(2),
-    rootDir: process.env.SKILLCADDY_ROOT || process.cwd()
+    rootDir: process.env.SKILLCADDY_ROOT || process.cwd(),
+    projectPath: process.env.SKILLCADDY_PROJECT || process.cwd()
   });
 }

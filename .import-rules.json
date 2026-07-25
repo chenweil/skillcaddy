@@ -111,6 +111,11 @@
       "reason": "Git source add orchestration — owns plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceGitUpdate.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdate.js", "lib/sourceValidation.js"],
+      "reason": "Git source update orchestration — owns fetch, fast-forward checks, incoming-tree validation, and batch outcomes"
+    },
+    {
       "from": "lib/sourceRecord.js",
       "allow": ["lib/sourcePolicy.js"],
       "reason": "Source record schema — validates source-owned facts against the shared source boundary policy"
@@ -142,7 +147,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

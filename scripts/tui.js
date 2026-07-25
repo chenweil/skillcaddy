@@ -103,7 +103,11 @@ async function updateGithubSkillsFlow() {
   const confirm = await ask('确认运行更新? y/N');
   if (!['y', 'yes'].includes(confirm.toLowerCase())) return;
 
-  await runCommand('bash', [path.join(codeRootDir, 'scripts', 'pull-github.sh'), githubDir]);
+  await runCommand('bash', [
+    path.join(codeRootDir, 'scripts', 'pull-github.sh'),
+    githubDir,
+    state.projectPath
+  ]);
   state = await loadTuiState(rootDir, state.projectPath);
   console.log('已重新扫描本地状态');
 }

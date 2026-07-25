@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Registered Git source updates now fetch the tracked ref, validate incoming skill paths, advance only by fast-forward, and expose stable `updated`, `current`, `dirty`, `breaking`, and `failed` outcomes.
+
+### Changed
+- `npm run pull:github` now delegates to the unified source-management updater instead of maintaining a parallel Git pull implementation.
+
 ### Active deprecations
 
 | Legacy feature | Replacement | Deprecated | Runtime support ends | Migration code removed |

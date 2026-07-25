@@ -248,7 +248,7 @@ On startup the manager scans every source directory (`official / github / person
 
 ## Updating GitHub sources
 
-Bulk fast-forward pull every `github/` sub-repo. Dirty working trees are automatically skipped, so local edits won't be clobbered:
+Update every registered Git source through the unified fast-forward-only safety path. Dirty working trees are skipped, and breaking updates that affect a known current-project link are blocked:
 
 ```bash
 npm run pull:github

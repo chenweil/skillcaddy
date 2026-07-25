@@ -137,7 +137,7 @@ node skills/skillcaddy-manager/scripts/version-manager.cjs check
 
 Use `sync` only when the user requests a version update, then verify the changed version fields before reporting completion.
 
-For sources under `github/`, inspect each repository for local changes. Skip dirty repositories and use fast-forward-only pulls; never stash, reset, or overwrite source edits.
+For registered Git sources, use the unified updater. It fetches the tracked ref, skips dirty worktrees, advances only by fast-forward, and blocks breaking updates that affect known current-project links. Never stash, reset, or overwrite source edits.
 
 Prefer:
 
@@ -145,7 +145,7 @@ Prefer:
 npm run pull:github
 ```
 
-Complete when pulled, current, dirty, non-Git, and failed targets are counted and network failures are distinguished from repository failures.
+Complete when updated, current, dirty, breaking, and failed outcomes are reported separately.
 
 ## Bootstrap and Web/TUI
 

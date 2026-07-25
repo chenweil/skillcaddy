@@ -248,7 +248,7 @@ skills/<skill-name>/
 
 ## 更新 GitHub 源
 
-批量 fast-forward pull 所有 `github/` 子仓库（脏工作树会自动跳过，不会冲掉本地修改）：
+通过统一的 fast-forward-only 安全路径更新所有已登记 Git 源。脏工作树会自动跳过；会影响当前项目已知链接的 breaking 更新会被阻止：
 
 ```bash
 npm run pull:github
