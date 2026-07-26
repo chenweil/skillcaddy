@@ -208,30 +208,49 @@ skillcaddy/
 └── test/
 ```
 
-The four external skill source directories (`official / github / personal / archived`) are added to `.gitignore`; after clone they're empty shells — fill them as described in [Adding a skill](#adding-a-skill) below. `skills/` is the repo-bundled source, shipped with this project, and is **not** in `.gitignore`.
+The four external skill source directories (`official / github / personal / archived`) are added to `.gitignore`. Use the managed source commands below instead of choosing a destination manually. `skills/` is the repo-bundled source, shipped with this project, and is **not** in `.gitignore`.
 
-Each skill is a subdirectory. A `SKILL.md` is recommended (describes when and how to use it):
+## Managed source acquisition
 
-```text
-official/
-└── my-skill/
-    └── SKILL.md
-```
-
-## Adding a skill
-
-Drop in directly (simplest):
+The first release is exposed through repository-local npm commands:
 
 ```bash
-mkdir -p official/my-skill
-# write the files into official/my-skill/
+# Read-only inventory and inspection
+npm run source -- list
+npm run source -- inspect github/example/toolbox
+
+# Preview, then acquire a Git repo, public HTTP(S) ZIP, local ZIP, or local directory
+npm run source -- add <input>
+npm run source -- add <input> --yes
+
+# Replace one registered source; Archive/Local updates require a new input
+npm run source -- update <source-id> [input]
+npm run source -- update <source-id> [input] --allow-breaking --yes
+
+# Update all registered Git sources through the same safety path
+npm run source -- update-git
 ```
 
-Clone from GitHub:
+`add` and `update` are separate operations. An identical repeated add is a successful no-op, while an identity or destination collision stops without authorizing replacement. Use `--name` or `--namespace` to resolve a new-source naming collision; use `update` only for a source identity already present in the source registry.
+
+CLI exit categories are stable: `0` success or identical no-op, `1` general acquisition/update failure, `2` invalid usage, `3` unresolved identity or collision, and `4` missing authorization for a breaking replacement.
+
+Acquisition changes only the central library. It never creates project links, executes acquired code, runs setup, or invokes runtime preflight. Enablement uses an already acquired skill through the existing Web, TUI, or project-link API. For an explicit combined request, acquire first, rescan state, resolve the one requested skill by full ID, and enable only that selection.
+
+Unknown setup readiness produces no generic warning or gate. A declared setup contract may add a non-blocking reminder after enablement. The publisher skill's runtime preflight remains responsible for proprietary credentials and setup, such as an IMA API key.
+
+### Adopt an existing library
+
+Migration preserves physical source paths and project links. Preview it first:
 
 ```bash
-git clone https://github.com/some/repo.git github/some-skill
+npm run source -- migrate
+npm run source -- migrate --yes
 ```
+
+The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
+
+The first release supports complete Git repositories, public HTTP(S) ZIP files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, non-ZIP archives, or a global `skillcaddy` executable.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 
@@ -246,12 +265,12 @@ Skills under `skills/` are tagged during scan as `source: 'local'`, `id: 'local/
 
 On startup the manager scans every source directory (`official / github / personal / archived / skills`); no service restart is needed to see new skills in the UI.
 
-## Updating GitHub sources
+## Updating Git sources
 
 Update every registered Git source through the unified fast-forward-only safety path. Dirty working trees are skipped, and breaking updates that affect a known current-project link are blocked:
 
 ```bash
-npm run pull:github
+npm run source -- update-git
 ```
 
 ## Skills bundled with this project

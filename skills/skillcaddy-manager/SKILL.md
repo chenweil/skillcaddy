@@ -1,6 +1,6 @@
 ---
 name: skillcaddy-manager
-description: Manage Skillcaddy libraries and project skill links. Use for discovery, enable/disable, audits, maintenance, bootstrap, or Web/TUI access.
+description: Manage Skillcaddy source acquisition, source updates, migrations, and project skill links. Use for discovery, add/update requests, enable/disable, audits, maintenance, bootstrap, or Web/TUI access.
 ---
 
 # Skillcaddy Manager
@@ -11,10 +11,10 @@ Treat Skillcaddy as a central skill library with project-level symlink activatio
 
 1. Resolve the Skillcaddy repository and target project. Default the project to the current working directory only when the user did not provide one.
    - Complete when both absolute paths are known.
-2. For recommendations, audits, or mutations, read `GET /api/state?projectPath=<encoded-path>`. If the server is unavailable, inspect the equivalent paths listed under **Core Model**.
-   - Complete when repository, project, global, Claude, metadata, and `advice` state relevant to the request are known.
+2. For recommendations, audits, or mutations, read `GET /api/state?projectPath=<encoded-path>`. For source acquisition, updates, or migration, also inspect the source registry with `npm run source -- list` and `npm run source -- inspect <source-id>`. If the server is unavailable, inspect the equivalent paths listed under **Core Model**.
+   - Complete when repository, source registry, project, global, Claude, metadata, and `advice` state relevant to the request are known.
 3. Route to the required branch and load only its reference; load multiple references only when the request combines branches:
-   - Discovery, enable/disable, audit, health, GitHub update, bootstrap, Web/TUI: [OPERATIONS.md](references/OPERATIONS.md)
+   - Discovery, source acquisition/update/migration, enable/disable, audit, health, Git update, bootstrap, Web/TUI: [OPERATIONS.md](references/OPERATIONS.md)
    - Recommendations: [RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md)
    - Notes, tags, `autoEnable`, migration, batch Chinese notes: [METADATA.md](references/METADATA.md)
    - Complete when the selected branch, target identities, and completion criterion are explicit.
@@ -29,6 +29,7 @@ Treat Skillcaddy as a central skill library with project-level symlink activatio
 |---|---|---|
 | Bundled | `skills/<name>/` | Skills shipped by this repository |
 | Central | `official/`, `github/`, `personal/`, `archived/` | Source libraries |
+| Source registry | `.skillcaddy/sources/` | Sidecar identity, provenance, integrity, install path, and discovered skill paths |
 | Project | `<project>/.agents/skills/` | Codex-compatible activation symlinks |
 | Project Claude | `<project>/.claude/skills/` | Claude compatibility symlinks |
 | Global | `~/.agents/skills/`, `~/.claude/skills/` | User-level skills that may conflict or shadow |
@@ -37,6 +38,10 @@ Treat Skillcaddy as a central skill library with project-level symlink activatio
 Preserve these invariants:
 
 - Enable and disable operations create or remove project symlinks; source skill directories remain intact.
+- Source acquisition changes only the central library. It never implies enablement, setup, or execution of acquired code.
+- `add` is for a new source identity. Only a matching source-registry record authorizes `update`; a destination collision never does.
+- An explicit combined request runs acquisition first, rescans state, resolves one requested acquired skill, and enables only that selection.
+- Unknown setup readiness produces no reminder or gate. Declared setup reminders remain non-blocking; publisher runtime preflight owns proprietary credentials and setup.
 - `archived/` skills require an explicit user request.
 - GitHub-backed source directories remain free of Skillcaddy metadata; write catalog metadata to the sidecar store.
 - Collection activation and project readiness are separate: setup may be missing after links are enabled.
@@ -59,6 +64,8 @@ Require confirmation before proceeding when:
 - a project alias points to a different target;
 - the project entry is not a symlink or is externally managed;
 - a GitHub source has uncommitted changes before update;
+- a breaking source replacement affects a known current-project link;
+- a source identity is ambiguous or a destination collision is not backed by a matching registry record;
 - the request reaches into `archived/` without naming the archived target;
 - the request would delete a source skill rather than a project link;
 - an advice item exposes a destructive or ownership ambiguity.

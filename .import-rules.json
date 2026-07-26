@@ -26,6 +26,11 @@
       "reason": "Leaf module — global manager skill install check"
     },
     {
+      "from": "lib/managerSourceWorkflow.js",
+      "allow": ["lib/enablePlan.js", "lib/projectActions.js", "lib/sourceManager.js", "lib/skillStore.js"],
+      "reason": "Manager adapter — sequences source acquisition and exact project enablement through public boundaries"
+    },
+    {
       "from": "lib/sourcePolicy.js",
       "allow": [],
       "reason": "Leaf module — shared source boundary policy"

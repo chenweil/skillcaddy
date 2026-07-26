@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Registered Git source updates now fetch the tracked ref, validate incoming skill paths, advance only by fast-forward, and expose stable `updated`, `current`, `dirty`, `breaking`, and `failed` outcomes.
+- Manager source workflows now infer updates only from registered identities, keep acquisition and enablement separate, and rescan through shared enablement preflight before enabling one explicitly selected acquired skill.
 
 ### Changed
 - `npm run pull:github` now delegates to the unified source-management updater instead of maintaining a parallel Git pull implementation.
+- English, Chinese, and Manager documentation now cover the repository-local source commands, migration and recovery, setup boundaries, and deferred first-release capabilities.
 
 ### Active deprecations
 

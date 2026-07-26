@@ -1,10 +1,21 @@
 # Skillcaddy Operations
 
-Use this reference for discovery, project links, audits, source updates, bootstrap, and Web/TUI access. Start from the core loop in `SKILL.md`.
+Use this reference for discovery, source acquisition, project links, audits, source updates, migration, bootstrap, and Web/TUI access. Start from the core loop in `SKILL.md`.
 
 ## State and Identity
 
 Prefer `GET /api/state?projectPath=<encoded-path>`. It returns `skills`, `enabled`, `global`, `claude`, and `advice` in one scan.
+
+For acquisition, update, and migration, also read the sidecar source registry through:
+
+```bash
+npm run source -- list
+npm run source -- inspect <source-id>
+```
+
+State answers which skills are discoverable and enabled. The source registry answers whether a source identity is registered and therefore whether the Manager may route to `update`. A physical destination collision is not registry identity and never authorizes replacement.
+
+After natural-language intent is resolved into acquisition and/or enablement fields, use the repository adapter in `lib/managerSourceWorkflow.js` for the shared plan/apply sequence. Its plan reports `add` versus `update`, and its apply path runs the shared enablement preflight after the required rescan. The npm commands below are the repository-local user-facing equivalents.
 
 For each skill identity, retain:
 
@@ -37,6 +48,67 @@ When multiple results remain, show their full IDs, paths, and descriptions for u
 | `collection-setup-invalid` | The tracked setup contract is invalid | Report the contract path and error; never guess or execute commands |
 
 If the API is unavailable, inspect `<project>/.agents/skills`, `<project>/.claude/skills`, `~/.agents/skills`, and `~/.claude/skills`, then compare aliases and link targets.
+
+## Source Acquisition and Enablement
+
+Classify the user's request before mutation:
+
+| User intent | Route |
+|---|---|
+| “Download/add this skill” / “下载这个 skill” | Acquisition only |
+| “Enable IMA knowledge-base” / “启用 IMA knowledge-base” | Enablement only; require an already acquired exact skill |
+| “Download and enable it in this project” / “下载并启用到当前项目” | Explicit combined workflow |
+| “Install this new URL for `<source-id>`” / “给 `<source-id>` 安装这个新版 URL” | Update only when that registry identity exists |
+
+For a new identity, preview and apply:
+
+```bash
+npm run source -- add <input>
+npm run source -- add <input> --yes
+```
+
+Inputs may be a hosted Git URL, GitHub tree URL, public HTTP(S) ZIP URL, local ZIP, or local directory. `add` is idempotent only for identical registered content. If identity or destination collision is reported, stop; use `--name` or `--namespace` for a distinct new source, or select an existing registered source explicitly for update.
+
+For a registered source, preview and apply:
+
+```bash
+npm run source -- update <source-id> [input]
+npm run source -- update <source-id> [input] --yes
+```
+
+Archive and Local replacement require a new input. Git update uses the registered remote and may omit it. When the plan reports an affected current-project link, stop unless the user explicitly authorizes:
+
+```bash
+npm run source -- update <source-id> [input] --allow-breaking --yes
+```
+
+Acquisition-only requests complete after a source-registry inspection and fresh state scan prove the source is present; do not create project links.
+
+Enablement-only requests resolve one exact existing skill and follow **Enable** below; do not run source acquisition.
+
+For an explicit combined request:
+
+1. preview and apply the acquisition plan;
+2. rescan `GET /api/state`;
+3. restrict matching to skill paths reported by the acquired source;
+4. if more than one remains, show full skill IDs and wait for selection;
+5. run the existing enable preflight and enable only the selected skill;
+6. rescan and verify both source presence and the one requested project link.
+
+Unknown setup readiness creates neither a reminder nor a gate. Surface a declared setup reminder after enablement without blocking the link. Never infer credentials or publisher setup from prose; the acquired skill's runtime preflight remains responsible for requirements such as IMA credentials.
+
+Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, non-ZIP archives, and a global `skillcaddy` executable are also deferred.
+
+## Source Registry Migration and Recovery
+
+Preview before applying:
+
+```bash
+npm run source -- migrate
+npm run source -- migrate --yes
+```
+
+Migration writes only `.skillcaddy/sources/`; it does not move source directories or edit project links. Leave ambiguous entries unresolved. For recovery, restore a pre-operation copy of `.skillcaddy/sources/`. Add and update already clean up or roll back failed publication; after an interruption, inspect registry and active content before retrying.
 
 ## Query Skills
 
@@ -142,7 +214,7 @@ For registered Git sources, use the unified updater. It fetches the tracked ref,
 Prefer:
 
 ```bash
-npm run pull:github
+npm run source -- update-git
 ```
 
 Complete when updated, current, dirty, breaking, and failed outcomes are reported separately.
