@@ -42,7 +42,6 @@ When multiple results remain, show their full IDs, paths, and descriptions for u
 | `global-shadowed-by-project` | Same alias exists globally and in project | Surface precedence risk |
 | `global-alias-conflict` | Candidate alias exists globally | Surface before enabling |
 | `library-duplicate-name` | Multiple source skills share a name | Use full ID and confirmed alias |
-| `legacy-metadata-deprecated` | Metadata still uses legacy storage | Route to `METADATA.md` migration |
 | `collection-setup-required` | Enabled skills depend on incomplete required setup | Offer the declared setup skill; do not report the collection ready |
 | `collection-setup-recommended` | Enabled skills would benefit from optional setup | Surface without blocking activation |
 | `collection-setup-invalid` | The tracked setup contract is invalid | Report the contract path and error; never guess or execute commands |

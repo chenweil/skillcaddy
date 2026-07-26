@@ -41,15 +41,16 @@ test('lists and searches skill choices with enabled state', async () => {
 test('prefers the metadata note as the skill introduction', async () => {
   const root = await makeTempDir('tui-root-');
   const project = await makeTempDir('tui-project-');
-  const skill = await createSkill(root, 'personal', 'review', 'Review code changes');
+  await createSkill(root, 'personal', 'review', 'Review code changes');
 
-  await writeFile(path.join(skill, 'skillcaddy.json'), JSON.stringify({
+  let state = await loadTuiState(root, project);
+  await saveSkillMetadata(root, state, 'personal/review', {
     note: '审查代码改动。',
     tags: [],
     autoEnable: true
-  }));
+  });
 
-  const state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project);
   const [choice] = listSkillChoices(state, { query: 'review' });
 
   assert.equal(choice.label, 'personal/review - 审查代码改动。');

@@ -95,16 +95,16 @@ The page loads that project immediately, keeps recently used project paths in br
 }
 ```
 
-The web UI reads legacy `<skill-dir>/skillcaddy.json` files for compatibility, but new edits are written to the local sidecar metadata store. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream source repositories clean while still making a large local library easier to browse.
+Runtime scans and the web UI read metadata only from the local sidecar store. Tags appear as filter tabs and badge pills; notes are shown on each skill card. Set `autoEnable` to `false` to exclude a deprecated or risky skill from library-level bulk enable while still allowing single-skill manual enable. This keeps upstream source repositories clean while still making a large local skill library easier to browse.
 
-Legacy metadata fallback is deprecated. Runtime reading ends in v0.15.0, while the migration command remains available through v0.15.x and is removed in v0.16.0. Preview and apply the migration with:
+Since v0.15.0, normal runtime scans ignore legacy `<skill-dir>/skillcaddy.json` files. The migration command explicitly discovers them, remains available through v0.15.x, and is removed in v0.16.0. Preview and apply the migration with:
 
 ```bash
 npm run migrate:metadata
 npm run migrate:metadata -- --yes
 ```
 
-The apply command writes equivalent sidecar metadata and retains the legacy file for rollback. Once the sidecar exists, Skillcaddy no longer uses the legacy copy.
+The apply command writes equivalent sidecar metadata and retains the legacy file for rollback. Runtime behavior changes only after the sidecar is written.
 
 ## Collection setup lifecycle
 

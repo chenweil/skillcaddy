@@ -10,8 +10,11 @@ const write = process.argv.slice(2).includes('--yes');
 
 await ensureSourceFolders(rootDir);
 const skills = await scanSkills(rootDir);
-const invalid = skills.filter((skill) => skill.metadataError);
 const result = await migrateLegacySkillMetadata(rootDir, skills, { write });
+const invalid = [
+  ...skills.filter((skill) => skill.metadataError),
+  ...result.invalid
+];
 
 if (result.pending.length === 0) {
   console.log('没有需要迁移的 legacy metadata。');

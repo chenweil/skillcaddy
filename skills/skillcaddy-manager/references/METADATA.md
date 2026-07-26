@@ -10,7 +10,7 @@ Use this reference for notes, tags, `autoEnable`, legacy migration, and batch Ch
 .skillcaddy/metadata/<source>/<relative-skill-path>/skillcaddy.json
 ```
 
-Legacy `<skill-dir>/skillcaddy.json` is read only for compatibility in v0.14.x. Runtime fallback ends in v0.15.0; the migration command remains through v0.15.x and is removed in v0.16.0. New writes use the API or sidecar path, especially for GitHub-backed sources.
+Since v0.15.0, runtime scans ignore legacy `<skill-dir>/skillcaddy.json`. The migration command explicitly discovers those files, remains through v0.15.x, and is removed in v0.16.0. New writes use the API or sidecar path, especially for GitHub-backed sources.
 
 Supported shape:
 

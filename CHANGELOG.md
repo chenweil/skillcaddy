@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Active deprecations
+
+| Legacy feature | Replacement | Deprecated | Runtime support ended | Migration code removed |
+| --- | --- | --- | --- | --- |
+| `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
+
+## [0.15.0] - 2026-07-26
+
 ### Added
+- Added a sidecar source registry with stable identities, sanitized provenance, integrity data, physical install paths, and discovered skill paths.
+- Added dry-run adoption for existing Git and Local sources without moving their current directories.
+- Added managed acquisition for local directories, local ZIP files, complete Git repositories, GitHub tree URLs, and public HTTP(S) ZIP files.
+- Added transactional Local and Archive replacement with validation, rollback, download and extraction limits, and current-project link protection.
 - Registered Git source updates now fetch the tracked ref, validate incoming skill paths, advance only by fast-forward, and expose stable `updated`, `current`, `dirty`, `breaking`, and `failed` outcomes.
 - Manager source workflows now infer updates only from registered identities, keep acquisition and enablement separate, and rescan through shared enablement preflight before enabling one explicitly selected acquired skill.
 
@@ -15,11 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npm run pull:github` now delegates to the unified source-management updater instead of maintaining a parallel Git pull implementation.
 - English, Chinese, and Manager documentation now cover the repository-local source commands, migration and recovery, setup boundaries, and deferred first-release capabilities.
 
-### Active deprecations
-
-| Legacy feature | Replacement | Deprecated | Runtime support ends | Migration code removed |
-| --- | --- | --- | --- | --- |
-| `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
+### Removed
+- Runtime scanning no longer reads legacy `<skill-dir>/skillcaddy.json` metadata. `npm run migrate:metadata` continues to discover and migrate those files explicitly through v0.15.x.
 
 ## [0.14.3] - 2026-07-22
 

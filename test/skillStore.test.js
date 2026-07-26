@@ -157,7 +157,7 @@ test('scans repository-provided root skills', async () => {
   assert.equal(result.targetPath, skill);
 });
 
-test('reads and writes skillcaddy metadata for notes and tags', async () => {
+test('ignores legacy metadata at runtime and writes notes and tags to sidecar storage', async () => {
   const root = await makeTempDir('skills-root-');
   const project = await makeTempDir('skills-project-');
   const skill = path.join(root, 'personal', 'metadata-skill');
@@ -172,12 +172,12 @@ test('reads and writes skillcaddy metadata for notes and tags', async () => {
   }));
 
   const state = await getState(root, project);
-  assert.equal(state.skills[0].note, 'Human readable note');
-  assert.deepEqual(state.skills[0].tags, ['Developer Tools', 'Quality']);
+  assert.equal(state.skills[0].note, '');
+  assert.deepEqual(state.skills[0].tags, []);
   assert.equal(state.skills[0].autoEnable, true);
-  assert.equal(state.skills[0].hasMetadata, true);
-  assert.equal(state.skills[0].metadataStorage, 'legacy');
-  assert.equal(state.advice[0].type, 'legacy-metadata-deprecated');
+  assert.equal(state.skills[0].hasMetadata, false);
+  assert.equal(state.skills[0].metadataStorage, undefined);
+  assert.equal(state.advice.some((item) => item.type === 'legacy-metadata-deprecated'), false);
 
   const result = await updateSkillMetadata(root, {
     skillPath: skill,
@@ -211,6 +211,9 @@ test('previews and applies legacy metadata migration without deleting the source
   await writeFile(legacyMetadataPath, JSON.stringify({ note: '旧备注', tags: ['Legacy'], autoEnable: false }));
 
   let state = await getState(root, project);
+  assert.equal(state.skills[0].hasMetadata, false);
+  assert.equal(state.skills[0].note, '');
+
   const preview = await migrateLegacySkillMetadata(root, state.skills);
   assert.equal(preview.dryRun, true);
   assert.equal(preview.migrated, 0);

@@ -95,16 +95,16 @@ http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 }
 ```
 
-Web UI 会兼容读取旧的 `<skill-dir>/skillcaddy.json`，但新的编辑会写到本地 sidecar 元数据存储。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游原件库，也能让大型本地 skill 库更容易浏览。
+运行时扫描与 Web UI 只从本地 sidecar 存储读取 metadata。Tags 会显示为过滤 tab 和 pill 标签，备注会显示在每个 skill 卡片上。把 `autoEnable` 设为 `false` 后，废弃或有风险的 skill 会被库级一键加入跳过，但仍可单独手动启用。这样既不污染上游原件库，也能让大型本地 skill 库更容易浏览。
 
-Legacy metadata fallback 已进入退役期：v0.15.0 停止运行时读取，迁移命令保留至 v0.15.x，并在 v0.16.0 删除。可先预检，再显式执行迁移：
+从 v0.15.0 开始，正常运行时扫描会忽略旧的 `<skill-dir>/skillcaddy.json`。迁移命令仍会显式发现这些文件，保留至 v0.15.x，并在 v0.16.0 删除。可先预检，再显式执行迁移：
 
 ```bash
 npm run migrate:metadata
 npm run migrate:metadata -- --yes
 ```
 
-执行迁移会写入等价的 sidecar metadata，并保留 legacy 文件用于回滚；sidecar 存在后，Skillcaddy 不再使用 legacy 副本。
+执行迁移会写入等价的 sidecar metadata，并保留 legacy 文件用于回滚；写入 sidecar 后运行时才会使用迁移后的 metadata。
 
 ## 库初始化生命周期
 
