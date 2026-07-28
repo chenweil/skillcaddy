@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   formatCompactSkillChoice,
+  formatSkillTableDivider,
+  formatSkillTableHeader,
   getDisplayWidth,
   getSkillPage,
   getSkillTableLayout,
@@ -47,6 +49,26 @@ test('aligns a Chinese introduction column and truncates it to terminal width', 
   assert.match(row, /…$/);
   assert.equal(getDisplayWidth(row.split(' | ')[1]), layout.introductionWidth);
   assert.equal(truncateDisplayWidth('中文介绍很长', 7), '中文介…');
+});
+
+test('uses a single column without overflowing a 35-column terminal', () => {
+  const layout = getSkillTableLayout(35);
+  const header = formatSkillTableHeader(layout);
+  const divider = formatSkillTableDivider(layout);
+  const row = formatCompactSkillChoice({
+    index: 1,
+    enabled: false,
+    skill: {
+      name: 'guizang-social-card-skill-with-a-long-name',
+      note: '生成社交卡片图片集。'
+    }
+  }, 1, layout);
+
+  assert.equal(header, 'Skill / 状态');
+  assert.doesNotMatch(divider, /\+/);
+  assert.doesNotMatch(row, /\|/);
+  assert.match(row, /可添加$/);
+  assert.ok([header, divider, row].every((line) => getDisplayWidth(line) <= 35));
 });
 
 test('uses the same compact row style for search and enabled choices', () => {
