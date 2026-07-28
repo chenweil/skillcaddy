@@ -18,6 +18,7 @@ npm-debug.log*
 .agents/
 .claude/
 .skillcaddy/
+.workbuddy/
 
 # skill 原件库（本地内容不进入版本控制；克隆后自行填充）
 official/*
