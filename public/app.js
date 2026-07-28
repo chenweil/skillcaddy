@@ -12,11 +12,13 @@ const state = {
   enabled: [],
   global: [],
   setups: [],
+  sources: [],
   advice: [],
   claude: null,
   collapsedGroups: new Set(),
   knownGroups: new Set(),
   activeTag: '',
+  searchQuery: '',
   editingSkillId: '',
   stats: { total: 0, enabled: 0, available: 0 }
 };
@@ -33,6 +35,7 @@ const elements = {
   claudeSkillList: document.querySelector('#claudeSkillList'),
   totalSkills: document.querySelector('#totalSkills'),
   sourceFilter: document.querySelector('#sourceFilter'),
+  skillSearch: document.querySelector('#skillSearch'),
   enabledList: document.querySelector('#enabledList'),
   agentsCount: document.querySelector('#agentsCount'),
   claudeCount: document.querySelector('#claudeCount'),
@@ -51,6 +54,10 @@ elements.loadProject.addEventListener('click', () => loadState({ feedback: true 
 elements.addProject.addEventListener('click', addCurrentProject);
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
 elements.sourceFilter.addEventListener('change', render);
+elements.skillSearch.addEventListener('input', (event) => {
+  state.searchQuery = event.target.value.trim().toLowerCase();
+  render();
+});
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
@@ -84,8 +91,8 @@ function render() {
   elements.heroAgentsCount.textContent = state.enabled.length;
   elements.heroClaudeCount.textContent = state.claude?.skills?.length || 0;
   elements.activeProject.textContent = state.projectPath || '等待读取项目路径';
-  renderAgentsSkills({ enabled: state.enabled, elements, onDisable: disable });
-  renderClaudeStatus({ claude: state.claude, elements, onUnlink: unlinkClaudeSkill });
+  renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable });
+  renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill });
   renderAdvice();
   renderProjectHistory();
   renderTagTabs();
@@ -205,7 +212,8 @@ function renderSkills() {
   const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
   const enabledTargets = new Set(enabledByTarget.keys());
   const sourceSkills = filter ? state.skills.filter((skill) => skill.source === filter) : state.skills;
-  const skills = state.activeTag ? sourceSkills.filter((skill) => (skill.tags || []).includes(state.activeTag)) : sourceSkills;
+  const searchedSkills = state.searchQuery ? sourceSkills.filter((skill) => matchesSearchQuery(skill, state.searchQuery)) : sourceSkills;
+  const skills = state.activeTag ? searchedSkills.filter((skill) => (skill.tags || []).includes(state.activeTag)) : searchedSkills;
   const groups = groupSkills(skills);
 
   elements.skillList.replaceChildren();
@@ -238,9 +246,13 @@ function renderSkills() {
     `;
 
     groupElement.querySelector('h3 .title').textContent = group.collection;
-    groupElement.querySelector('p').textContent = group.collectionPath;
+    const sourceInfo = findSourceInfo(group.key);
+    const versionText = sourceInfo?.version ? ` · ${sourceInfo.version}` : '';
+    groupElement.querySelector('p').textContent = `${group.collectionPath}${versionText}`;
     const setup = findCollectionSetup(group.source, group.collection);
-    groupElement.querySelector('.badge').textContent = `${group.source} · ${group.skills.length}${setup ? ` · ${setupStatusLabel(setup)}` : ''}`;
+    const badge = groupElement.querySelector('.badge');
+    badge.textContent = `${group.source} · ${group.skills.length}${setup ? ` · ${setupStatusLabel(setup)}` : ''}`;
+    if (setup) badge.title = setupTooltip(setup);
     groupElement.querySelector('.group-toggle').addEventListener('click', () => toggleGroup(group.key));
     const enableAllButton = groupElement.querySelector('.group-enable-all');
     const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
@@ -422,6 +434,13 @@ function groupSkills(skills) {
   );
 }
 
+function matchesSearchQuery(skill, query) {
+  const name = (skill.name || '').toLowerCase();
+  const description = (skill.description || '').toLowerCase();
+  const tags = (skill.tags || []).join(' ').toLowerCase();
+  return name.includes(query) || description.includes(query) || tags.includes(query);
+}
+
 function toggleGroup(key) {
   state.collapsedGroups.has(key) ? state.collapsedGroups.delete(key) : state.collapsedGroups.add(key);
   renderSkills();
@@ -503,6 +522,20 @@ function confirmSetupPreflight(skillIds) {
 function setupStatusLabel(setup) {
   if (setup.status === 'missing') return setup.affectedEnabledSkillIds.length > 0 ? '待配置' : '需初始化';
   return { partial: '配置不完整', ready: '已就绪', invalid: '配置无效' }[setup.status] || setup.status;
+}
+
+function setupTooltip(setup) {
+  const tooltips = {
+    missing: '尚未配置，启用后需运行初始化 skill',
+    partial: '仅完成部分配置，请运行初始化 skill',
+    ready: '已完成初始化配置',
+    invalid: '配置定义无效，请检查 collection-metadata 文件'
+  };
+  return tooltips[setup.status] || '';
+}
+
+function findSourceInfo(groupKey) {
+  return state.sources.find((source) => source.installPath === groupKey);
 }
 
 function canBulkEnableSkill(skill, enabledTargets) {

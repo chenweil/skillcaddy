@@ -1,4 +1,4 @@
-export function renderAgentsSkills({ enabled, elements, onDisable }) {
+export function renderAgentsSkills({ enabled, skills, elements, onDisable }) {
   elements.enabledList.replaceChildren();
   if (enabled.length === 0) {
     elements.enabledList.append(empty('当前项目还没有启用 skill'));
@@ -17,6 +17,12 @@ export function renderAgentsSkills({ enabled, elements, onDisable }) {
     `;
     item.querySelector('.name').textContent = skill.alias;
     item.querySelector('.path').textContent = skill.targetPath || skill.linkPath;
+
+    const sourceSkill = skills.find((s) => s.path === skill.targetPath);
+    if (sourceSkill) {
+      const description = sourceSkill.note || sourceSkill.description;
+      if (description) item.title = description;
+    }
 
     const button = document.createElement('button');
     button.className = 'secondary danger';

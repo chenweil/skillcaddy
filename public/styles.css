@@ -242,6 +242,20 @@ h3 {
   margin: 0 0 16px;
 }
 
+.library-search {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.library-search input {
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.library-search input::placeholder {
+  color: var(--muted-soft);
+}
+
 .advice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

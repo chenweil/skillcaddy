@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-29
+
+### Added
+- Web 全局搜索框：在 Library 区域顶部新增搜索输入框，支持按 skill 名称、描述、标签实时过滤。
+- Web 库级状态 tooltip：鼠标悬停在状态 badge（"待配置"/"配置不完整"/"已就绪"）上时显示解释文字。
+- Web 版本展示：库路径后展示 Git commit hash（前 7 位）或 Archive integrity hash（前 12 位），数据来源于 source registry。
+- Web 启用列描述 tooltip：左侧 Agents / Claude Code 已启用列表的每个 skill 条目增加鼠标悬停描述，优先显示中文备注（`note`），无则显示英文描述（`description`）。
+
+### Changed
+- `/api/state` 返回值新增 `sources` 数组，包含每个源的版本信息（Git commit 或 integrity hash）。
+- `renderAgentsSkills` / `renderClaudeStatus` 增加 `skills` 参数用于匹配源 skill 信息。
+
 ### Active deprecations
 
 | Legacy feature | Replacement | Deprecated | Runtime support ended | Migration code removed |
