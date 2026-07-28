@@ -66,7 +66,7 @@ npm run source -- add <input>
 npm run source -- add <input> --yes
 ```
 
-Inputs may be a hosted Git URL, GitHub tree URL, public HTTP(S) ZIP URL, local ZIP, or local directory. `add` is idempotent only for identical registered content. If identity or destination collision is reported, stop; use `--name` or `--namespace` for a distinct new source, or select an existing registered source explicitly for update.
+Inputs may be a hosted Git URL, GitHub tree URL, public HTTP(S) ZIP URL, stable direct HTTP(S) `/SKILL.md` URL, local ZIP, or local directory. A Remote file source requires `--name`, installs as `official/<name>/SKILL.md`, and does not accept `--namespace`. `add` is idempotent only for identical registered content. If identity or destination collision is reported, stop; use `--name` or `--namespace` where supported for a distinct new source, or select an existing registered source explicitly for update.
 
 For a registered source, preview and apply:
 
@@ -75,7 +75,7 @@ npm run source -- update <source-id> [input]
 npm run source -- update <source-id> [input] --yes
 ```
 
-Archive and Local replacement require a new input. Git update uses the registered remote and may omit it. When the plan reports an affected current-project link, stop unless the user explicitly authorizes:
+Archive and Local replacement require a new input. Git and Remote file updates reuse the registered origin when input is omitted. Supplying a new stable direct `/SKILL.md` URL for a Remote file update migrates its registered origin. When the plan reports an affected current-project link, stop unless the user explicitly authorizes:
 
 ```bash
 npm run source -- update <source-id> [input] --allow-breaking --yes

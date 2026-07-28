@@ -219,11 +219,16 @@ The first release is exposed through repository-local npm commands:
 npm run source -- list
 npm run source -- inspect github/example/toolbox
 
-# Preview, then acquire a Git repo, public HTTP(S) ZIP, local ZIP, or local directory
+# Preview, then acquire a Git repo, public HTTP(S) ZIP, direct SKILL.md,
+# local ZIP, or local directory
 npm run source -- add <input>
 npm run source -- add <input> --yes
 
-# Replace one registered source; Archive/Local updates require a new input
+# Direct SKILL.md requires an explicit name and installs under official/<name>/
+npm run source -- add https://example.com/SKILL.md --name example --yes
+
+# Replace one registered source; Archive/Local updates require a new input,
+# while Git/Remote file updates may reuse their registered origin
 npm run source -- update <source-id> [input]
 npm run source -- update <source-id> [input] --allow-breaking --yes
 
@@ -231,7 +236,7 @@ npm run source -- update <source-id> [input] --allow-breaking --yes
 npm run source -- update-git
 ```
 
-`add` and `update` are separate operations. An identical repeated add is a successful no-op, while an identity or destination collision stops without authorizing replacement. Use `--name` or `--namespace` to resolve a new-source naming collision; use `update` only for a source identity already present in the source registry.
+`add` and `update` are separate operations. An identical repeated add is a successful no-op, while an identity or destination collision stops without authorizing replacement. Use `--name` or `--namespace` to resolve Archive/Local naming collisions. Remote files require `--name` and reject `--namespace`; use `update` only for a source identity already present in the source registry. A Remote-file update may omit input to reuse the registered origin or supply a new stable URL to migrate that origin.
 
 CLI exit categories are stable: `0` success or identical no-op, `1` general acquisition/update failure, `2` invalid usage, `3` unresolved identity or collision, and `4` missing authorization for a breaking replacement.
 
@@ -250,7 +255,7 @@ npm run source -- migrate --yes
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 
-The first release supports complete Git repositories, public HTTP(S) ZIP files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, non-ZIP archives, or a global `skillcaddy` executable.
+The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, non-ZIP archives, or a global `skillcaddy` executable. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 

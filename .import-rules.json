@@ -72,23 +72,48 @@
     },
     {
       "from": "lib/sourceHttp.js",
-      "allow": ["lib/sourceAcquisitionError.js"],
-      "reason": "Remote Archive transport — owns HTTP(S), redirects, streaming limits, timeouts, and sanitized URL facts"
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRemoteFilePolicy.js"],
+      "reason": "Remote HTTP transport — owns Archive and Remote-file request handling, redirects, streaming limits, and timeouts"
+    },
+    {
+      "from": "lib/sourceRemoteFilePolicy.js",
+      "allow": [],
+      "reason": "Remote file URL policy — owns stable direct-SKILL.md recognition, validation, and sanitization"
     },
     {
       "from": "lib/sourceArchiveAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
       "reason": "Remote Archive add orchestration — owns Archive identities, plans, collisions, staging, and atomic publication"
     },
     {
       "from": "lib/sourceArchiveWorkspace.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceTree.js"],
-      "reason": "Remote Archive workspace — owns shared download, staging, and cleanup lifecycles"
+      "allow": ["lib/sourceHttp.js", "lib/sourceLocal.js"],
+      "reason": "Remote Archive staging — owns downloaded Archive inspection and extraction into a supplied workspace"
+    },
+    {
+      "from": "lib/sourceWorkspace.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js"],
+      "reason": "Managed source workspace — owns safe central-library staging-directory creation and cleanup"
     },
     {
       "from": "lib/sourceArchiveUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
       "reason": "Remote Archive update orchestration — owns replacement plans and reuses the source replacement transaction"
+    },
+    {
+      "from": "lib/sourceRemoteFileWorkspace.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "reason": "Remote file workspace — owns bounded single-file download, byte validation, and staged source facts"
+    },
+    {
+      "from": "lib/sourceRemoteFileAdd.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
+      "reason": "Remote file add orchestration — owns explicit identities, plans, collision checks, and atomic publication"
+    },
+    {
+      "from": "lib/sourceRemoteFileUpdate.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
+      "reason": "Remote file update orchestration — owns registered-origin replacement plans and reuses the source replacement transaction"
     },
     {
       "from": "lib/sourceUpdate.js",
@@ -102,7 +127,7 @@
     },
     {
       "from": "lib/sourceGitUrl.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRecord.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRecord.js", "lib/sourceRemoteFilePolicy.js"],
       "reason": "Git URL normalization — derives sanitized repository identity and optional GitHub source focus"
     },
     {
@@ -122,7 +147,7 @@
     },
     {
       "from": "lib/sourceRecord.js",
-      "allow": ["lib/sourcePolicy.js"],
+      "allow": ["lib/sourcePolicy.js", "lib/sourceRemoteFilePolicy.js"],
       "reason": "Source record schema — validates source-owned facts against the shared source boundary policy"
     },
     {
@@ -152,7 +177,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

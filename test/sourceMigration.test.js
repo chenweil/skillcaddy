@@ -113,6 +113,40 @@ test('applies only source-registry records and repeated application is idempoten
   assert.deepEqual(await snapshotTree(project), projectBefore);
 });
 
+test('adopts Git sources with direct-child and singular-container skill layouts', async () => {
+  const root = await makeTempDir('source-migration-compatible-layouts-');
+  const directChildPath = path.join(root, 'github', 'jpoehnel');
+  const singularContainerPath = path.join(root, 'github', 'opentui-skill');
+
+  await createGitSource(directChildPath, {
+    remote: 'https://github.com/jpoehnelt/skills.git',
+    skillPath: 'agent-dx-cli-scale'
+  });
+  await createGitSource(singularContainerPath, {
+    remote: 'https://github.com/msmps/opentui-skill.git',
+    skillPath: 'skill/opentui'
+  });
+
+  const plan = await planSourceMigration({ rootDir: root });
+
+  assert.deepEqual(plan.unresolved, []);
+  assert.deepEqual(
+    plan.records.map(({ sourceId, installPath, skills }) => ({ sourceId, installPath, skills })),
+    [
+      {
+        sourceId: 'github/jpoehnelt/skills',
+        installPath: 'github/jpoehnel',
+        skills: ['agent-dx-cli-scale']
+      },
+      {
+        sourceId: 'github/msmps/opentui-skill',
+        installPath: 'github/opentui-skill',
+        skills: ['skill/opentui']
+      }
+    ]
+  );
+});
+
 test('reports ambiguous remotes, duplicate identities, nested repositories, and unsafe paths', async () => {
   const root = await makeTempDir('source-migration-conflicts-');
   const outside = await makeTempDir('source-migration-outside-');

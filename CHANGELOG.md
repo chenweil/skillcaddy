@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | --- | --- | --- | --- | --- |
 | `<skill-dir>/skillcaddy.json` | `.skillcaddy/metadata/<source>/<relative-path>/skillcaddy.json` | v0.14.0 | v0.15.0 | v0.16.0 |
 
+## [0.15.1] - 2026-07-28
+
+### Added
+- Added managed Remote file sources for stable direct HTTP(S) `/SKILL.md` URLs, including explicit `official/<name>` identities, bounded validation, sanitized reusable origins, SHA-256 integrity, and transactional per-source updates.
+
+### Changed
+- Source discovery now recognizes root `SKILL.md`, bounded `skills/**/SKILL.md` and `skill/**/SKILL.md` layouts, and direct-child `<name>/SKILL.md` layouts while keeping populated `skills/` collections authoritative and excluding support directories.
+
 ## [0.15.0] - 2026-07-26
 
 ### Added

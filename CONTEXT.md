@@ -21,7 +21,7 @@ A disambiguating provenance label used when two skill sources have the same name
 _Avoid_: Author, hostname
 
 **Source bucket**:
-A top-level provenance classification for an acquired source. Hosted Git repositories belong to `github`, upstream archives to `official`, user-supplied local content to `personal`, and retired content to `archived`.
+A top-level provenance classification for an acquired source. Hosted Git repositories belong to `github`, upstream archives and remote files to `official`, user-supplied local content to `personal`, and retired content to `archived`; callers do not select the bucket independently of provenance.
 _Avoid_: File type, install status
 
 **Source registry**:
@@ -40,9 +40,17 @@ _Avoid_: Sparse checkout, partial source
 Access credentials managed by the user's existing Git or download environment rather than stored by Skillcaddy. Persisted source provenance never contains secrets or sensitive URL parameters.
 _Avoid_: Skillcaddy token, embedded password
 
+**Stable source URL**:
+A direct HTTP(S) origin that remains fetchable when stored without credentials, query parameters, or fragments, allowing the source registry to reuse it for later updates.
+_Avoid_: Signed URL, temporary download link
+
 **Archive source**:
 A versioned archive acquired from a direct download URL and unpacked into the central library. It may contain one skill or a collection of related skills, and only its latest installed version is retained.
 _Avoid_: ZIP skill, skill folder
+
+**Remote file source**:
+A skill source acquired from a direct HTTP(S) URL whose acquisition unit is one `SKILL.md`. Its origin and installed-content integrity remain registered so later downloads update the same source identity.
+_Avoid_: Repository path source, unmanaged download
 
 **Local source**:
 A skill source imported from a local archive or directory and copied into the central library so it does not depend on the original filesystem location.
@@ -55,6 +63,10 @@ _Avoid_: Setup, enablement
 **Source validation**:
 Safety and discoverability checks applied before acquisition changes the central library. Safety failures reject the source, while non-security skill-format issues are reported as quality warnings.
 _Avoid_: Runtime preflight, setup check
+
+**Recognized skill layout**:
+A source-relative Skill location at the source root, within four directory levels under `skills/` or `skill/`, or in a direct child `<name>/`. Directory segments named `docs`, `references`, or `tests` are support content and are excluded. A populated `skills/` layout is authoritative, and unrelated deeper `SKILL.md` files outside the recognized collection roots are not discovered.
+_Avoid_: Recursive skill search, any SKILL.md
 
 **Source upgrade**:
 Replacement of an installed skill source with another valid package for the same source identity. Archive upgrades do not require Skillcaddy to infer or compare versions, and the replaced package is not retained as an active or historical copy.

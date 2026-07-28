@@ -219,11 +219,16 @@ skillcaddy/
 npm run source -- list
 npm run source -- inspect github/example/toolbox
 
-# 先预览，再获取 Git 仓库、公开 HTTP(S) ZIP、本地 ZIP 或本地目录
+# 先预览，再获取 Git 仓库、公开 HTTP(S) ZIP、直接 SKILL.md、
+# 本地 ZIP 或本地目录
 npm run source -- add <input>
 npm run source -- add <input> --yes
 
-# 替换一个已登记 source；Archive/Local 更新需要新 input
+# 直接 SKILL.md 必须显式指定 name，并安装到 official/<name>/
+npm run source -- add https://example.com/SKILL.md --name example --yes
+
+# 替换一个已登记 source；Archive/Local 更新需要新 input，
+# Git/Remote file 可复用 registry 中的 origin
 npm run source -- update <source-id> [input]
 npm run source -- update <source-id> [input] --allow-breaking --yes
 
@@ -231,7 +236,7 @@ npm run source -- update <source-id> [input] --allow-breaking --yes
 npm run source -- update-git
 ```
 
-`add` 与 `update` 是不同操作。重复添加完全相同的内容会成功且不改动；source identity 或目标目录冲突会停止，不能因此获得替换权限。新 source 的命名冲突可用 `--name` 或 `--namespace` 解决；只有 source registry 已存在对应 identity 时才能使用 `update`。
+`add` 与 `update` 是不同操作。重复添加完全相同的内容会成功且不改动；source identity 或目标目录冲突会停止，不能因此获得替换权限。Archive/Local 新 source 的命名冲突可用 `--name` 或 `--namespace` 解决。Remote file 必须提供 `--name`，不接受 `--namespace`；只有 source registry 已存在对应 identity 时才能使用 `update`。Remote file 更新可省略 input 以复用已登记 origin，也可提供新的稳定 URL 来迁移 origin。
 
 CLI exit category 保持稳定：`0` 表示成功或 identical no-op，`1` 表示一般获取/更新失败，`2` 表示参数错误，`3` 表示 identity 未解析或冲突，`4` 表示 breaking replacement 缺少显式授权。
 
@@ -250,7 +255,7 @@ npm run source -- migrate --yes
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 
-首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版、非 ZIP archive，也不提供全局 `skillcaddy` 可执行文件。
+首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版、非 ZIP archive，也不提供全局 `skillcaddy` 可执行文件。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
 
 随本仓库发布（仅在贡献 Skillcaddy 本身时使用）：
 
