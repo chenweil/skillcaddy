@@ -32,6 +32,7 @@ Skillcaddy 用一个 AISkills 目录作单一事实来源，用按项目的 syml
 ```bash
 git clone https://github.com/chenweil/skillcaddy.git
 cd skillcaddy
+npm install
 npm start
 ```
 
@@ -46,6 +47,18 @@ npm run tui -- /path/to/project
 # 或显式指定原件库根目录
 npm run tui -- --root ~/AISkills /path/to/project
 ```
+
+如果希望在任意项目中使用这份 clone 的原件库，只需安装一次本地 TUI 命令：
+
+```bash
+npm run install:tui
+npm run check:tui
+
+cd /path/to/another-project
+skillcaddy
+```
+
+`install:tui` 使用本地 `npm link`，不会从 npm registry 下载或复制 Skillcaddy。全局 `skillcaddy` 命令始终链接到当前 clone；这个 clone 仍是中央原件库，后续通过 `git pull` 更新即可。不带参数运行 `skillcaddy` 会管理当前目录，也可以用 `skillcaddy /path/to/project` 指定其它项目。如果全局同名 package 已链接到另一份 clone，安装会停止，不会覆盖。
 
 TUI 提供完整的键盘驱动界面，无需浏览器：
 
@@ -255,7 +268,7 @@ npm run source -- migrate --yes
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 
-首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版、非 ZIP archive，也不提供全局 `skillcaddy` 可执行文件。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
+首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版或非 ZIP archive。clone-backed 全局 `skillcaddy` 命令只暴露现有 TUI，不会把 source acquisition 变成 npm 全局包。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
 
 随本仓库发布（仅在贡献 Skillcaddy 本身时使用）：
 

@@ -26,6 +26,11 @@
       "reason": "Leaf module — global manager skill install check"
     },
     {
+      "from": "lib/tuiInstall.js",
+      "allow": [],
+      "reason": "Leaf module — clone-linked global TUI command install check"
+    },
+    {
       "from": "lib/managerSourceWorkflow.js",
       "allow": ["lib/enablePlan.js", "lib/projectActions.js", "lib/sourceManager.js", "lib/skillStore.js"],
       "reason": "Manager adapter — sequences source acquisition and exact project enablement through public boundaries"

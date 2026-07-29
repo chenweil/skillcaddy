@@ -32,6 +32,7 @@ Whether you're a solo dev with half a dozen repos, a small team standardizing on
 ```bash
 git clone https://github.com/chenweil/skillcaddy.git
 cd skillcaddy
+npm install
 npm start
 ```
 
@@ -46,6 +47,18 @@ npm run tui -- /path/to/project
 # or with explicit root
 npm run tui -- --root ~/AISkills /path/to/project
 ```
+
+To use the cloned library from any project, link its TUI command once:
+
+```bash
+npm run install:tui
+npm run check:tui
+
+cd /path/to/another-project
+skillcaddy
+```
+
+`install:tui` uses local `npm link`: it does not download or copy Skillcaddy from the npm registry. The global `skillcaddy` command remains linked to this clone, which stays the central library and can be updated with `git pull`. Running `skillcaddy` without an argument manages the current directory; `skillcaddy /path/to/project` selects another project. The installer refuses to replace a global `skillcaddy` package linked to another clone.
 
 The TUI provides a full keyboard-driven interface without needing a browser:
 
@@ -255,7 +268,7 @@ npm run source -- migrate --yes
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 
-The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, non-ZIP archives, or a global `skillcaddy` executable. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
+The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, or non-ZIP archives. The clone-backed global `skillcaddy` command only exposes the existing TUI; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 

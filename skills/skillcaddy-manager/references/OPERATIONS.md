@@ -96,7 +96,7 @@ For an explicit combined request:
 
 Unknown setup readiness creates neither a reminder nor a gate. Surface a declared setup reminder after enablement without blocking the link. Never infer credentials or publisher setup from prose; the acquired skill's runtime preflight remains responsible for requirements such as IMA credentials.
 
-Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, non-ZIP archives, and a global `skillcaddy` executable are also deferred.
+Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, and non-ZIP archives are also deferred. The optional clone-backed global `skillcaddy` command exposes the existing TUI only; it does not change source-management boundaries.
 
 ## Source Registry Migration and Recovery
 
@@ -219,6 +219,15 @@ npm run source -- update-git
 Complete when updated, current, dirty, breaking, and failed outcomes are reported separately.
 
 ## Bootstrap and Web/TUI
+
+The TUI command can be linked from a clone without publishing or downloading a global npm package:
+
+```bash
+npm run install:tui
+npm run check:tui
+```
+
+`install:tui` uses local `npm link`, so the global `skillcaddy` command resolves back to the current clone and uses that clone as the central library. It refuses a global package link owned by another clone. From another project, run `skillcaddy` to manage the current directory or `skillcaddy /path/to/project` to select a target explicitly. This is a user-level mutation, so obtain approval before running it.
 
 Global manager installation writes to a user-level directory, so obtain approval first. From the repository:
 

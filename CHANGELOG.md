@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-29
+
+### Added
+- 新增 clone-backed TUI 安装流程：`npm run install:tui` 通过本地 `npm link` 暴露全局 `skillcaddy` 命令，`npm run check:tui` 验证链接仍指向当前原件库 clone；安装前拒绝覆盖由其它 clone 占用的全局 package link。
+
 ## [0.16.1] - 2026-07-29
 
 ### Fixed
