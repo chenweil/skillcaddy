@@ -58,7 +58,10 @@ async function mainLoop() {
     ].join('\n'));
 
     const choice = await ask('选择操作');
-    if (choice === 'q') return;
+    if (choice === 'q') {
+      console.log('\nbyebye 👋');
+      return;
+    }
 
     try {
       if (choice === '1') printEnabledSkills();
@@ -587,7 +590,16 @@ function parseBoolean(value) {
 }
 
 async function ask(prompt) {
-  return (await rl.question(`${prompt}: `)).trim();
+  try {
+    return (await rl.question(`${prompt}: `)).trim();
+  } catch (error) {
+    if (error.code === 'ABORT_ERR' || error.name === 'AbortError') {
+      rl.close();
+      console.log('\nbyebye 👋');
+      process.exit(0);
+    }
+    throw error;
+  }
 }
 
 async function runCommand(command, args) {

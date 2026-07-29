@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-07-29
+
+### Fixed
+- TUI 按 Ctrl+C 不再抛出 `AbortError` 堆栈，改为静默退出并输出 `byebye 👋`。
+- TUI 主菜单输入 `q` 退出时同样输出 `byebye 👋`。
+
 ## [0.16.0] - 2026-07-29
 
 ### Added
