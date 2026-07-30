@@ -401,6 +401,54 @@ test('incoming validation and registry publication failures preserve Git and reg
   });
 });
 
+test('batch Git updates re-prepare current sources through the shared lifecycle', async () => {
+  const fixture = await createGitFixture('batch-current-reprepare');
+  const root = await makeTempDir('source-git-batch-current-reprepare-root-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    const counterPath = path.join(fixture.fixtureRoot, 'batch-upload-count');
+    const wrapperPath = path.join(fixture.fixtureRoot, 'batch-upload-pack-wrapper');
+    const readmePath = path.join(checkout, 'README.md');
+    await writeFile(wrapperPath, [
+      '#!/bin/sh',
+      `counter_file=${shellQuote(counterPath)}`,
+      'count="$(cat "$counter_file" 2>/dev/null || printf 0)"',
+      'count=$((count + 1))',
+      'printf \'%s\\n\' "$count" > "$counter_file"',
+      'git-upload-pack "$@"',
+      'upload_status=$?',
+      'if [ "$count" -eq 2 ]; then',
+      `  printf 'concurrent batch edit\\n' > ${shellQuote(readmePath)}`,
+      'fi',
+      'exit "$upload_status"',
+      ''
+    ].join('\n'));
+    await chmod(wrapperPath, 0o755);
+    await execFile('git', [
+      '-C',
+      checkout,
+      'config',
+      'remote.origin.uploadpack',
+      wrapperPath
+    ]);
+
+    assert.deepEqual(
+      await updateGitSources({ rootDir: root }),
+      {
+        sources: [{
+          sourceId: fixture.sourceId,
+          status: 'failed',
+          category: 'stale-plan',
+          applied: false
+        }]
+      }
+    );
+    assert.equal(await readFile(readmePath, 'utf8'), 'concurrent batch edit\n');
+  });
+});
+
 test('batch Git updates expose stable updated, current, dirty, breaking, and failed outcomes', async () => {
   const root = await makeTempDir('source-git-batch-root-');
   const project = await makeTempDir('source-git-batch-project-');

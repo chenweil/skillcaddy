@@ -137,6 +137,7 @@
     {
       "from": "lib/sourceUpgrade.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceRemoteFileUpgradeAdapter.js", "lib/sourceUpgradeExecution.js", "lib/sourceUpgradePolicy.js"],
+      "importedBy": ["lib/sourceGitBatchUpdate.js", "lib/sourceManager.js"],
       "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, policy, projections, and explicit transaction phases"
     },
     {
@@ -168,19 +169,20 @@
     {
       "from": "lib/sourceGitUpgradeAdapter.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
-      "importedBy": ["lib/sourceGitUpdate.js", "lib/sourceUpgrade.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Git upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
       "from": "lib/sourceGitUpdateTransaction.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js"],
-      "importedBy": ["lib/sourceGitUpdate.js", "lib/sourceUpgradeExecution.js"],
+      "importedBy": ["lib/sourceUpgradeExecution.js"],
       "reason": "Git fast-forward publisher — owns registry staging, fast-forward advancement, HEAD verification, and record rollback"
     },
     {
-      "from": "lib/sourceGitUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceGitUpdateTransaction.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js"],
-      "reason": "Transitional Git batch workflow — retains batch outcomes through shared Git preparation and publication internals"
+      "from": "lib/sourceGitBatchUpdate.js",
+      "allow": ["lib/sourceRegistry.js", "lib/sourceUpgrade.js"],
+      "importedBy": ["lib/sourceManager.js"],
+      "reason": "Git batch workflow — enumerates registered Git sources and aggregates shared lifecycle outcomes"
     },
     {
       "from": "lib/sourceRecord.js",
@@ -214,7 +216,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitBatchUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
