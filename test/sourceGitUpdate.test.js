@@ -1,5 +1,6 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import {
+  chmod,
   mkdir,
   readFile,
   symlink,
@@ -114,6 +115,54 @@ test('reports a dirty registered Git source without changing or stashing it', as
     );
     assert.equal(await readFile(path.join(checkout, 'local.txt'), 'utf8'), 'keep me\n');
     assert.equal(await readFile(path.join(checkout, 'README.md'), 'utf8'), 'initial\n');
+  });
+});
+
+test('re-prepares a current Git source before returning its no-op result', async () => {
+  const fixture = await createGitFixture('current-reprepare');
+  const root = await makeTempDir('source-git-current-reprepare-root-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    const counterPath = path.join(fixture.fixtureRoot, 'upload-count');
+    const wrapperPath = path.join(fixture.fixtureRoot, 'upload-pack-wrapper');
+    const readmePath = path.join(checkout, 'README.md');
+    await writeFile(wrapperPath, [
+      '#!/bin/sh',
+      `counter_file=${shellQuote(counterPath)}`,
+      'count="$(cat "$counter_file" 2>/dev/null || printf 0)"',
+      'count=$((count + 1))',
+      'printf \'%s\\n\' "$count" > "$counter_file"',
+      'git-upload-pack "$@"',
+      'upload_status=$?',
+      'if [ "$count" -eq 2 ]; then',
+      `  printf 'concurrent edit\\n' > ${shellQuote(readmePath)}`,
+      'fi',
+      'exit "$upload_status"',
+      ''
+    ].join('\n'));
+    await chmod(wrapperPath, 0o755);
+    await execFile('git', [
+      '-C',
+      checkout,
+      'config',
+      'remote.origin.uploadpack',
+      wrapperPath
+    ]);
+
+    const plan = await planUpdateSource(
+      { rootDir: root },
+      { sourceId: fixture.sourceId }
+    );
+    assert.equal(plan.status, 'current');
+
+    await assert.rejects(
+      () => applyUpdateSource({ rootDir: root }, plan),
+      (error) => error.category === 'stale-plan' &&
+        error.message === 'Git source changed since the update plan'
+    );
+    assert.equal(await readFile(readmePath, 'utf8'), 'concurrent edit\n');
   });
 });
 
@@ -633,6 +682,10 @@ async function withGitUrlRewrites(fixtures, callback) {
 
 function skillDocument(description) {
   return `---\ndescription: ${description}\n---\n# Review\n`;
+}
+
+function shellQuote(value) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function captureOutput() {
