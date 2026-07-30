@@ -136,8 +136,14 @@
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceRemoteFileUpgradeAdapter.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
-      "reason": "Deep Source upgrade lifecycle — owns directory-source planning, re-planning, policy, projections, and explicit transaction phases"
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceRemoteFileUpgradeAdapter.js", "lib/sourceUpgradeExecution.js", "lib/sourceUpgradePolicy.js"],
+      "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, policy, projections, and explicit transaction phases"
+    },
+    {
+      "from": "lib/sourceUpgradeExecution.js",
+      "allow": ["lib/sourceGitUpdateTransaction.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
+      "reason": "Source upgrade execution — owns preparation checks and distinct directory and Git publication phases"
     },
     {
       "from": "lib/sourceUpdateTransaction.js",
@@ -160,9 +166,21 @@
       "reason": "Git source add orchestration — owns plans, collisions, staging, and atomic publication"
     },
     {
+      "from": "lib/sourceGitUpgradeAdapter.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "importedBy": ["lib/sourceGitUpdate.js", "lib/sourceUpgrade.js"],
+      "reason": "Git upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
+    },
+    {
+      "from": "lib/sourceGitUpdateTransaction.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js"],
+      "importedBy": ["lib/sourceGitUpdate.js", "lib/sourceUpgradeExecution.js"],
+      "reason": "Git fast-forward publisher — owns registry staging, fast-forward advancement, HEAD verification, and record rollback"
+    },
+    {
       "from": "lib/sourceGitUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpgradePolicy.js", "lib/sourceValidation.js"],
-      "reason": "Git source update orchestration — owns fetch, fast-forward checks, incoming-tree validation, and batch outcomes"
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceGitUpdateTransaction.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js"],
+      "reason": "Transitional Git batch workflow — retains batch outcomes through shared Git preparation and publication internals"
     },
     {
       "from": "lib/sourceRecord.js",

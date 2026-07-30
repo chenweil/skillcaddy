@@ -98,6 +98,10 @@ for (const consentContract of [
   {
     name: 'Remote file',
     staleMessage: 'Remote SKILL.md changed since the update plan'
+  },
+  {
+    name: 'Git',
+    staleMessage: 'Git source changed since the update plan'
   }
 ]) {
   test(
