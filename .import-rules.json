@@ -207,8 +207,8 @@
     },
     {
       "from": "lib/skillStore.js",
-      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/collectionSetup.js", "lib/skillMetadata.js", "lib/sourcePolicy.js", "lib/sourceSkillDiscovery.js"],
-      "reason": "Store layer — currently imports claudeStore for getState aggregation; dept probe: decouple via aggregator layer"
+      "allow": ["lib/projectPath.js", "lib/claudeStore.js", "lib/collectionSetup.js", "lib/skillMetadata.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceSkillDiscovery.js"],
+      "reason": "Store aggregation — getState reads skill, Claude, collection-setup, and registered-source state"
     },
     {
       "from": "lib/projectActions.js",

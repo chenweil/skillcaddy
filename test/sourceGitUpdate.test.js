@@ -58,10 +58,16 @@ test('fast-forwards a registered Git source and reports a subsequent no-op', asy
       { rootDir: root, projectPath: project },
       { sourceId: fixture.sourceId }
     );
-    assert.equal(currentPlan.status, 'current');
-    assert.equal(
-      (await applyUpdateSource({ rootDir: root, projectPath: project }, currentPlan)).status,
-      'current'
+    assert.deepEqual(
+      currentPlan,
+      expectedGitPlan(fixture, 'current', nextCommit, nextCommit)
+    );
+    assert.deepEqual(
+      await applyUpdateSource(
+        { rootDir: root, projectPath: project },
+        currentPlan
+      ),
+      expectedGitResult(fixture, 'current', nextCommit)
     );
   });
 
@@ -93,8 +99,19 @@ test('reports a dirty registered Git source without changing or stashing it', as
       { rootDir: root },
       { sourceId: fixture.sourceId }
     );
-    assert.equal(plan.status, 'dirty');
-    assert.equal((await applyUpdateSource({ rootDir: root }, plan)).status, 'dirty');
+    assert.deepEqual(
+      plan,
+      expectedGitPlan(
+        fixture,
+        'dirty',
+        fixture.initialCommit,
+        fixture.initialCommit
+      )
+    );
+    assert.deepEqual(
+      await applyUpdateSource({ rootDir: root }, plan),
+      expectedGitResult(fixture, 'dirty', fixture.initialCommit)
+    );
     assert.equal(await readFile(path.join(checkout, 'local.txt'), 'utf8'), 'keep me\n');
     assert.equal(await readFile(path.join(checkout, 'README.md'), 'utf8'), 'initial\n');
   });
@@ -112,7 +129,16 @@ test('rejects a non-fast-forward Git source without changing the worktree', asyn
 
     await assert.rejects(
       () => planUpdateSource({ rootDir: root }, { sourceId: fixture.sourceId }),
-      (error) => error.category === 'non-fast-forward'
+      (error) => {
+        assert.equal(error.name, 'SourceAcquisitionError');
+        assert.equal(error.category, 'non-fast-forward');
+        assert.equal(error.exitCode, 1);
+        assert.equal(
+          error.message,
+          `Git source cannot advance by fast-forward: ${fixture.sourceId}`
+        );
+        return true;
+      }
     );
     assert.equal(await readFile(path.join(checkout, 'local-only.md'), 'utf8'), 'local commit\n');
   });
@@ -230,7 +256,13 @@ test('incoming validation and registry publication failures preserve Git and reg
 
       await assert.rejects(
         () => planUpdateSource({ rootDir: root }, { sourceId: fixture.sourceId }),
-        (error) => error.category === 'source-validation'
+        (error) => {
+          assert.equal(error.name, 'SourceAcquisitionError');
+          assert.equal(error.category, 'source-validation');
+          assert.equal(error.exitCode, 1);
+          assert.equal(error.message, 'No scanner-visible SKILL.md was found');
+          return true;
+        }
       );
       assert.equal(
         await readHead(path.join(root, 'github', fixture.repository)),
@@ -260,7 +292,10 @@ test('incoming validation and registry publication failures preserve Git and reg
             throw new Error('injected registry publication failure');
           }
         }, plan),
-        /injected registry publication failure/
+        {
+          name: 'Error',
+          message: 'injected registry publication failure'
+        }
       );
       assert.equal(
         await readHead(path.join(root, 'github', fixture.repository)),
@@ -296,7 +331,16 @@ test('incoming validation and registry publication failures preserve Git and reg
             await writeFile(path.join(checkout, 'README.md'), 'concurrent local edit\n');
           }
         }, plan),
-        (error) => error.category === 'git-update'
+        (error) => {
+          assert.equal(error.name, 'SourceAcquisitionError');
+          assert.equal(error.category, 'git-update');
+          assert.equal(error.exitCode, 1);
+          assert.equal(
+            error.message,
+            `Could not fast-forward Git source: ${fixture.sourceId}`
+          );
+          return true;
+        }
       );
       assert.equal(await readHead(checkout), fixture.initialCommit);
       assert.equal(
@@ -335,17 +379,40 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
     await execFile('git', ['-C', failedCheckout, 'remote', 'set-url', 'origin', 'https://fixtures.invalid/missing.git']);
 
     const result = await updateGitSources({ rootDir: root, projectPath: project });
-    assert.deepEqual(
-      result.sources.map(({ sourceId, status }) => ({ sourceId, status })),
-      [
-        { sourceId: fixtures[3].sourceId, status: 'breaking' },
-        { sourceId: fixtures[4].sourceId, status: 'breaking' },
-        { sourceId: fixtures[2].sourceId, status: 'dirty' },
-        { sourceId: fixtures[5].sourceId, status: 'failed' },
-        { sourceId: fixtures[1].sourceId, status: 'current' },
-        { sourceId: fixtures[0].sourceId, status: 'updated' }
+    assert.deepEqual(result, {
+      sources: [
+        {
+          sourceId: fixtures[3].sourceId,
+          status: 'breaking',
+          category: 'breaking-replacement',
+          applied: false
+        },
+        {
+          sourceId: fixtures[4].sourceId,
+          status: 'breaking',
+          category: 'breaking-replacement',
+          applied: true
+        },
+        {
+          sourceId: fixtures[2].sourceId,
+          status: 'dirty'
+        },
+        {
+          sourceId: fixtures[5].sourceId,
+          status: 'failed',
+          category: 'source-collision',
+          applied: false
+        },
+        {
+          sourceId: fixtures[1].sourceId,
+          status: 'current'
+        },
+        {
+          sourceId: fixtures[0].sourceId,
+          status: 'updated'
+        }
       ].sort((left, right) => left.sourceId.localeCompare(right.sourceId))
-    );
+    });
     assert.equal(JSON.stringify(result).includes(root), false);
 
     const output = captureOutput();
@@ -375,6 +442,45 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
     );
   });
 });
+
+function expectedGitPlan(fixture, status, currentCommit, incomingCommit) {
+  return {
+    operation: 'update-source',
+    status,
+    sourceId: fixture.sourceId,
+    installPath: `github/${fixture.repository}`,
+    input: {
+      type: 'git',
+      remote: `https://fixtures.invalid/fixtures/${fixture.repository}.git`
+    },
+    currentCommit,
+    incomingCommit,
+    skills: ['skills/review'],
+    warnings: [],
+    changes: {
+      unchanged: ['skills/review'],
+      added: [],
+      removedOrRelocated: []
+    },
+    affectedProjectLinks: []
+  };
+}
+
+function expectedGitResult(fixture, status, commit) {
+  return {
+    status,
+    sourceId: fixture.sourceId,
+    installPath: `github/${fixture.repository}`,
+    commit,
+    skills: ['skills/review'],
+    warnings: [],
+    changes: {
+      unchanged: ['skills/review'],
+      added: [],
+      removedOrRelocated: []
+    }
+  };
+}
 
 async function createGitFixture(name, existingRemoteRoot, branch = 'main') {
   const fixtureRoot = existingRemoteRoot
