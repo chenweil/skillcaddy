@@ -85,6 +85,85 @@ for (const contract of sourceUpgradeContractCases) {
   });
 }
 
+test('Local input Source upgrade retains the original plan consent facts', async (t) => {
+  const contract = sourceUpgradeContractCases.find(
+    (candidate) => candidate.name === 'Local input'
+  );
+  const fixture = await contract.create(t);
+  const originalPlan = await planUpdateSource(
+    fixture.context,
+    fixture.request
+  );
+  await fixture.changeCandidate();
+  const changedPlan = await planUpdateSource(
+    fixture.context,
+    fixture.request
+  );
+  Object.assign(originalPlan, structuredClone(changedPlan));
+
+  await assert.rejects(
+    () => applyUpdateSource(fixture.context, originalPlan),
+    (error) => {
+      assert.equal(error.name, 'SourceAcquisitionError');
+      assert.equal(error.category, 'stale-plan');
+      assert.equal(error.exitCode, 1);
+      assert.equal(
+        error.message,
+        'Local source or replacement content changed since the update plan'
+      );
+      return true;
+    }
+  );
+});
+
+test('Local input Source upgrade rejects mutation of its public plan facts', async (t) => {
+  const mutations = [
+    {
+      name: 'operation',
+      apply: (plan) => {
+        plan.operation = 'add-source';
+      }
+    },
+    {
+      name: 'status',
+      apply: (plan) => {
+        plan.status = 'updated';
+      }
+    },
+    {
+      name: 'input type',
+      apply: (plan) => {
+        plan.input.type = 'remote-zip';
+      }
+    }
+  ];
+
+  for (const mutation of mutations) {
+    await t.test(mutation.name, async () => {
+      const contract = sourceUpgradeContractCases.find(
+        (candidate) => candidate.name === 'Local input'
+      );
+      const fixture = await contract.create(t);
+      const plan = await planUpdateSource(fixture.context, fixture.request);
+      mutation.apply(plan);
+
+      await assert.rejects(
+        () => applyUpdateSource(fixture.context, plan),
+        (error) => {
+          assert.equal(error.name, 'SourceAcquisitionError');
+          assert.equal(error.category, 'stale-plan');
+          assert.equal(error.exitCode, 1);
+          assert.equal(
+            error.message,
+            'Local source or replacement content changed since the update plan'
+          );
+          return true;
+        }
+      );
+    });
+  }
+});
+
 for (const contract of directoryReplayCases) {
   test(`${contract.name} directory replacement plan is replayable`, async (t) => {
     const fixture = await contract.create(t);

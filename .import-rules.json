@@ -71,6 +71,11 @@
       "reason": "Local source staging — copies directories, expands ZIP inputs, and returns validated source facts"
     },
     {
+      "from": "lib/sourceLocalUpgradeAdapter.js",
+      "allow": ["lib/sourceLocal.js"],
+      "reason": "Local input upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
+    },
+    {
       "from": "lib/sourceAdd.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
@@ -102,7 +107,7 @@
     },
     {
       "from": "lib/sourceArchiveUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
       "reason": "Remote Archive update orchestration — owns replacement plans and reuses the source replacement transaction"
     },
     {
@@ -117,13 +122,18 @@
     },
     {
       "from": "lib/sourceRemoteFileUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpdate.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
       "reason": "Remote file update orchestration — owns registered-origin replacement plans and reuses the source replacement transaction"
     },
     {
-      "from": "lib/sourceUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdateTransaction.js", "lib/skillStore.js"],
-      "reason": "Local source update orchestration — owns replacement plans, current-project link checks, staging, and rollback"
+      "from": "lib/sourceUpgradePolicy.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
+      "reason": "Source upgrade policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
+    },
+    {
+      "from": "lib/sourceUpgrade.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
+      "reason": "Deep Source upgrade lifecycle — owns Local input planning, re-planning, policy, projections, and explicit transaction phases"
     },
     {
       "from": "lib/sourceUpdateTransaction.js",
@@ -147,7 +157,7 @@
     },
     {
       "from": "lib/sourceGitUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpdate.js", "lib/sourceValidation.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceUpgradePolicy.js", "lib/sourceValidation.js"],
       "reason": "Git source update orchestration — owns fetch, fast-forward checks, incoming-tree validation, and batch outcomes"
     },
     {
@@ -182,7 +192,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpdate.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
