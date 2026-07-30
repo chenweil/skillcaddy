@@ -125,6 +125,29 @@ test('acquires a complete HTTPS Git repository without enabling its skills', asy
   });
 });
 
+test('Git Source acquisition re-plans before apply', async () => {
+  const fixture = await createGitFixture('stale-owner', 'stale-skills');
+  const root = await makeTempDir('source-git-add-stale-root-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    const plan = await planAddSource(
+      { rootDir: root },
+      { input: 'https://fixtures.invalid/stale-owner/stale-skills.git' }
+    );
+    await advanceMainBranch(fixture);
+
+    await assert.rejects(
+      () => applyAddSource({ rootDir: root }, plan),
+      (error) => error.category === 'stale-plan' &&
+        /Git source changed/.test(error.message)
+    );
+    await assert.rejects(
+      () => access(path.join(root, plan.installPath)),
+      /ENOENT/
+    );
+  });
+});
+
 test('normalizes a GitHub tree URL and retains its branch and subdirectory focus', async () => {
   const fixture = await createGitFixture('example', 'skills');
   const root = await makeTempDir('source-github-tree-root-');

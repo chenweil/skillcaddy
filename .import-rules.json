@@ -47,6 +47,18 @@
       "reason": "Source acquisition error — leaf error type for stable outcome categories"
     },
     {
+      "from": "lib/sourceAcquisitionAdapter.js",
+      "allow": [],
+      "importedBy": ["lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "reason": "Internal Source acquisition adapter contract — validates and freezes the lifecycle preparation seam"
+    },
+    {
+      "from": "lib/sourceAcquisitionPolicy.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "importedBy": ["lib/sourceAcquisition.js", "lib/sourceAcquisitionExecution.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "reason": "Source acquisition policy — owns plan fingerprints, collision checks, and installed-directory verification"
+    },
+    {
       "from": "lib/sourceSkillDiscovery.js",
       "allow": [],
       "reason": "Scanner-visible skill discovery — shared leaf policy for acquisition validation and runtime state"
@@ -84,9 +96,10 @@
       "reason": "Remote Archive upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
-      "from": "lib/sourceAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
-      "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
+      "from": "lib/sourceLocalAcquisitionAdapter.js",
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceLocal.js", "lib/sourceRegistry.js"],
+      "importedBy": ["lib/sourceAcquisition.js"],
+      "reason": "Local acquisition adapter — owns Local input parsing, preparation, identity, and record projection"
     },
     {
       "from": "lib/sourceHttp.js",
@@ -99,9 +112,10 @@
       "reason": "Remote file URL policy — owns stable direct-SKILL.md recognition, validation, and sanitization"
     },
     {
-      "from": "lib/sourceArchiveAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
-      "reason": "Remote Archive add orchestration — owns Archive identities, plans, collisions, staging, and atomic publication"
+      "from": "lib/sourceRemoteArchiveAcquisitionAdapter.js",
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "importedBy": ["lib/sourceAcquisition.js"],
+      "reason": "Remote Archive acquisition adapter — owns Archive parsing, preparation, identity, and record projection"
     },
     {
       "from": "lib/sourceArchiveWorkspace.js",
@@ -119,9 +133,10 @@
       "reason": "Remote file workspace — owns bounded single-file download, byte validation, and staged source facts"
     },
     {
-      "from": "lib/sourceRemoteFileAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
-      "reason": "Remote file add orchestration — owns explicit identities, plans, collision checks, and atomic publication"
+      "from": "lib/sourceRemoteFileAcquisitionAdapter.js",
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js"],
+      "importedBy": ["lib/sourceAcquisition.js"],
+      "reason": "Remote file acquisition adapter — owns URL parsing, preparation, identity, and record projection"
     },
     {
       "from": "lib/sourceRemoteFileUpgradeAdapter.js",
@@ -164,9 +179,10 @@
       "reason": "Git source staging — clones complete repositories and returns validated source facts"
     },
     {
-      "from": "lib/sourceGitAdd.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitStaging.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
-      "reason": "Git source add orchestration — owns plans, collisions, staging, and atomic publication"
+      "from": "lib/sourceGitAcquisitionAdapter.js",
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitStaging.js", "lib/sourceGitUrl.js", "lib/sourceTree.js"],
+      "importedBy": ["lib/sourceAcquisition.js"],
+      "reason": "Git acquisition adapter — owns repository parsing, clone preparation, identity, and record projection"
     },
     {
       "from": "lib/sourceGitUpgradeAdapter.js",
@@ -185,6 +201,18 @@
       "allow": ["lib/sourceRegistry.js", "lib/sourceUpgrade.js"],
       "importedBy": ["lib/sourceManager.js"],
       "reason": "Git batch workflow — enumerates registered Git sources and aggregates shared lifecycle outcomes"
+    },
+    {
+      "from": "lib/sourceAcquisitionExecution.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
+      "importedBy": ["lib/sourceAcquisition.js"],
+      "reason": "Source acquisition execution — owns re-preparation checks, publication rollback, and workspace cleanup"
+    },
+    {
+      "from": "lib/sourceAcquisition.js",
+      "allow": ["lib/sourceAcquisitionExecution.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "importedBy": ["lib/sourceManager.js"],
+      "reason": "Deep Source acquisition lifecycle — owns selection, planning, re-planning, stale-plan enforcement, and result projection"
     },
     {
       "from": "lib/sourceRecord.js",
@@ -218,7 +246,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitBatchUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAcquisition.js", "lib/sourceGitBatchUpdate.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

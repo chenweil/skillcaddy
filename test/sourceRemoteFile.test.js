@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -68,6 +68,30 @@ test('acquires one remote SKILL.md as a registered official source', async (t) =
   assert.equal(record.type, 'remote-file');
   assert.match(record.integrity.value, /^[a-f0-9]{64}$/);
   assert.deepEqual(record.skills, ['.']);
+});
+
+test('Remote file Source acquisition re-plans before apply', async (t) => {
+  let content = '# Planned Remote file\n';
+  const fixture = await startHttpFixture(t, (_request, response) => {
+    response.end(content);
+  });
+  const root = await makeTempDir('source-remote-file-add-stale-root-');
+  const input = `http://127.0.0.1:${fixture.port}/SKILL.md`;
+  const plan = await planAddSource(
+    { rootDir: root },
+    { input, name: 'stale-remote-file' }
+  );
+  content = '# Changed Remote file\n';
+
+  await assert.rejects(
+    () => applyAddSource({ rootDir: root }, plan),
+    (error) => error.category === 'stale-plan' &&
+      /Remote SKILL\.md changed/.test(error.message)
+  );
+  await assert.rejects(
+    () => access(path.join(root, plan.installPath)),
+    /ENOENT/
+  );
 });
 
 test('updates a registered remote file from its stored origin', async (t) => {

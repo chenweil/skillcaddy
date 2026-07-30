@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import {
+  access,
   mkdir,
   readFile,
   readdir,
@@ -103,6 +104,31 @@ test('acquires a remote ZIP by signature with sanitized provenance and no enable
     ['official/publisher-package/skills/remote']
   );
   assert.deepEqual(await snapshotProject(project), projectBefore);
+});
+
+test('Remote Archive Source acquisition re-plans before apply', async (t) => {
+  let archive = buildZip([
+    { name: 'skill/SKILL.md', content: '# Planned Archive\n' }
+  ]);
+  const fixture = await startHttpFixture(t, (_request, response) => {
+    response.end(archive);
+  });
+  const root = await makeTempDir('source-http-add-stale-root-');
+  const input = `http://127.0.0.1:${fixture.port}/stale-archive`;
+  const plan = await planAddSource({ rootDir: root }, { input });
+  archive = buildZip([
+    { name: 'skill/SKILL.md', content: '# Changed Archive\n' }
+  ]);
+
+  await assert.rejects(
+    () => applyAddSource({ rootDir: root }, plan),
+    (error) => error.category === 'stale-plan' &&
+      /Remote Archive changed/.test(error.message)
+  );
+  await assert.rejects(
+    () => access(path.join(root, plan.installPath)),
+    /ENOENT/
+  );
 });
 
 test('uses registrable-domain namespaces on collision and permits an explicit override', async (t) => {

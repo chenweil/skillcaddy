@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-07-30
+
+### Changed
+- Centralized Source acquisition behind one shared lifecycle that owns plan retention, re-planning, stale-plan enforcement, installed-state and destination collision checks, publication rollback, result projection, and workspace cleanup.
+- Introduced internal preparation adapter seam for source-specific input parsing, identity selection, content inspection, Source registry projection, and active-content verification.
+- Removed legacy `sourceAdd.js`, `sourceArchiveAdd.js`, `sourceGitAdd.js`, and `sourceRemoteFileAdd.js` modules in favor of the unified acquisition lifecycle.
+
+### Added
+- Added `lib/sourceAcquisition.js` as the core lifecycle orchestrator.
+- Added `lib/sourceAcquisitionAdapter.js` base class and source-specific adapters for Git, Local, Remote Archive, and Remote File inputs.
+- Added `lib/sourceAcquisitionExecution.js` for publication and rollback logic.
+- Added `lib/sourceAcquisitionPolicy.js` for plan fingerprinting, collision checks, and status resolution.
+- Added `test/sourceAcquisitionContract.test.js` covering lifecycle invariants and adapter conformance.
+
 ## [0.18.0] - 2026-07-30
 
 ### Added
