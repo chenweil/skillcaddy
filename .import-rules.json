@@ -132,6 +132,7 @@
     {
       "from": "lib/sourceUpgradePolicy.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
+      "importedBy": ["lib/sourceUpgrade.js", "lib/sourceUpgradeExecution.js"],
       "reason": "Source upgrade policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
     },
     {
@@ -149,6 +150,7 @@
     {
       "from": "lib/sourceUpdateTransaction.js",
       "allow": ["lib/sourceRegistry.js"],
+      "importedBy": ["lib/sourceUpgradeExecution.js"],
       "reason": "Local source replacement transaction — owns atomic publication, rollback, and transaction artifact cleanup"
     },
     {
