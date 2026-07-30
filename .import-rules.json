@@ -5,10 +5,11 @@
     "from is a file path and supports * globs.",
     "allow is either an array of allowed internal targets or true.",
     "targets in allow support * globs.",
+    "importedBy optionally restricts which production files may import a target.",
     "Imports from node:* are always allowed.",
     "Files matched by requireRulesFor must be covered by at least one rule."
   ],
-  "requireRulesFor": ["server.js", "lib/*.js"],
+  "requireRulesFor": ["server.js", "lib/*.js", "scripts/*.js"],
   "rules": [
     {
       "from": "lib/projectPath.js",
@@ -73,11 +74,13 @@
     {
       "from": "lib/sourceLocalUpgradeAdapter.js",
       "allow": ["lib/sourceLocal.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Local input upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
       "from": "lib/sourceRemoteArchiveUpgradeAdapter.js",
       "allow": ["lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Remote Archive upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
@@ -123,6 +126,7 @@
     {
       "from": "lib/sourceRemoteFileUpgradeAdapter.js",
       "allow": ["lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Remote file upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
@@ -234,6 +238,11 @@
       "from": "lib/tuiLayout.js",
       "allow": [],
       "reason": "TUI display formatting — leaf module with no store dependencies"
+    },
+    {
+      "from": "scripts/*.js",
+      "allow": true,
+      "reason": "CLI entry points — may coordinate modules but cannot import restricted internals"
     },
     {
       "from": "server.js",

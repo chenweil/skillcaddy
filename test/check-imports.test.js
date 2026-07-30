@@ -154,3 +154,54 @@ test('detects files that are not covered by required import rules', async () => 
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('restricts internal modules to permitted importers', async () => {
+  const root = await makeTempDir('import-restricted-importer-');
+
+  try {
+    await mkdir(path.join(root, 'lib'), { recursive: true });
+    await mkdir(path.join(root, 'scripts'), { recursive: true });
+    await writeFile(
+      path.join(root, 'lib', 'adapter.js'),
+      'export function prepare() {}\n'
+    );
+    await writeFile(
+      path.join(root, 'lib', 'lifecycle.js'),
+      "import { prepare } from './adapter.js';\n"
+    );
+    await writeFile(
+      path.join(root, 'scripts', 'cli.js'),
+      "import { prepare } from '../lib/adapter.js';\n"
+    );
+
+    const violations = checkImports(
+      [
+        {
+          from: 'lib/adapter.js',
+          allow: [],
+          importedBy: ['lib/lifecycle.js'],
+          reason: 'Internal preparation adapter'
+        },
+        {
+          from: 'lib/lifecycle.js',
+          allow: ['lib/adapter.js'],
+          reason: 'Lifecycle'
+        },
+        {
+          from: 'scripts/*.js',
+          allow: true,
+          reason: 'CLI entry points'
+        }
+      ],
+      root,
+      { requireRulesFor: ['lib/*.js', 'scripts/*.js'] }
+    );
+
+    assert.equal(violations.length, 1);
+    assert.equal(violations[0].type, 'restricted-importer');
+    assert.equal(violations[0].file, 'scripts/cli.js');
+    assert.equal(violations[0].resolved, 'lib/adapter.js');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

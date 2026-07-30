@@ -93,7 +93,9 @@ export function loadRules(configPath) {
 
 export function checkImports(rules, cwd = rootDir, options = {}) {
   const violations = [];
-  violations.push(...checkRuleCoverage(rules, cwd, options.requireRulesFor || []));
+  const requiredPatterns = options.requireRulesFor || [];
+  violations.push(...checkRuleCoverage(rules, cwd, requiredPatterns));
+  violations.push(...checkRestrictedImporters(rules, cwd, requiredPatterns));
 
   for (const rule of rules) {
     const files = findFiles(cwd, rule.from);
@@ -129,6 +131,39 @@ export function checkImports(rules, cwd = rootDir, options = {}) {
   return violations;
 }
 
+function checkRestrictedImporters(rules, cwd, importerPatterns) {
+  const violations = [];
+  const importerFiles = new Set(importerPatterns.flatMap(
+    (pattern) => findFiles(cwd, pattern)
+  ));
+  const restrictedTargets = rules.filter(
+    (rule) => Array.isArray(rule.importedBy)
+  );
+
+  for (const file of importerFiles) {
+    const imports = parseImports(path.join(cwd, file));
+    for (const specifier of imports) {
+      if (!INTERNAL_RE.test(specifier)) continue;
+      const resolved = resolveSpecifier(file, specifier);
+      for (const target of restrictedTargets) {
+        if (!matchRule(resolved, target.from)) continue;
+        if (target.importedBy.some((pattern) => matchRule(file, pattern))) {
+          continue;
+        }
+        violations.push({
+          type: 'restricted-importer',
+          file,
+          line: findLineNumber(path.join(cwd, file), specifier),
+          specifier,
+          resolved,
+          allowedImporters: target.importedBy
+        });
+      }
+    }
+  }
+  return violations;
+}
+
 function checkRuleCoverage(rules, cwd, requiredPatterns) {
   const violations = [];
   for (const pattern of requiredPatterns) {
@@ -157,6 +192,14 @@ function formatViolations(violations) {
     if (v.type === 'missing-rule') {
       console.log(`  ${v.file}`);
       console.log(`    missing rule for required pattern: ${v.ruleFrom}`);
+      console.log();
+      continue;
+    }
+    if (v.type === 'restricted-importer') {
+      console.log(`  ${v.file}:${v.line}`);
+      console.log(`    import → ${v.specifier}`);
+      console.log(`    resolve → ${v.resolved}`);
+      console.log(`    allowed importers: ${v.allowedImporters.join(', ')}`);
       console.log();
       continue;
     }
