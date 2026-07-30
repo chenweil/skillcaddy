@@ -73,7 +73,7 @@ Replacement of an installed skill source with another valid package for the same
 _Avoid_: Side-by-side install, version copy
 
 **Breaking source replacement**:
-A source upgrade that removes or relocates a previously discovered skill path and may therefore break project links. It is distinct from version comparison and requires explicit authorization when an affected link is known.
+A source upgrade that removes or relocates a previously discovered skill path and may therefore break a link in the project considered for the upgrade. It is distinct from version comparison and requires explicit authorization when an affected current-project link is known; links in other projects are outside this decision.
 _Avoid_: New version, content update
 
 **Setup readiness**:
