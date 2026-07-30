@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-07-30
+
+### Changed
+- Centralized Local input, Remote Archive, Remote file, single Git, and Git batch Source upgrades behind one shared lifecycle while preserving the established `sourceManager` plans, results, errors, CLI behavior, and Git safety semantics.
+- Removed the remaining legacy Source upgrade path and tightened import boundaries around lifecycle policy, preparation adapters, and the distinct directory and Git publishers.
+
 ## [0.17.0] - 2026-07-29
 
 ### Added
