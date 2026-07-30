@@ -121,9 +121,9 @@
       "reason": "Remote file add orchestration — owns explicit identities, plans, collision checks, and atomic publication"
     },
     {
-      "from": "lib/sourceRemoteFileUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
-      "reason": "Remote file update orchestration — owns registered-origin replacement plans and reuses the source replacement transaction"
+      "from": "lib/sourceRemoteFileUpgradeAdapter.js",
+      "allow": ["lib/sourceHttp.js", "lib/sourceRemoteFileWorkspace.js"],
+      "reason": "Remote file upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
       "from": "lib/sourceUpgradePolicy.js",
@@ -132,7 +132,7 @@
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceRemoteFileUpgradeAdapter.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
       "reason": "Deep Source upgrade lifecycle — owns directory-source planning, re-planning, policy, projections, and explicit transaction phases"
     },
     {
@@ -192,7 +192,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
