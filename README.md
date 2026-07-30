@@ -123,7 +123,7 @@ The apply command writes equivalent sidecar metadata and retains the legacy file
 
 Some collections require a one-time, per-project setup after their skills are enabled. Skillcaddy keeps these contracts outside third-party clones under `collection-metadata/<source>/<collection>.json`. `/api/state` reports each configured collection as `missing`, `partial`, `ready`, or `invalid`.
 
-Library-level enablement uses `POST /api/enable-plan` to include the declared setup skill when needed, then Web/TUI shows the setup status and next Agent instruction. Enabling links remains allowed, but an incomplete collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
+Library-level enablement uses `POST /api/enable-plan` to include the declared setup skill when needed and `POST /api/enable-collection` to apply the shared plan. One lifecycle now classifies every candidate as enabled, unchanged, skipped, or failed and refreshes setup guidance for both Web and TUI. Enabling links remains allowed, but an incomplete collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
 
 ## Platform compatibility
 

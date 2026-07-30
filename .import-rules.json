@@ -232,6 +232,12 @@
       "reason": "Enable preflight — pure projection shared by API and TUI"
     },
     {
+      "from": "lib/collectionEnablement.js",
+      "allow": ["lib/enablePlan.js", "lib/projectActions.js", "lib/skillStore.js"],
+      "importedBy": ["lib/tuiActions.js", "server.js"],
+      "reason": "Deep Collection enablement lifecycle — owns planning, link application, outcome classification, and setup reminder refresh"
+    },
+    {
       "from": "lib/skillMetadata.js",
       "allow": ["lib/projectPath.js", "lib/sourcePolicy.js"],
       "reason": "Metadata store — can validate inputs and source boundaries through leaf modules"
@@ -253,7 +259,7 @@
     },
     {
       "from": "lib/tuiActions.js",
-      "allow": ["lib/skillStore.js", "lib/projectActions.js", "lib/claudeStore.js", "lib/skillMetadata.js"],
+      "allow": ["lib/collectionEnablement.js", "lib/skillStore.js", "lib/projectActions.js", "lib/claudeStore.js", "lib/skillMetadata.js"],
       "reason": "TUI adapter — can depend on existing stores and coordinators without owning filesystem rules"
     },
     {

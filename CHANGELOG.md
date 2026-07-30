@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-30
+
+### Added
+- Added `POST /api/enable-collection` as the shared execution boundary for Collection enablement.
+
+### Changed
+- Centralized Collection enablement execution behind one shared Web/TUI lifecycle that applies project links, classifies enabled/unchanged/skipped/failed outcomes, and refreshes non-blocking setup reminders without executing setup skills.
+- Reduced Web and TUI adapters to user confirmation and result presentation while preserving partial successes and explicit per-skill failures.
+
 ## [0.17.1] - 2026-07-30
 
 ### Changed

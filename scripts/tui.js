@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   disableAlias,
+  enableCollectionChoice,
   enableSkillChoice,
   formatAdvice,
   listEnabledAliases,
@@ -273,23 +274,24 @@ async function enableLibraryFlow(library, choices) {
     if (!['y', 'yes'].includes(confirm.toLowerCase())) return;
   }
 
-  let enabled = 0;
-  let unchanged = 0;
-  let failed = 0;
-  for (const choice of targets) {
-    try {
-      const result = await enableSkillChoice(rootDir, state, choice.skill.id);
-      result.unchanged ? unchanged += 1 : enabled += 1;
-      state = await loadTuiState(rootDir, state.projectPath);
-    } catch (error) {
-      failed += 1;
-      console.log(`失败 ${choice.skill.name}: ${error.message}`);
-    }
-  }
+  const result = await enableCollectionChoice(
+    rootDir,
+    state,
+    choices.map((choice) => choice.skill.id)
+  );
+  state = await loadTuiState(rootDir, state.projectPath);
+  result.outcomes
+    .filter((outcome) => outcome.status === 'failed')
+    .forEach((outcome) => console.log(`失败 ${outcome.alias}: ${outcome.error}`));
 
-  console.log(`已处理 ${library.collection}: 启用 ${enabled}，已存在 ${unchanged}，跳过 ${skipped.length}，失败 ${failed}`);
-  if (pendingSetups.length > 0) {
-    showSetupGuidance ? printSetupGuidance(pendingSetups) : console.log(`库已启用但仍待配置；稍后请运行 ${pendingSetups.map((setup) => setup.setupSkillName).join('、')}。`);
+  console.log(`已处理 ${library.collection}: 启用 ${result.counts.enabled}，已存在 ${result.counts.unchanged}，跳过 ${result.counts.skipped}，失败 ${result.counts.failed}`);
+  if (!result.refresh.ok) {
+    console.log(`配置提醒刷新失败：${result.refresh.error}`);
+  }
+  const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
+  const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
+  if (remainingSetups.length > 0) {
+    showSetupGuidance ? printSetupGuidance(remainingSetups) : console.log(`库已启用但仍待配置；稍后请运行 ${remainingSetups.map((setup) => setup.setupSkillName).join('、')}。`);
   }
 }
 

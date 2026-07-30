@@ -96,6 +96,10 @@ _Avoid_: Source validation, Skillcaddy setup reminder
 The creation of a project-level link to a skill already present in the central library. Source acquisition never implies enablement; both occur in one workflow only when the user expresses both intents.
 _Avoid_: Download, installation
 
+**Collection enablement**:
+A project operation that applies enablement to every eligible skill in one collection and classifies each candidate as enabled, unchanged, skipped, or failed. It never establishes setup readiness.
+_Avoid_: Bulk installation, collection setup
+
 **Skill**:
 An Agent-facing capability rooted at a directory containing `SKILL.md`, discovered within a skill source and enabled independently per project.
 _Avoid_: Library, repository

@@ -472,30 +472,25 @@ async function enableGroup(group) {
 
   if (pendingSetups.length > 0 && !confirmSetupPreflight(skills.map((skill) => skill.id))) return;
 
-  let enabled = 0;
-  let unchanged = 0;
-  let failed = 0;
-
-  for (const skill of skills) {
-    try {
-      const result = await api('/api/enable', {
-        method: 'POST',
-        body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
-      });
-      result.unchanged ? unchanged += 1 : enabled += 1;
-    } catch {
-      failed += 1;
+  const result = await api('/api/enable-collection', {
+    method: 'POST',
+    body: {
+      projectPath: elements.projectPath.value,
+      skillIds: group.skills.map((skill) => skill.id)
     }
-  }
+  });
 
   const parts = [`已处理 ${group.collection}`];
-  if (enabled) parts.push(`启用 ${enabled}`);
-  if (unchanged) parts.push(`已存在 ${unchanged}`);
-  if (skipped.length) parts.push(`跳过 ${skipped.length}`);
-  if (failed) parts.push(`失败 ${failed}`);
+  if (result.counts.enabled) parts.push(`启用 ${result.counts.enabled}`);
+  if (result.counts.unchanged) parts.push(`已存在 ${result.counts.unchanged}`);
+  if (result.counts.skipped) parts.push(`跳过 ${result.counts.skipped}`);
+  if (result.counts.failed) parts.push(`失败 ${result.counts.failed}`);
   await loadState({ button: null });
-  if (pendingSetups.length > 0) parts.push(`待配置：${pendingSetups.map((setup) => setup.setupSkillName).join('、')}`);
-  setMessage(parts.join('，'), failed > 0);
+  const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
+  const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
+  if (remainingSetups.length > 0) parts.push(`待配置：${remainingSetups.map((setup) => setup.setupSkillName).join('、')}`);
+  if (!result.refresh.ok) parts.push(`配置提醒刷新失败：${result.refresh.error}`);
+  setMessage(parts.join('，'), result.counts.failed > 0 || !result.refresh.ok);
 }
 
 function findCollectionSetup(source, collection) {

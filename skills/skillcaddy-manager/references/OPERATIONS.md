@@ -138,6 +138,16 @@ Complete when the rescan reports the expected alias and target, with remaining a
 
 Expand the collection and request the shared enable plan. Exclude archived skills and skip `autoEnable: false`, except for a setup skill added by the plan because affected skills require it. Before mutation, show every pending setup with its status, missing artifacts, and setup skill.
 
+After confirmation, execute the shared Collection enablement lifecycle:
+
+```bash
+curl -sS -X POST http://127.0.0.1:4173/api/enable-collection \
+  -H 'Content-Type: application/json' \
+  -d '{"projectPath":"/path/to/project","skillIds":["source/collection/skill-a","source/collection/skill-b"]}'
+```
+
+The lifecycle owns project-link application, classifies every candidate as enabled, unchanged, skipped, or failed, and refreshes setup reminders after execution. Do not reproduce that loop in an adapter or Agent workflow.
+
 For interactive setup, offer:
 
 1. enable and continue into setup guidance;

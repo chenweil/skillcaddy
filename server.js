@@ -8,6 +8,7 @@ import {
   getState
 } from './lib/skillStore.js';
 import { syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
+import { executeCollectionEnablement } from './lib/collectionEnablement.js';
 import { readVersion } from './lib/version.js';
 import { enableProjectSkill } from './lib/projectActions.js';
 import { buildCollectionEnablePlan } from './lib/enablePlan.js';
@@ -69,6 +70,15 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     const state = await getState(rootDir, body.projectPath || rootDir);
     sendJson(res, 200, buildCollectionEnablePlan(state, Array.isArray(body.skillIds) ? body.skillIds : []));
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/enable-collection') {
+    const body = await readJson(req);
+    sendJson(res, 200, await executeCollectionEnablement(rootDir, {
+      projectPath: body.projectPath || rootDir,
+      skillIds: body.skillIds
+    }));
     return;
   }
 

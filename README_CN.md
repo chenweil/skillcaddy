@@ -123,7 +123,7 @@ npm run migrate:metadata -- --yes
 
 部分 collection 在启用 skills 后，还需要针对每个项目执行一次 setup。Skillcaddy 把契约保存在第三方 clone 之外的 `collection-metadata/<source>/<collection>.json`，并通过 `/api/state` 把状态报告为 `missing`、`partial`、`ready` 或 `invalid`。
 
-库级一键启用通过 `POST /api/enable-plan` 在需要时把 setup skill 纳入启用计划；Web/TUI 随后展示初始化状态和明确的 Agent 操作指引。软链接仍可先启用，但配置不完整的库只显示为“待配置”，不会被宣称为“已就绪”。交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
+库级一键启用通过 `POST /api/enable-plan` 在需要时把 setup skill 纳入启用计划，再通过 `POST /api/enable-collection` 执行共享计划。统一生命周期会把每个候选 skill 分类为已启用、已存在、已跳过或失败，并为 Web/TUI 重新扫描 setup 指引。软链接仍可先启用，但配置不完整的库只显示为“待配置”，不会被宣称为“已就绪”。交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
 
 ## 平台兼容性
 
