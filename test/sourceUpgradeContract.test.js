@@ -116,6 +116,37 @@ test('Local input Source upgrade retains the original plan consent facts', async
   );
 });
 
+test('Remote Archive Source upgrade retains the original plan consent facts', async (t) => {
+  const contract = sourceUpgradeContractCases.find(
+    (candidate) => candidate.name === 'Remote Archive'
+  );
+  const fixture = await contract.create(t);
+  const originalPlan = await planUpdateSource(
+    fixture.context,
+    fixture.request
+  );
+  await fixture.changeCandidate();
+  const changedPlan = await planUpdateSource(
+    fixture.context,
+    fixture.request
+  );
+  Object.assign(originalPlan, structuredClone(changedPlan));
+
+  await assert.rejects(
+    () => applyUpdateSource(fixture.context, originalPlan),
+    (error) => {
+      assert.equal(error.name, 'SourceAcquisitionError');
+      assert.equal(error.category, 'stale-plan');
+      assert.equal(error.exitCode, 1);
+      assert.equal(
+        error.message,
+        'Remote Archive changed since the update plan'
+      );
+      return true;
+    }
+  );
+});
+
 test('Local input Source upgrade rejects mutation of its public plan facts', async (t) => {
   const mutations = [
     {

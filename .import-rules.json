@@ -76,6 +76,11 @@
       "reason": "Local input upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
+      "from": "lib/sourceRemoteArchiveUpgradeAdapter.js",
+      "allow": ["lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js"],
+      "reason": "Remote Archive upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
+    },
+    {
       "from": "lib/sourceAdd.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocal.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "reason": "Local source add orchestration — owns identities, plans, collisions, staging, and atomic publication"
@@ -106,11 +111,6 @@
       "reason": "Managed source workspace — owns safe central-library staging-directory creation and cleanup"
     },
     {
-      "from": "lib/sourceArchiveUpdate.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpdateTransaction.js", "lib/sourceWorkspace.js"],
-      "reason": "Remote Archive update orchestration — owns replacement plans and reuses the source replacement transaction"
-    },
-    {
       "from": "lib/sourceRemoteFileWorkspace.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
       "reason": "Remote file workspace — owns bounded single-file download, byte validation, and staged source facts"
@@ -132,8 +132,8 @@
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
-      "reason": "Deep Source upgrade lifecycle — owns Local input planning, re-planning, policy, projections, and explicit transaction phases"
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceHttp.js", "lib/sourceLocalUpgradeAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveUpgradeAdapter.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
+      "reason": "Deep Source upgrade lifecycle — owns directory-source planning, re-planning, policy, projections, and explicit transaction phases"
     },
     {
       "from": "lib/sourceUpdateTransaction.js",
@@ -192,7 +192,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceArchiveUpdate.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAdd.js", "lib/sourceArchiveAdd.js", "lib/sourceGitAdd.js", "lib/sourceGitUpdate.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceRemoteFileAdd.js", "lib/sourceRemoteFileUpdate.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {
