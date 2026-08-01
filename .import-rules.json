@@ -58,8 +58,13 @@
       "reason": "Source upgrade adapter contract — validates and freezes the upgrade adapter seam (freely importable)"
     },
     {
+      "from": "lib/canonicalJson.js",
+      "allow": [],
+      "reason": "Leaf serializer — shared canonical representation for source policy fingerprints"
+    },
+    {
       "from": "lib/sourceAcquisitionPolicy.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "allow": ["lib/canonicalJson.js", "lib/sourceAcquisitionError.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "importedBy": ["lib/sourceAcquisition.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
       "reason": "Source acquisition policy — owns plan fingerprints, collision checks, and installed-directory verification"
     },
@@ -133,7 +138,7 @@
     },
     {
       "from": "lib/sourceUpgradePolicy.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
+      "allow": ["lib/canonicalJson.js", "lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
       "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Source upgrade policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
     },
