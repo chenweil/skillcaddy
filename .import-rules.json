@@ -134,15 +134,15 @@
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpdateTransaction.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpgradeTransaction.js", "lib/sourceWorkspace.js"],
       "importedBy": ["lib/sourceGitBatchUpdate.js", "lib/sourceManager.js"],
       "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, execution, projections, and explicit transaction phases"
     },
     {
-      "from": "lib/sourceUpdateTransaction.js",
-      "allow": ["lib/sourceRegistry.js"],
+      "from": "lib/sourceUpgradeTransaction.js",
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js"],
       "importedBy": ["lib/sourceUpgrade.js"],
-      "reason": "Local source replacement transaction — owns atomic publication, rollback, and transaction artifact cleanup"
+      "reason": "Source upgrade transactions — owns directory replacement and Git fast-forward strategies for atomic updates"
     },
     {
       "from": "lib/sourceGitUrl.js",
@@ -165,12 +165,6 @@
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
       "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Git upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
-    },
-    {
-      "from": "lib/sourceGitUpdateTransaction.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js"],
-      "importedBy": ["lib/sourceUpgrade.js"],
-      "reason": "Git fast-forward publisher — owns registry staging, fast-forward advancement, HEAD verification, and record rollback"
     },
     {
       "from": "lib/sourceGitBatchUpdate.js",
