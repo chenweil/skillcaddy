@@ -42,6 +42,7 @@
   color: var(--ink);
   padding: 2px 8px;
   font: 500 12px/1.4 var(--sans);
+  font-variant-numeric: tabular-nums;
   vertical-align: middle;
 }
 
@@ -74,7 +75,7 @@
   height: 36px;
   min-height: 36px;
   flex: 0 0 36px;
-  background: var(--primary);
+  background: var(--primary-strong);
   color: var(--on-primary);
   padding: 0;
   font-size: 20px;

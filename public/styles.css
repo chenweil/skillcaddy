@@ -1,13 +1,17 @@
 :root {
   color-scheme: light;
+  /* --primary 只用于非文本装饰：白字压在上面只有 3.28:1。 */
   --primary: #cc785c;
-  --primary-active: #a9583e;
+  /* 文本与按钮静息底：白字 5.06:1，canvas 上作文本 4.80:1。 */
+  --primary-strong: #a9583e;
+  /* hover/active：白字 6.57:1。 */
+  --primary-active: #8f4a34;
   --primary-disabled: #e6dfd8;
   --ink: #141413;
   --body: #3d3d3a;
   --body-strong: #252523;
   --muted: #6c6a64;
-  --muted-soft: #8e8b82;
+  --muted-soft: #6f6c66;
   --hairline: #e6dfd8;
   --hairline-soft: #ebe6df;
   --canvas: #faf9f5;
@@ -22,15 +26,16 @@
   --on-dark-soft: #a09d96;
   --accent-teal: #5db8a6;
   --accent-amber: #e8a55a;
-  --success: #5db872;
+  --success: #2f6f41;
   --warning: #d4a017;
   --error: #c64545;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
-  --display: Cormorant Garamond, EB Garamond, Georgia, "Times New Roman", serif;
-  --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* 三个字族全部自带兜底：本地工具需离线可用，不引入网络字体依赖。 */
+  --display: Georgia, "Times New Roman", "Songti SC", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -115,7 +120,7 @@ textarea {
 
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--primary);
+  color: var(--primary-strong);
   font: 500 12px/1.4 var(--sans);
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -225,6 +230,7 @@ h3 {
   font-family: var(--display);
   font-size: 34px;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1;
   text-overflow: ellipsis;
@@ -408,19 +414,19 @@ textarea {
   resize: vertical;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
-  outline: none;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary-strong);
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 1px;
 }
 
 button {
   min-height: 40px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: var(--primary);
+  background: var(--primary-strong);
   color: var(--on-primary);
   cursor: pointer;
   padding: 0 20px;
@@ -445,6 +451,10 @@ button.is-enabled {
   background: var(--surface-soft);
   color: var(--success);
   border: 1px solid var(--success);
+}
+
+button[aria-disabled="true"] {
+  cursor: default;
 }
 
 button.secondary {
@@ -611,12 +621,17 @@ button.danger:disabled,
 }
 
 .group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-height: 0;
+  min-width: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--ink);
   padding: 0;
+  font: inherit;
   text-align: left;
 }
 
@@ -636,12 +651,13 @@ button.danger:disabled,
 .group-enable-all {
   min-width: 44px;
   height: 36px;
-  background: var(--primary);
+  background: var(--primary-strong);
   color: var(--on-primary);
   padding: 0 12px;
   font-size: 12px;
   white-space: nowrap;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .group-enable-all:active,
@@ -665,16 +681,15 @@ button.danger:disabled,
   height: 36px;
 }
 
-.group-head h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.group-heading {
+  min-width: 0;
   margin: 0;
+  font-size: 18px;
   font-weight: 600;
   line-height: 1.3;
 }
 
-.group-head h3 .title {
+.group-toggle .title {
   overflow-wrap: anywhere;
 }
 
@@ -694,9 +709,15 @@ button.danger:disabled,
   flex-shrink: 0;
   width: 18px;
   height: 1em;
-  color: var(--primary);
+  color: var(--primary-strong);
   font: 700 14px/1 var(--mono);
   transition: transform 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
 }
 
 .is-collapsed .chevron {
@@ -720,8 +741,24 @@ button.danger:disabled,
 }
 
 .empty {
+  display: flex;
+  flex-direction: column;
   color: var(--muted);
   font: 14px/1.55 var(--sans);
+}
+
+.empty strong {
+  margin-bottom: 4px;
+  color: var(--body-strong);
+  font-weight: 500;
+}
+
+.empty-action {
+  align-self: flex-start;
+  margin-top: 12px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
 .skill {
@@ -811,7 +848,7 @@ button.danger:disabled,
 .toggle-field input {
   width: 18px;
   min-height: 18px;
-  accent-color: var(--primary);
+  accent-color: var(--primary-strong);
 }
 
 .toggle-field span {
@@ -833,11 +870,19 @@ button.danger:disabled,
   overflow-wrap: anywhere;
 }
 
-.message {
+.message-region {
   min-height: 24px;
   margin: 18px 0 0;
+}
+
+.message {
+  margin: 0;
   color: var(--primary-active);
   font: 13px/1.45 var(--mono);
+}
+
+.message:empty {
+  display: none;
 }
 
 .message.is-error {
