@@ -53,6 +53,11 @@
       "reason": "Internal Source acquisition adapter contract — validates and freezes the lifecycle preparation seam"
     },
     {
+      "from": "lib/sourceUpgradeAdapter.js",
+      "allow": [],
+      "reason": "Source upgrade adapter contract — validates and freezes the upgrade adapter seam (freely importable)"
+    },
+    {
       "from": "lib/sourceAcquisitionPolicy.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
       "importedBy": ["lib/sourceAcquisition.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
@@ -134,7 +139,7 @@
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpgradeTransaction.js", "lib/sourceWorkspace.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradeAdapter.js", "lib/sourceUpgradePolicy.js", "lib/sourceUpgradeTransaction.js", "lib/sourceWorkspace.js"],
       "importedBy": ["lib/sourceGitBatchUpdate.js", "lib/sourceManager.js"],
       "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, execution, projections, and explicit transaction phases"
     },
@@ -162,7 +167,7 @@
     },
     {
       "from": "lib/sourceGitUpgradeAdapter.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceValidation.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceUpgradeAdapter.js", "lib/sourceValidation.js"],
       "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Git upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
