@@ -18,7 +18,7 @@
         </div>
         <div class="topbar-actions">
           <span id="versionTag" class="version" aria-label="版本号"></span>
-          <button id="refreshButton" class="icon-button" title="刷新" aria-label="刷新">↻</button>
+          <button id="refreshButton" class="icon-button" data-focus-key="refresh" title="刷新" aria-label="刷新">↻</button>
         </div>
       </nav>
 
@@ -57,10 +57,10 @@
         <label>
           <span>目标项目路径</span>
           <small class="field-hint">输入项目路径后点「添加项目」保存到下方历史</small>
-          <input id="projectPath" type="text" spellcheck="false" placeholder="/Users/your-name/projects/my-app">
+          <input id="projectPath" type="text" data-focus-key="project-path" spellcheck="false" placeholder="/Users/your-name/projects/my-app">
         </label>
         <button id="addProject" class="secondary" type="button">添加项目</button>
-        <button id="loadProject">读取项目</button>
+        <button id="loadProject" data-focus-key="load-project">读取项目</button>
         <div id="projectHistory" class="project-history" aria-label="历史项目"></div>
       </section>
 
@@ -77,7 +77,7 @@
             <section class="enabled-column">
               <div class="column-title">
                 <span>.agents/skills <span id="agentsCount" class="count">0</span></span>
-                <button id="disableAgents" class="icon-button danger" title="一键清空 .agents/skills" aria-label="一键清空 .agents/skills">×</button>
+                <button id="disableAgents" class="icon-button danger" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills" aria-label="一键清空 .agents/skills">×</button>
               </div>
               <div id="enabledList" class="list compact"></div>
             </section>
@@ -85,8 +85,8 @@
               <div class="column-title">
                 <span>Claude Code <span id="claudeCount" class="count">0</span></span>
                 <div class="actions">
-                  <button id="syncClaude" class="icon-button" title="同步到 Claude Code" aria-label="同步到 Claude Code">+</button>
-                  <button id="unlinkClaude" class="icon-button danger" title="一键清空 Claude Code" aria-label="一键清空 Claude Code">×</button>
+                  <button id="syncClaude" class="icon-button" data-focus-key="claude-sync" title="同步到 Claude Code" aria-label="同步到 Claude Code">+</button>
+                  <button id="unlinkClaude" class="icon-button danger" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code" aria-label="一键清空 Claude Code">×</button>
                 </div>
               </div>
               <section id="claudeSkillList" class="claude-list"></section>
@@ -100,7 +100,7 @@
               <p class="eyebrow">Library</p>
               <h2>Skill 原件库 <strong id="totalSkills" class="count">0</strong></h2>
             </div>
-            <select id="sourceFilter" title="来源过滤">
+            <select id="sourceFilter" data-focus-key="source-filter" title="来源过滤">
               <option value="">全部来源</option>
               <option value="local">local</option>
               <option value="official">official</option>
@@ -111,7 +111,7 @@
           </div>
           <section id="adviceList" class="advice-list"></section>
           <div class="library-search">
-            <input id="skillSearch" type="text" placeholder="搜索 skill 名称、描述或标签..." aria-label="搜索 skills">
+            <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索 skill 名称、描述或标签..." aria-label="搜索 skills">
           </div>
           <nav id="tagTabs" class="tag-tabs" aria-label="Skill 标签过滤"></nav>
           <div id="skillList" class="list"></div>

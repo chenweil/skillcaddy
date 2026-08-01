@@ -50,6 +50,8 @@ function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink }) {
     const unlinkButton = item.querySelector('[data-action="unlink"]');
     unlinkButton.textContent = skill.isSymlink ? '移除' : '不可移除';
     unlinkButton.dataset.focusKey = `claude-remove:${skill.alias}`;
+    unlinkButton.dataset.focusFallbackSelector = '#claudeSkillList [data-focus-key^="claude-remove:"]:not(:disabled)';
+    unlinkButton.dataset.focusFallbackKey = 'claude-sync';
     unlinkButton.setAttribute('aria-label', skill.isSymlink
       ? `从 Claude Code 移除 ${skill.alias}`
       : `${skill.alias} 不是软链接，无法移除`);

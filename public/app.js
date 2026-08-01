@@ -131,6 +131,8 @@ function renderProjectHistory() {
     removeButton.type = 'button';
     removeButton.textContent = '×';
     removeButton.dataset.focusKey = `project-remove:${projectPath}`;
+    removeButton.dataset.focusFallbackSelector = '#projectHistory .project-chip-remove';
+    removeButton.dataset.focusFallbackKey = 'project-path';
     removeButton.title = `移除项目：${projectPath}`;
     removeButton.setAttribute('aria-label', `从历史移除项目：${projectPath}`);
     removeButton.addEventListener('click', () => forgetProject(projectPath));
@@ -162,7 +164,7 @@ function rememberProject(projectPath) {
 function forgetProject(projectPath) {
   state.projectHistory = state.projectHistory.filter((item) => item !== projectPath);
   localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
-  renderProjectHistory();
+  withPreservedFocus(renderProjectHistory);
   setMessage(`已移除项目：${projectPath}`);
 }
 
@@ -515,6 +517,18 @@ function renderMetadataEditor(container, skill) {
   form.elements.note.value = skill.note || '';
   form.elements.tags.value = (skill.tags || []).join(', ');
   form.elements.autoEnable.checked = skill.autoEnable !== false;
+
+  form.elements.note.dataset.focusKey = `skill-note:${skill.id}`;
+  form.elements.note.dataset.focusFallbackKey = `skill-edit:${skill.id}`;
+  form.elements.tags.dataset.focusKey = `skill-tags:${skill.id}`;
+  form.elements.tags.dataset.focusFallbackKey = `skill-edit:${skill.id}`;
+  form.elements.autoEnable.dataset.focusKey = `skill-auto-enable:${skill.id}`;
+  form.elements.autoEnable.dataset.focusFallbackKey = `skill-edit:${skill.id}`;
+  form.querySelector('button[type="submit"]').dataset.focusKey = `skill-save:${skill.id}`;
+  form.querySelector('button[type="submit"]').dataset.focusFallbackKey = `skill-edit:${skill.id}`;
+  form.querySelector('button[type="button"]').dataset.focusKey = `skill-cancel:${skill.id}`;
+  form.querySelector('button[type="button"]').dataset.focusFallbackKey = `skill-edit:${skill.id}`;
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     await saveMetadata(skill, form);
@@ -599,7 +613,15 @@ async function enableGroup(group) {
   if (result.counts.enabled) parts.push(`启用 ${result.counts.enabled}`);
   if (result.counts.unchanged) parts.push(`已存在 ${result.counts.unchanged}`);
   if (result.counts.skipped) parts.push(`跳过 ${result.counts.skipped}`);
-  if (result.counts.failed) parts.push(`失败 ${result.counts.failed}`);
+  if (result.counts.failed) {
+    const failedAliases = (result.outcomes || [])
+      .filter((outcome) => outcome.status === 'failed')
+      .map((outcome) => outcome.alias)
+      .filter(Boolean);
+    parts.push(failedAliases.length
+      ? `以下 ${failedAliases.length} 个未能启用，可单独重试：${failedAliases.join('、')}`
+      : `失败 ${result.counts.failed}`);
+  }
   await loadState({ button: null });
   const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
   const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
@@ -746,13 +768,19 @@ async function disableAgents() {
   if (!confirmBulkClear(`清空 .agents/skills 里全部 ${aliases.length} 个 skill？`, aliases.length)) return;
 
   await withButtonState(elements.disableAgents, '…', async () => {
-    await Promise.all(aliases.map((alias) => api('/api/disable', {
+    const results = await Promise.allSettled(aliases.map((alias) => api('/api/disable', {
       method: 'POST',
       body: { projectPath: elements.projectPath.value, alias }
     })));
-    setMessage(`已清空 ${aliases.length} 个 agents skill`);
+    const failed = results
+      .map((result, index) => result.status === 'rejected' ? aliases[index] : null)
+      .filter(Boolean);
+    const removed = aliases.length - failed.length;
+    const message = [`已清空 ${removed} 个 agents skill`];
+    if (failed.length) message.push(`以下 ${failed.length} 个未能清空，可单独重试：${failed.join('、')}`);
+    setMessage(message.join('，'), failed.length > 0);
     await loadState({ button: null });
-  });
+  }, () => state.enabled.filter((skill) => skill.isSymlink).length === 0);
 }
 
 async function syncClaude() {
@@ -786,7 +814,7 @@ async function unlinkClaude() {
     setMessage(result.removed ? `已清空 Claude Code 的 ${count} 个 skill 入口` : 'Claude Code 当前未启用 skill 入口');
     await loadState({ button: null });
     await flashButton(elements.unlinkClaude, '✓');
-  });
+  }, () => !state.claude || !state.claude.exists || state.claude.skills.length === 0);
 }
 
 async function unlinkClaudeSkill(alias) {
@@ -844,42 +872,76 @@ function withPreservedFocus(task) {
     return;
   }
 
-  const focusKey = document.activeElement?.dataset?.focusKey || '';
+  const focus = captureFocus();
   isRestoringFocus = true;
   try {
     task();
   } finally {
     isRestoringFocus = false;
+    restoreFocus(focus);
   }
-
-  restoreFocus(focusKey);
 }
 
-function restoreFocus(focusKey) {
-  if (!focusKey) return;
+function captureFocus() {
+  const active = document.activeElement;
+  const focusKey = active?.dataset?.focusKey || '';
+  if (!focusKey) return null;
 
-  const target = document.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`);
-  if (!target) return;
+  const fallbackSelector = active.dataset.focusFallbackSelector || '';
+  const fallbackCandidates = fallbackSelector ? [...document.querySelectorAll(fallbackSelector)] : [];
+  return {
+    focusKey,
+    fallbackKey: active.dataset.focusFallbackKey || '',
+    fallbackSelector,
+    fallbackIndex: fallbackCandidates.indexOf(active)
+  };
+}
 
-  if (!target.disabled) {
-    target.focus();
+function restoreFocus(focus) {
+  if (!focus?.focusKey) return;
+
+  const target = document.querySelector(`[data-focus-key="${CSS.escape(focus.focusKey)}"]`);
+
+  if (focusTarget(target)) {
     return;
   }
 
-  // 控件因这次操作变为不可用时，退到同一张卡片里第一个还能用的控件，
-  // 而不是把焦点丢回页首。
-  target.closest('[data-focus-scope]')?.querySelector('button:not(:disabled)')?.focus();
+  if (target?.disabled) {
+    const fallback = target.closest('[data-focus-scope]')?.querySelector('button:not(:disabled)');
+    if (focusTarget(fallback)) return;
+  }
+
+  if (focus.fallbackSelector) {
+    const candidates = [...document.querySelectorAll(focus.fallbackSelector)].filter((candidate) => !candidate.disabled);
+    if (candidates.length > 0) {
+      const index = Math.min(Math.max(focus.fallbackIndex, 0), candidates.length - 1);
+      if (focusTarget(candidates[index])) return;
+    }
+  }
+
+  if (focus.fallbackKey) {
+    const fallback = document.querySelector(`[data-focus-key="${CSS.escape(focus.fallbackKey)}"]`);
+    if (focusTarget(fallback)) return;
+  }
 }
 
-async function withButtonState(button, busyText, task) {
+function focusTarget(target) {
+  if (!target || target.disabled) return false;
+  target.focus();
+  return true;
+}
+
+async function withButtonState(button, busyText, task, resolveDisabled = () => false) {
+  const focus = captureFocus();
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = busyText;
   try {
     await task();
   } finally {
-    button.disabled = false;
+    button.disabled = resolveDisabled();
     button.textContent = originalText;
+    restoreFocus(focus);
   }
 }
 
