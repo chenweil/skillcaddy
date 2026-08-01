@@ -55,7 +55,7 @@
     {
       "from": "lib/sourceAcquisitionPolicy.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
-      "importedBy": ["lib/sourceAcquisition.js", "lib/sourceAcquisitionExecution.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "importedBy": ["lib/sourceAcquisition.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
       "reason": "Source acquisition policy — owns plan fingerprints, collision checks, and installed-directory verification"
     },
     {
@@ -129,25 +129,19 @@
     {
       "from": "lib/sourceUpgradePolicy.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
-      "importedBy": ["lib/sourceUpgrade.js", "lib/sourceUpgradeExecution.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Source upgrade policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
     },
     {
       "from": "lib/sourceUpgrade.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpgradeExecution.js", "lib/sourceUpgradePolicy.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceArchiveWorkspace.js", "lib/sourceGitUpdateTransaction.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceHttp.js", "lib/sourceLocal.js", "lib/sourceRemoteFileWorkspace.js", "lib/sourceRegistry.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
       "importedBy": ["lib/sourceGitBatchUpdate.js", "lib/sourceManager.js"],
-      "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, policy, projections, and explicit transaction phases"
-    },
-    {
-      "from": "lib/sourceUpgradeExecution.js",
-      "allow": ["lib/sourceGitUpdateTransaction.js", "lib/sourceUpdateTransaction.js", "lib/sourceUpgradePolicy.js", "lib/sourceWorkspace.js"],
-      "importedBy": ["lib/sourceUpgrade.js"],
-      "reason": "Source upgrade execution — owns preparation checks and distinct directory and Git publication phases"
+      "reason": "Deep Source upgrade lifecycle — owns planning, re-planning, execution, projections, and explicit transaction phases"
     },
     {
       "from": "lib/sourceUpdateTransaction.js",
       "allow": ["lib/sourceRegistry.js"],
-      "importedBy": ["lib/sourceUpgradeExecution.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Local source replacement transaction — owns atomic publication, rollback, and transaction artifact cleanup"
     },
     {
@@ -175,7 +169,7 @@
     {
       "from": "lib/sourceGitUpdateTransaction.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceRegistry.js"],
-      "importedBy": ["lib/sourceUpgradeExecution.js"],
+      "importedBy": ["lib/sourceUpgrade.js"],
       "reason": "Git fast-forward publisher — owns registry staging, fast-forward advancement, HEAD verification, and record rollback"
     },
     {
@@ -185,16 +179,10 @@
       "reason": "Git batch workflow — enumerates registered Git sources and aggregates shared lifecycle outcomes"
     },
     {
-      "from": "lib/sourceAcquisitionExecution.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
-      "importedBy": ["lib/sourceAcquisition.js"],
-      "reason": "Source acquisition execution — owns re-preparation checks, publication rollback, and workspace cleanup"
-    },
-    {
       "from": "lib/sourceAcquisition.js",
-      "allow": ["lib/sourceAcquisitionExecution.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
       "importedBy": ["lib/sourceManager.js"],
-      "reason": "Deep Source acquisition lifecycle — owns selection, planning, re-planning, stale-plan enforcement, and result projection"
+      "reason": "Deep Source acquisition lifecycle — owns selection, planning, re-planning, execution, and result projection"
     },
     {
       "from": "lib/sourceRecord.js",
