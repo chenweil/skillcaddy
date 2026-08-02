@@ -52,6 +52,12 @@ const elements = {
   activeProject: document.querySelector('#activeProject')
 };
 
+// These module-level states must be initialized before the startup top-level
+// await below can resume through loadState() -> render().
+let lastFilterSignature = '';
+let filterExpandedGroups = new Set();
+let isRestoringFocus = false;
+
 elements.loadProject.addEventListener('click', () => loadState({ feedback: true }));
 elements.addProject.addEventListener('click', addCurrentProject);
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
@@ -347,9 +353,6 @@ function clearFilters() {
 // 分组默认折叠可以压住 30 个库的长度，但筛选结果同样折叠时，
 // 用户只看到一排组标题，会把「命中藏在折叠分组里」误读成「没搜到」。
 // 因此筛选条件一变就展开全部命中分组；条件不变时仍尊重用户的手动折叠。
-let lastFilterSignature = '';
-let filterExpandedGroups = new Set();
-
 function initializeCollapsedGroups(groups) {
   const signature = filterSignature();
   if (signature === lastFilterSignature) {
@@ -864,8 +867,6 @@ function setMessage(text, isError = false) {
 
 // DOM 全量重建会把焦点掉回 <body>：键盘用户每展开一个分组、启用一个 skill，
 // 都得从页首重新 Tab。渲染前记下焦点控件的稳定标识，渲染后再找回来。
-let isRestoringFocus = false;
-
 function withPreservedFocus(task) {
   if (isRestoringFocus) {
     task();
