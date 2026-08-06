@@ -29,3 +29,6 @@ personal/*
 !personal/.gitkeep
 archived/*
 !archived/.gitkeep
+
+# agent
+.pi/
