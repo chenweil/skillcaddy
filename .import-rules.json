@@ -270,6 +270,11 @@
       "reason": "TUI display formatting — leaf module with no store dependencies"
     },
     {
+      "from": "lib/webManager.js",
+      "allow": [],
+      "reason": "Web process lifecycle — owns PID records, readiness probes, and verified shutdown"
+    },
+    {
       "from": "scripts/*.js",
       "allow": true,
       "reason": "CLI entry points — may coordinate modules but cannot import restricted internals"

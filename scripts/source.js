@@ -2,6 +2,7 @@
 
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
+import path from 'node:path';
 import {
   applyAddSource,
   applySourceMigration,
@@ -25,20 +26,36 @@ export async function runSourceCli({
   confirm
 } = {}) {
   const [command, ...args] = argv;
+  const projectOption = parseProjectOption(args);
 
   try {
-    if (command === 'list' && args.length === 0) {
+    if (projectOption.error) {
+      stderr.write(`Error: ${projectOption.error}\n`);
+      printUsage(stderr);
+      return 2;
+    }
+
+    if (projectOption.specified && !['update', 'update-git'].includes(command)) {
+      stderr.write('Error: --project is supported only by update and update-git\n');
+      printUsage(stderr);
+      return 2;
+    }
+
+    const commandArgs = projectOption.args;
+    const effectiveProjectPath = path.resolve(projectOption.projectPath || projectPath);
+
+    if (command === 'list' && commandArgs.length === 0) {
       printList(await listSources({ rootDir }), stdout);
       return 0;
     }
 
     if (command === 'update') {
-      const parsed = parseUpdateArgs(args);
+      const parsed = parseUpdateArgs(commandArgs);
       if (!parsed) {
         printUsage(stderr);
         return 2;
       }
-      const context = { rootDir, projectPath };
+      const context = { rootDir, projectPath: effectiveProjectPath };
       const planUpdate = parsed.allowBreaking
         ? planBreakingUpdateSource
         : planUpdateSource;
@@ -60,8 +77,8 @@ export async function runSourceCli({
       return 0;
     }
 
-    if (command === 'update-git' && args.length === 0) {
-      const result = await updateGitSources({ rootDir, projectPath });
+    if (command === 'update-git' && commandArgs.length === 0) {
+      const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath });
       printGitUpdateBatch(result, stdout);
       return result.sources.some(
         (source) => source.status === 'failed' ||
@@ -207,6 +224,20 @@ function printUpdatePlan(plan, stdout) {
   printSkillPaths('unchanged', plan.changes.unchanged, stdout);
   printSkillPaths('added', plan.changes.added, stdout);
   printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
+  if (plan.affectedProjectLinks?.length) {
+    printAffectedProjectLinks(plan.affectedProjectLinks, stdout);
+  }
+}
+
+function printAffectedProjectLinks(links, stdout) {
+  if (!Array.isArray(links) || links.length === 0) {
+    stdout.write('would break project links:\n  (none)\n');
+    return;
+  }
+  stdout.write('would break project links:\n');
+  for (const link of links) {
+    stdout.write(`  - ${link.alias} -> ${link.skillPath}\n`);
+  }
 }
 
 function printGitUpdateBatch(result, stdout) {
@@ -223,11 +254,48 @@ function printGitUpdateBatch(result, stdout) {
       ? ` (${source.applied ? 'updated' : 'blocked'})`
       : '';
     stdout.write(`[${source.status}] ${source.sourceId}${detail}\n`);
+    if (source.status === 'breaking' && source.affected?.length) {
+      const aliases = source.affected.map((link) => link.alias).join(', ');
+      stdout.write(`  would break: ${aliases}\n`);
+    }
   }
   stdout.write(
     `Git source summary: updated=${counts.updated} current=${counts.current} ` +
     `dirty=${counts.dirty} breaking=${counts.breaking} failed=${counts.failed}\n`
   );
+}
+
+function parseProjectOption(args) {
+  const remaining = [];
+  let projectPath;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === '--project') {
+      const value = args[index + 1];
+      if (projectPath !== undefined || !value || value.startsWith('--')) {
+        return { error: '--project 需要一个目录路径' };
+      }
+      projectPath = value;
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith('--project=')) {
+      const value = argument.slice('--project='.length);
+      if (projectPath !== undefined || !value) {
+        return { error: '--project 需要一个目录路径' };
+      }
+      projectPath = value;
+      continue;
+    }
+    remaining.push(argument);
+  }
+
+  return {
+    args: remaining,
+    projectPath,
+    specified: projectPath !== undefined
+  };
 }
 
 function printUpdateResult(result, stdout) {
@@ -325,8 +393,8 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
-  stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes]\n');
-  stderr.write('Usage: npm run source -- update-git\n');
+  stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes] [--project <dir>]\n');
+  stderr.write('Usage: npm run source -- update-git [--project <dir>]\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 

@@ -404,6 +404,7 @@ test('incoming validation and registry publication failures preserve Git and reg
 test('batch Git updates re-prepare current sources through the shared lifecycle', async () => {
   const fixture = await createGitFixture('batch-current-reprepare');
   const root = await makeTempDir('source-git-batch-current-reprepare-root-');
+  const project = await makeTempDir('source-git-batch-current-reprepare-project-');
 
   await withGitUrlRewrite(fixture.remoteRoot, async () => {
     await addFixtureSource(root, fixture);
@@ -435,7 +436,7 @@ test('batch Git updates re-prepare current sources through the shared lifecycle'
     ]);
 
     assert.deepEqual(
-      await updateGitSources({ rootDir: root }),
+      await updateGitSources({ rootDir: root, projectPath: project }),
       {
         sources: [{
           sourceId: fixture.sourceId,
@@ -482,7 +483,8 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
           sourceId: fixtures[3].sourceId,
           status: 'breaking',
           category: 'breaking-replacement',
-          applied: false
+          applied: false,
+          affected: [{ alias: 'review', skillPath: 'skills/review' }]
         },
         {
           sourceId: fixtures[4].sourceId,
@@ -515,9 +517,8 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
     const output = captureOutput();
     assert.equal(
       await runSourceCli({
-        argv: ['update-git'],
+        argv: ['update-git', '--project', project],
         rootDir: root,
-        projectPath: project,
         ...output.streams
       }),
       1
@@ -526,11 +527,15 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
     assert.match(output.stdout(), /\[dirty\] github\/fixtures\/batch-dirty/);
     assert.match(
       output.stdout(),
-      /\[breaking\] github\/fixtures\/batch-breaking \(blocked\)/
+      /\[breaking\] github\/fixtures\/batch-breaking \(blocked\)\n  would break: review\n/
     );
     assert.match(
       output.stdout(),
       /\[current\] github\/fixtures\/batch-breaking-unlinked/
+    );
+    assert.doesNotMatch(
+      output.stdout(),
+      /github\/fixtures\/batch-breaking-unlinked\n  would break/
     );
     assert.match(output.stdout(), /\[failed\] github\/fixtures\/batch-failed/);
     assert.match(
@@ -538,6 +543,15 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
       /Git source summary: updated=0 current=3 dirty=1 breaking=1 failed=1/
     );
   });
+});
+
+test('batch Git updates require an explicit current project path', async () => {
+  const root = await makeTempDir('source-git-batch-project-required-root-');
+
+  await assert.rejects(
+    () => updateGitSources({ rootDir: root }),
+    (error) => error.message === 'Git source updates require context.projectPath'
+  );
 });
 
 function expectedGitPlan(fixture, status, currentCommit, incomingCommit) {

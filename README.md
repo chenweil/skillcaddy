@@ -38,6 +38,41 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
+### Global CLI / TUI command
+
+Install the clone-backed command globally from this repository (uses local `npm link`; it does not download an npm package):
+
+```bash
+npm run install:cli
+npm run check:cli
+```
+
+The installed `skillcaddy` command provides both the CLI and TUI. The older `install:tui` / `check:tui` names remain as compatibility aliases. You can also run `npm run tui -- install cli` from the clone, or choose `11. 安装/检查全局 CLI + TUI 命令` inside the TUI.
+
+After linking the local CLI/TUI command once, the same entry point can manage the Web server and inspect or update skills from any project:
+
+```bash
+skillcaddy start [projectPath]     # start the Web manager
+skillcaddy stop                    # stop Skillcaddy-owned Web only
+skillcaddy restart [projectPath]   # restart the Web manager
+skillcaddy -v                      # show the version
+skillcaddy -h                      # show help
+skillcaddy -u [projectPath]        # safely update registered Git skill sources
+skillcaddy -a [projectPath]        # report project state, advice, and recommendations
+```
+
+`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires the current project path when invoked through the source-management API. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the central library for source and analysis operations; Web lifecycle commands use the clone that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
+
+On platforms without a process-ownership probe, Web stop/restart fail closed rather than guessing which process to terminate.
+
+If you do not want to link the global command yet, the repository-local entry supports the same commands:
+
+```bash
+npm run tui -- start --no-open
+npm run tui -- stop
+npm run tui -- -a /path/to/project
+```
+
 ### Terminal UI (TUI)
 
 For the interactive terminal manager, run:
@@ -48,17 +83,17 @@ npm run tui -- /path/to/project
 npm run tui -- --root ~/AISkills /path/to/project
 ```
 
-To use the cloned library from any project, link its TUI command once:
+To use the cloned library from any project, link its CLI/TUI command once:
 
 ```bash
-npm run install:tui
-npm run check:tui
+npm run install:cli
+npm run check:cli
 
 cd /path/to/another-project
 skillcaddy
 ```
 
-`install:tui` uses local `npm link`: it does not download or copy Skillcaddy from the npm registry. The global `skillcaddy` command remains linked to this clone, which stays the central library and can be updated with `git pull`. Running `skillcaddy` without an argument manages the current directory; `skillcaddy /path/to/project` selects another project. The installer refuses to replace a global `skillcaddy` package linked to another clone.
+`install:cli` uses local `npm link`: it does not download or copy Skillcaddy from the npm registry. The global `skillcaddy` command remains linked to this clone, which stays the central library and can be updated with `git pull`. Running `skillcaddy` without an argument manages the current directory; `skillcaddy /path/to/project` selects another project. The installer refuses to replace a global `skillcaddy` package linked to another clone.
 
 The TUI provides a full keyboard-driven interface without needing a browser:
 
@@ -74,10 +109,11 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **Refresh project** — Reload state, switch project path
 - **Update GitHub sources** — Batch fast-forward pull `github/` repos
 - **Batch Chinese notes** — Interactive flow (option 10) to fill missing Chinese `note` fields for skills that only have an English description
+- **Install/check the global command** — Option 11 installs the CLI + TUI command from this clone
 
 Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
-Menu navigation uses number keys (1-10) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
+Menu navigation uses number keys (1-11) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
@@ -243,10 +279,10 @@ npm run source -- add https://example.com/SKILL.md --name example --yes
 # Replace one registered source; Archive/Local updates require a new input,
 # while Git/Remote file updates may reuse their registered origin
 npm run source -- update <source-id> [input]
-npm run source -- update <source-id> [input] --allow-breaking --yes
+npm run source -- update <source-id> [input] --allow-breaking --yes [--project /path/to/project]
 
 # Update all registered Git sources through the same safety path
-npm run source -- update-git
+npm run source -- update-git [--project /path/to/project]
 ```
 
 `add` and `update` are separate operations. An identical repeated add is a successful no-op, while an identity or destination collision stops without authorizing replacement. Use `--name` or `--namespace` to resolve Archive/Local naming collisions. Remote files require `--name` and reject `--namespace`; use `update` only for a source identity already present in the source registry. A Remote-file update may omit input to reuse the registered origin or supply a new stable URL to migrate that origin.
@@ -268,7 +304,7 @@ npm run source -- migrate --yes
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 
-The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, or non-ZIP archives. The clone-backed global `skillcaddy` command only exposes the existing TUI; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
+The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, or non-ZIP archives. The clone-backed global `skillcaddy` command now also exposes Web lifecycle, read-only analysis, and registered-Git update entry points while retaining the existing source-management boundaries; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 
@@ -288,8 +324,12 @@ On startup the manager scans every source directory (`official / github / person
 Update every registered Git source through the unified fast-forward-only safety path. Dirty working trees are skipped, and breaking updates that affect a known current-project link are blocked:
 
 ```bash
-npm run source -- update-git
+npm run source -- update-git --project /path/to/project
 ```
+
+When the command is run from the central library clone, pass `--project` (or set
+`SKILLCADDY_PROJECT`) so breaking updates are checked against the intended
+project's `.agents/skills/` links.
 
 ## Skills bundled with this project
 

@@ -71,14 +71,14 @@ Inputs may be a hosted Git URL, GitHub tree URL, public HTTP(S) ZIP URL, stable 
 For a registered source, preview and apply:
 
 ```bash
-npm run source -- update <source-id> [input]
-npm run source -- update <source-id> [input] --yes
+npm run source -- update <source-id> [input] [--project <project-dir>]
+npm run source -- update <source-id> [input] --yes [--project <project-dir>]
 ```
 
 Archive and Local replacement require a new input. Git and Remote file updates reuse the registered origin when input is omitted. Supplying a new stable direct `/SKILL.md` URL for a Remote file update migrates its registered origin. When the plan reports an affected current-project link, stop unless the user explicitly authorizes:
 
 ```bash
-npm run source -- update <source-id> [input] --allow-breaking --yes
+npm run source -- update <source-id> [input] --allow-breaking --yes [--project <project-dir>]
 ```
 
 Acquisition-only requests complete after a source-registry inspection and fresh state scan prove the source is present; do not create project links.
@@ -96,7 +96,7 @@ For an explicit combined request:
 
 Unknown setup readiness creates neither a reminder nor a gate. Surface a declared setup reminder after enablement without blocking the link. Never infer credentials or publisher setup from prose; the acquired skill's runtime preflight remains responsible for requirements such as IMA credentials.
 
-Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, and non-ZIP archives are also deferred. The optional clone-backed global `skillcaddy` command exposes the existing TUI only; it does not change source-management boundaries.
+Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, and non-ZIP archives are also deferred. The optional clone-backed global `skillcaddy` command keeps the existing no-argument TUI and additionally exposes Web lifecycle commands plus `-u` for the existing safe registered-Git batch update and read-only `-a` analysis. These CLI additions do not change source-management or enablement boundaries.
 
 ## Source Registry Migration and Recovery
 
@@ -223,21 +223,27 @@ For registered Git sources, use the unified updater. It fetches the tracked ref,
 Prefer:
 
 ```bash
-npm run source -- update-git
+npm run source -- update-git [--project <project-dir>]
 ```
+
+The batch updater requires a current project path. Pass `--project`, set
+`SKILLCADDY_PROJECT`, or provide `context.projectPath` through the public
+source-management seam; missing context is an error rather than an implicit
+"no project links" result. The Web lifecycle uses the clone's own root, while
+`--root` is for central-library source and analysis operations.
 
 Complete when updated, current, dirty, breaking, and failed outcomes are reported separately.
 
 ## Bootstrap and Web/TUI
 
-The TUI command can be linked from a clone without publishing or downloading a global npm package:
+The clone-backed CLI + TUI command can be linked globally without publishing or downloading a global npm package:
 
 ```bash
-npm run install:tui
-npm run check:tui
+npm run install:cli
+npm run check:cli
 ```
 
-`install:tui` uses local `npm link`, so the global `skillcaddy` command resolves back to the current clone and uses that clone as the central library. It refuses a global package link owned by another clone. From another project, run `skillcaddy` to manage the current directory or `skillcaddy /path/to/project` to select a target explicitly. This is a user-level mutation, so obtain approval before running it.
+`install:cli` uses local `npm link`, so the global `skillcaddy` command resolves back to the current clone and uses that clone as the central library. It exposes both CLI and TUI behavior; `install:tui` / `check:tui` remain compatibility aliases. The same operation is available as `npm run tui -- install cli` or TUI option 11. It refuses a global package link owned by another clone. From another project, run `skillcaddy` to manage the current directory or `skillcaddy /path/to/project` to select a target explicitly. This is a user-level mutation, so obtain approval before running it.
 
 Global manager installation writes to a user-level directory, so obtain approval first. From the repository:
 

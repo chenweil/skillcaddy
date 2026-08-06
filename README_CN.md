@@ -38,6 +38,41 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
+### 全局 CLI / TUI 命令
+
+从本仓库 clone 安装到全局（使用本地 `npm link`，不会下载 npm 包）：
+
+```bash
+npm run install:cli
+npm run check:cli
+```
+
+安装后，`skillcaddy` 同时提供 CLI 和 TUI。旧的 `install:tui` / `check:tui` 仍保留为兼容别名；也可以在仓库内直接运行 `npm run tui -- install cli`，或进入 TUI 后选择 `11. 安装/检查全局 CLI + TUI 命令`。
+
+安装一次本地 CLI/TUI 命令后，也可以从任意项目直接使用统一入口管理 Web 和 skill：
+
+```bash
+skillcaddy start [projectPath]     # 启动 Web 管理器
+skillcaddy stop                    # 停止 Skillcaddy 自己启动的 Web
+skillcaddy restart [projectPath]   # 重启 Web 管理器
+skillcaddy -v                      # 查看版本
+skillcaddy -h                      # 查看帮助
+skillcaddy -u [projectPath]        # 安全更新已登记的 Git skill 源
+skillcaddy -a [projectPath]        # 分析项目状态、诊断和推荐
+```
+
+`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，source 管理 API 必须明确提供当前项目路径。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 用于 source 和分析操作选择中央原件库，Web 生命周期使用提供 CLI 的 clone。未带参数的 `skillcaddy` 仍然进入 TUI。
+
+在无法验证进程归属的平台上，Web stop/restart 会安全失败，不会猜测并终止进程。
+
+如果暂时不想安装全局命令，仓库内也可以直接运行同一入口：
+
+```bash
+npm run tui -- start --no-open
+npm run tui -- stop
+npm run tui -- -a /path/to/project
+```
+
 ### 终端 UI（TUI）
 
 启动交互式终端管理器：
@@ -48,17 +83,17 @@ npm run tui -- /path/to/project
 npm run tui -- --root ~/AISkills /path/to/project
 ```
 
-如果希望在任意项目中使用这份 clone 的原件库，只需安装一次本地 TUI 命令：
+如果希望在任意项目中使用这份 clone 的原件库，只需安装一次本地 CLI/TUI 命令：
 
 ```bash
-npm run install:tui
-npm run check:tui
+npm run install:cli
+npm run check:cli
 
 cd /path/to/another-project
 skillcaddy
 ```
 
-`install:tui` 使用本地 `npm link`，不会从 npm registry 下载或复制 Skillcaddy。全局 `skillcaddy` 命令始终链接到当前 clone；这个 clone 仍是中央原件库，后续通过 `git pull` 更新即可。不带参数运行 `skillcaddy` 会管理当前目录，也可以用 `skillcaddy /path/to/project` 指定其它项目。如果全局同名 package 已链接到另一份 clone，安装会停止，不会覆盖。
+`install:cli` 使用本地 `npm link`，不会从 npm registry 下载或复制 Skillcaddy。全局 `skillcaddy` 命令始终链接到当前 clone；这个 clone 仍是中央原件库，后续通过 `git pull` 更新即可。不带参数运行 `skillcaddy` 会管理当前目录，也可以用 `skillcaddy /path/to/project` 指定其它项目。如果全局同名 package 已链接到另一份 clone，安装会停止，不会覆盖。
 
 TUI 提供完整的键盘驱动界面，无需浏览器：
 
@@ -74,10 +109,11 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **刷新项目** — 重载状态、切换项目路径
 - **更新 GitHub 源** — 批量 fast-forward pull `github/` 仓库
 - **批量生成中文 note** — 交互式流程（选项 10），为仅有英文 `description`、缺少中文 `note` 的 skill 补全中文介绍
+- **安装/检查全局命令** — 选项 11，安装当前 clone 提供的 CLI + TUI 命令
 
 浏览库时改为紧凑分页表格展示（`n`/`p` 翻页，`a` 一键加入该库）。skill 介绍优先使用 metadata 中的 `note`，而非原始英文 `description`。
 
-菜单导航使用数字键（1-10）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
+菜单导航使用数字键（1-11）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
 
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 
@@ -243,10 +279,10 @@ npm run source -- add https://example.com/SKILL.md --name example --yes
 # 替换一个已登记 source；Archive/Local 更新需要新 input，
 # Git/Remote file 可复用 registry 中的 origin
 npm run source -- update <source-id> [input]
-npm run source -- update <source-id> [input] --allow-breaking --yes
+npm run source -- update <source-id> [input] --allow-breaking --yes [--project /path/to/project]
 
 # 通过同一安全路径更新全部已登记 Git source
-npm run source -- update-git
+npm run source -- update-git [--project /path/to/project]
 ```
 
 `add` 与 `update` 是不同操作。重复添加完全相同的内容会成功且不改动；source identity 或目标目录冲突会停止，不能因此获得替换权限。Archive/Local 新 source 的命名冲突可用 `--name` 或 `--namespace` 解决。Remote file 必须提供 `--name`，不接受 `--namespace`；只有 source registry 已存在对应 identity 时才能使用 `update`。Remote file 更新可省略 input 以复用已登记 origin，也可提供新的稳定 URL 来迁移 origin。
@@ -268,7 +304,7 @@ npm run source -- migrate --yes
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 
-首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版或非 ZIP archive。clone-backed 全局 `skillcaddy` 命令只暴露现有 TUI，不会把 source acquisition 变成 npm 全局包。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
+首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版或非 ZIP archive。clone-backed 全局 `skillcaddy` 命令现在还提供 Web 生命周期、只读分析和已登记 Git 源更新入口，但仍复用现有 source 管理边界。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
 
 随本仓库发布（仅在贡献 Skillcaddy 本身时使用）：
 
@@ -288,8 +324,12 @@ skills/<skill-name>/
 通过统一的 fast-forward-only 安全路径更新所有已登记 Git 源。脏工作树会自动跳过；会影响当前项目已知链接的 breaking 更新会被阻止：
 
 ```bash
-npm run source -- update-git
+npm run source -- update-git --project /path/to/project
 ```
+
+如果命令是在中央原件库 clone 内执行，请传入 `--project`（或设置
+`SKILLCADDY_PROJECT`），确保 breaking 更新检查的是目标项目的
+`.agents/skills/` 软链接。
 
 ## 本项目自带的 skills
 

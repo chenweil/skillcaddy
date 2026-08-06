@@ -251,25 +251,54 @@ test('source CLI returns exit 4 when update would break a current-project link',
   await mkdir(path.join(project, '.agents', 'skills'), { recursive: true });
   await symlink(
     path.join(root, 'personal', 'managed', 'skills', 'removed'),
-    path.join(project, '.agents', 'skills', 'removed'),
+    path.join(project, '.agents', 'skills', 'legacy-review'),
     'dir'
   );
   const output = captureOutput();
 
   assert.equal(
     await runSourceCli({
-      argv: ['update', 'personal/managed', replacement, '--yes'],
+      argv: [
+        'update',
+        'personal/managed',
+        replacement,
+        '--yes',
+        '--project',
+        project
+      ],
       rootDir: root,
-      projectPath: project,
       ...output.streams
     }),
     4
   );
   assert.match(output.stderr(), /Outcome: breaking-replacement/);
+  assert.match(output.stderr(), /current-project links: legacy-review/);
   assert.match(output.stderr(), /--allow-breaking/);
   assert.equal(
     await readFile(path.join(root, 'personal', 'managed', 'skills', 'removed', 'SKILL.md'), 'utf8'),
     '# Removed\n'
+  );
+
+  const authorizedOutput = captureOutput();
+  assert.equal(
+    await runSourceCli({
+      argv: [
+        'update',
+        'personal/managed',
+        replacement,
+        '--allow-breaking',
+        '--yes',
+        '--project',
+        project
+      ],
+      rootDir: root,
+      ...authorizedOutput.streams
+    }),
+    0
+  );
+  assert.match(
+    authorizedOutput.stdout(),
+    /would break project links:\n  - legacy-review -> skills\/removed/
   );
 });
 

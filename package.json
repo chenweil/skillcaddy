@@ -1,6 +1,6 @@
 {
   "name": "skillcaddy",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "private": true,
   "description": "Local skill source library and per-project symlink manager.",
   "type": "module",
@@ -16,8 +16,10 @@
     "lint": "node scripts/check-imports.js",
     "install:manager": "node scripts/manager-skill.js install",
     "check:manager": "node scripts/manager-skill.js check",
-    "install:tui": "node scripts/tui-command.js install",
-    "check:tui": "node scripts/tui-command.js check",
+    "install:cli": "node scripts/tui-command.js install cli",
+    "check:cli": "node scripts/tui-command.js check cli",
+    "install:tui": "node scripts/tui-command.js install tui",
+    "check:tui": "node scripts/tui-command.js check tui",
     "migrate:metadata": "node scripts/migrate-metadata.js",
     "pull:github": "bash scripts/pull-github.sh",
     "tui": "node scripts/tui.js"

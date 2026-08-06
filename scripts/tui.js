@@ -18,6 +18,7 @@ import {
   syncClaude
 } from '../lib/tuiActions.js';
 import { buildCollectionEnablePlan } from '../lib/enablePlan.js';
+import { checkCliInstall, installCliCommand } from '../lib/tuiInstall.js';
 import {
   formatCompactSkillChoice,
   formatSkillTableDivider,
@@ -26,10 +27,21 @@ import {
   getSkillPage,
   getSkillTableLayout
 } from '../lib/tuiLayout.js';
+import { isCliCommand, runCli } from './cli.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const options = parseArgs(process.argv.slice(2));
 const codeRootDir = path.resolve(__dirname, '..');
+
+if (isCliCommand(process.argv.slice(2))) {
+  const exitCode = await runCli({
+    argv: process.argv.slice(2),
+    rootDir: process.env.SKILLCADDY_ROOT || codeRootDir,
+    runtimeRootDir: codeRootDir
+  });
+  process.exit(exitCode);
+}
+
+const options = parseArgs(process.argv.slice(2));
 const rootDir = path.resolve(options.root || process.env.SKILLCADDY_ROOT || codeRootDir);
 
 const rl = createInterface({ input, output });
@@ -55,6 +67,7 @@ async function mainLoop() {
       '8. 刷新项目状态',
       '9. 更新 GitHub skill 库',
       '10. 批量生成中文 note',
+      '11. 安装/检查全局 CLI + TUI 命令',
       'q. 退出'
     ].join('\n'));
 
@@ -75,6 +88,7 @@ async function mainLoop() {
       else if (choice === '8') await refreshState();
       else if (choice === '9') await updateGithubSkillsFlow();
       else if (choice === '10') await batchTranslateNotesFlow();
+      else if (choice === '11') await installGlobalCommandFlow();
       else console.log('未知操作');
     } catch (error) {
       console.log(`错误：${error.message}`);
@@ -82,6 +96,17 @@ async function mainLoop() {
 
     await ask('回车继续');
   }
+}
+
+async function installGlobalCommandFlow() {
+  const current = await checkCliInstall(codeRootDir);
+  console.log(current.message);
+  if (current.ok) return;
+  if (current.status !== 'missing') throw new Error(current.message);
+
+  const installed = await installCliCommand(codeRootDir);
+  console.log(installed.message);
+  console.log(`命令: ${installed.command}`);
 }
 
 function printSummary() {
@@ -595,7 +620,7 @@ async function ask(prompt) {
   try {
     return (await rl.question(`${prompt}: `)).trim();
   } catch (error) {
-    if (error.code === 'ABORT_ERR' || error.name === 'AbortError') {
+    if (error.code === 'ABORT_ERR' || error.code === 'ERR_USE_AFTER_CLOSE' || error.code === 'ERR_INVALID_STATE' || error.name === 'AbortError') {
       rl.close();
       console.log('\nbyebye 👋');
       process.exit(0);

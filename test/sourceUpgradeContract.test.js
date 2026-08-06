@@ -260,6 +260,10 @@ test('Breaking source replacement protection is limited to the current project',
       assert.equal(error.name, 'SourceAcquisitionError');
       assert.equal(error.category, 'breaking-replacement');
       assert.equal(error.exitCode, 4);
+      assert.deepEqual(error.affectedProjectLinks, [{
+        alias: 'current-project-link',
+        skillPath: 'skills/removed'
+      }]);
       assert.equal(
         error.message,
         'Source replacement would break current-project links: ' +

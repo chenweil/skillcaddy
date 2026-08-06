@@ -2,25 +2,32 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkTuiInstall, installTuiCommand } from '../lib/tuiInstall.js';
+import { checkCliInstall, installCliCommand } from '../lib/tuiInstall.js';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const command = process.argv[2] || 'check';
+const target = process.argv[3] || 'cli';
 
 try {
-  const result = command === 'install'
-    ? await installTuiCommand(rootDir)
-    : command === 'check'
-      ? await checkTuiInstall(rootDir)
-      : null;
-
-  if (!result) {
-    console.error(`Unknown command: ${command}`);
-    console.error('Usage: node scripts/tui-command.js <check|install>');
+  if (!['cli', 'tui'].includes(target)) {
+    console.error(`Unknown target: ${target}`);
+    console.error('Usage: node scripts/tui-command.js <check|install> [cli|tui]');
     process.exitCode = 2;
   } else {
-    printResult(result);
-    process.exitCode = result.ok ? 0 : 1;
+    const result = command === 'install'
+      ? await installCliCommand(rootDir)
+      : command === 'check'
+        ? await checkCliInstall(rootDir)
+        : null;
+
+    if (!result) {
+      console.error(`Unknown command: ${command}`);
+      console.error('Usage: node scripts/tui-command.js <check|install> [cli|tui]');
+      process.exitCode = 2;
+    } else {
+      printResult(result);
+      process.exitCode = result.ok ? 0 : 1;
+    }
   }
 } catch (error) {
   console.error(error.message);

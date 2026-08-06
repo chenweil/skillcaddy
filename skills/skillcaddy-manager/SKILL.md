@@ -1,6 +1,6 @@
 ---
 name: skillcaddy-manager
-description: Manage Skillcaddy source acquisition, source updates, migrations, and project skill links. Use for discovery, add/update requests, enable/disable, audits, maintenance, bootstrap, or Web/TUI access.
+description: Manage Skillcaddy source acquisition, source updates, migrations, project skill links, and the Web/TUI CLI. Use for discovery, add/update requests, enable/disable, audits, maintenance, bootstrap, or Web/TUI access.
 ---
 
 # Skillcaddy Manager
@@ -48,6 +48,9 @@ Preserve these invariants:
 - Interactive setup is never executed silently; obtain confirmation and let the declared setup skill own project edits.
 - Repository behavior in `lib/skillStore.js`, `lib/projectActions.js`, and `lib/claudeStore.js` is authoritative when documentation and implementation differ.
 - The fixed default Web manager URL is `http://127.0.0.1:4173`.
+- The clone-backed `skillcaddy` entry keeps no-argument TUI compatibility and also supports `start`, `stop`, `restart`, `-u` for registered Git source updates, and read-only `-a` analysis.
+- Global bootstrap is explicit: run `npm run install:cli` and `npm run check:cli` from the clone; the installed command provides both CLI and TUI, while `install:tui` remains a compatibility alias.
+- Batch Git source updates require an explicit current project context; use `--project` or `SKILLCADDY_PROJECT` so breaking project links are not silently skipped.
 
 ## Mutation Gate
 

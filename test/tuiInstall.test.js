@@ -4,7 +4,9 @@ import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  checkCliInstall,
   checkTuiInstall,
+  installCliCommand,
   installTuiCommand
 } from '../lib/tuiInstall.js';
 
@@ -17,6 +19,7 @@ test('links the cloned repository as the global skillcaddy command', async () =>
   try {
     const before = await checkTuiInstall(root, { globalRoot });
     assert.equal(before.status, 'missing');
+    assert.equal((await checkCliInstall(root, { globalRoot })).status, 'missing');
 
     const installed = await installTuiCommand(root, {
       globalRoot,
@@ -30,6 +33,7 @@ test('links the cloned repository as the global skillcaddy command', async () =>
     assert.equal(installed.status, 'installed');
     assert.equal(installed.unchanged, false);
     assert.equal(installed.targetPath, targetPath);
+    assert.equal((await checkCliInstall(root, { globalRoot })).ok, true);
 
     const again = await installTuiCommand(root, {
       globalRoot,
@@ -38,6 +42,7 @@ test('links the cloned repository as the global skillcaddy command', async () =>
       }
     });
     assert.equal(again.unchanged, true);
+    assert.equal((await installCliCommand(root, { globalRoot })).unchanged, true);
     assert.equal(linkCalls, 1);
   } finally {
     await rm(root, { recursive: true, force: true });

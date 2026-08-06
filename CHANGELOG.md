@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.20.0] - 2026-08-07
+
+### Added
+- Added a unified clone-backed `skillcaddy` CLI for Web `start`, `stop`, and `restart`, version/help output, safe registered-Git updates with `-u`, and read-only project analysis with `-a`.
+- Added verified Web process ownership and PID lifecycle handling; external services occupying the Web port are never stopped or replaced.
+- Added explicit global CLI/TUI bootstrap commands: `npm run install:cli` / `npm run check:cli`, with `install:tui` / `check:tui` compatibility aliases.
+- Added affected project-link reporting for blocked Git source updates and an explicit `--project` path for the source CLI.
+
+### Changed
+- Made `-a` analysis read-only and made batch Git updates reject a missing current-project context instead of silently skipping link protection.
+- Clarified that `--root` is for source/analysis operations and that Web shutdown fails closed when process ownership cannot be verified.
+- Recorded the clone-backed CLI and local Web lifecycle boundary in ADR-0007 while preserving source-manager and enablement boundaries.
+
 ## [0.19.1] - 2026-08-06
 
 ### Changed
