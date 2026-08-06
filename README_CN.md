@@ -331,6 +331,19 @@ npm run source -- update-git --project /path/to/project
 `SKILLCADDY_PROJECT`），确保 breaking 更新检查的是目标项目的
 `.agents/skills/` 软链接。
 
+如果你手动执行了 `git pull`，导致已登记 Git clone 前进但 registry 没有同步，
+可以用显式 repair 流程采纳当前状态：
+
+```bash
+npm run source -- repair github/<owner>/<repo> --project /path/to/project
+npm run source -- repair github/<owner>/<repo> --project /path/to/project --yes
+```
+
+repair 不会 pull、覆盖、stash 或 reset 当前 clone；只有干净、位于登记 ref、
+远端一致、相对 registry 为 fast-forward 且通过 source 校验的 clone 才会被采纳。
+如果会影响当前项目链接，仍需显式加 `--allow-breaking`；dirty clone 只提醒，
+不会自动处理。
+
 ## 本项目自带的 skills
 
 ### skillcaddy-manager

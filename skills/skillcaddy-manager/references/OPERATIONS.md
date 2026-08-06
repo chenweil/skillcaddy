@@ -232,7 +232,23 @@ source-management seam; missing context is an error rather than an implicit
 "no project links" result. The Web lifecycle uses the clone's own root, while
 `--root` is for central-library source and analysis operations.
 
-Complete when updated, current, dirty, breaking, and failed outcomes are reported separately.
+If a user manually advances a registered Git checkout with `git pull`, use the
+explicit registry-repair flow rather than editing the sidecar record directly:
+
+```bash
+npm run source -- repair <source-id> --project <project-dir>
+npm run source -- repair <source-id> --project <project-dir> --yes
+```
+
+Repair adopts only a clean checkout on the registered ref and remote whose
+current commit is a fast-forward of the registered commit. It validates the
+current skill inventory and applies the same current-project link protection;
+`--allow-breaking` is required for an affected link. Dirty checkouts remain
+untouched and are reported as reminders. Batch failures now include their
+category and reason, while dirty outcomes include a non-mutating reminder.
+
+Complete when updated, current, dirty, breaking, failed, and repair outcomes
+are reported separately.
 
 ## Bootstrap and Web/TUI
 

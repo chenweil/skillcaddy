@@ -5,12 +5,15 @@ import { createInterface } from 'node:readline/promises';
 import path from 'node:path';
 import {
   applyAddSource,
+  applyRepairSource,
   applySourceMigration,
   applyUpdateSource,
   inspectSource,
   listSources,
   planAddSource,
+  planBreakingRepairSource,
   planBreakingUpdateSource,
+  planRepairSource,
   planSourceMigration,
   planUpdateSource,
   updateGitSources
@@ -35,8 +38,8 @@ export async function runSourceCli({
       return 2;
     }
 
-    if (projectOption.specified && !['update', 'update-git'].includes(command)) {
-      stderr.write('Error: --project is supported only by update and update-git\n');
+    if (projectOption.specified && !['repair', 'update', 'update-git'].includes(command)) {
+      stderr.write('Error: --project is supported only by repair, update, and update-git\n');
       printUsage(stderr);
       return 2;
     }
@@ -84,6 +87,34 @@ export async function runSourceCli({
         (source) => source.status === 'failed' ||
           source.status === 'breaking' && source.applied === false
       ) ? 1 : 0;
+    }
+
+    if (command === 'repair') {
+      const parsed = parseRepairArgs(commandArgs);
+      if (!parsed) {
+        printUsage(stderr);
+        return 2;
+      }
+      const context = { rootDir, projectPath: effectiveProjectPath };
+      const planRepair = parsed.allowBreaking
+        ? planBreakingRepairSource
+        : planRepairSource;
+      const plan = await planRepair(context, parsed.request);
+      printRepairPlan(plan, stdout);
+      if (
+        plan.status === 'ready' &&
+        !parsed.yes &&
+        !await requestConfirmation(
+          { confirm, stdin, stdout },
+          plan,
+          'Adopt this Git registry state? [y/N] '
+        )
+      ) {
+        stdout.write('Outcome: cancelled\n');
+        return 0;
+      }
+      printRepairResult(await applyRepairSource(context, plan), stdout);
+      return 0;
     }
 
     if (command === 'inspect' && args.length === 1) {
@@ -252,11 +283,19 @@ function printGitUpdateBatch(result, stdout) {
     counts[source.status] += 1;
     const detail = source.status === 'breaking'
       ? ` (${source.applied ? 'updated' : 'blocked'})`
+      : source.status === 'failed' && source.category
+        ? ` (${source.category})`
       : '';
     stdout.write(`[${source.status}] ${source.sourceId}${detail}\n`);
     if (source.status === 'breaking' && source.affected?.length) {
       const aliases = source.affected.map((link) => link.alias).join(', ');
       stdout.write(`  would break: ${aliases}\n`);
+    }
+    if (source.status === 'dirty') {
+      stdout.write(`  reminder: ${source.message || 'local Git changes found; update skipped'}\n`);
+    }
+    if (source.status === 'failed') {
+      stdout.write(`  reason: ${source.message || source.category || 'Git source update failed'}\n`);
     }
   }
   stdout.write(
@@ -302,6 +341,30 @@ function printUpdateResult(result, stdout) {
   stdout.write(`Outcome: ${result.status}\n`);
   stdout.write(`source: ${result.sourceId}\n`);
   stdout.write(`install: ${result.installPath}\n`);
+}
+
+function printRepairPlan(plan, stdout) {
+  stdout.write(`Repair plan: ${plan.status}\n`);
+  stdout.write(`source: ${plan.sourceId}\n`);
+  stdout.write(`install: ${plan.installPath}\n`);
+  stdout.write(`registered commit: ${plan.registeredCommit}\n`);
+  stdout.write(`current commit: ${plan.currentCommit}\n`);
+  printSkillPaths('unchanged', plan.changes.unchanged, stdout);
+  printSkillPaths('added', plan.changes.added, stdout);
+  printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
+  if (plan.affectedProjectLinks?.length) {
+    printAffectedProjectLinks(plan.affectedProjectLinks, stdout);
+  }
+  if (plan.status === 'dirty') {
+    stdout.write('reminder: local Git changes found; registry was not changed\n');
+  }
+}
+
+function printRepairResult(result, stdout) {
+  stdout.write(`Outcome: ${result.status}\n`);
+  stdout.write(`source: ${result.sourceId}\n`);
+  stdout.write(`install: ${result.installPath}\n`);
+  stdout.write(`commit: ${result.commit}\n`);
 }
 
 function printSkillPaths(label, skillPaths, stdout) {
@@ -367,6 +430,26 @@ function parseUpdateArgs(args) {
   return { request, yes, allowBreaking };
 }
 
+function parseRepairArgs(args) {
+  if (args.length < 1 || args[0].startsWith('--')) return null;
+  const request = { sourceId: args[0] };
+  let allowBreaking = false;
+  let yes = false;
+
+  for (const argument of args.slice(1)) {
+    if (argument === '--allow-breaking' && !allowBreaking) {
+      allowBreaking = true;
+      continue;
+    }
+    if (argument === '--yes' && !yes) {
+      yes = true;
+      continue;
+    }
+    return null;
+  }
+  return { request, yes, allowBreaking };
+}
+
 async function requestConfirmation({ confirm, stdin, stdout }, plan, prompt) {
   if (confirm) return Boolean(await confirm(plan));
   const readline = createInterface({ input: stdin, output: stdout });
@@ -393,6 +476,7 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
+  stderr.write('Usage: npm run source -- repair <source-id> [--allow-breaking] [--yes] [--project <dir>]\n');
   stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes] [--project <dir>]\n');
   stderr.write('Usage: npm run source -- update-git [--project <dir>]\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');

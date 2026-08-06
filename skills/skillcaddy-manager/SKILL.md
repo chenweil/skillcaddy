@@ -51,6 +51,7 @@ Preserve these invariants:
 - The clone-backed `skillcaddy` entry keeps no-argument TUI compatibility and also supports `start`, `stop`, `restart`, `-u` for registered Git source updates, and read-only `-a` analysis.
 - Global bootstrap is explicit: run `npm run install:cli` and `npm run check:cli` from the clone; the installed command provides both CLI and TUI, while `install:tui` remains a compatibility alias.
 - Batch Git source updates require an explicit current project context; use `--project` or `SKILLCADDY_PROJECT` so breaking project links are not silently skipped.
+- If a registered Git checkout was manually advanced with `git pull`, use `npm run source -- repair <source-id> --project <project-dir>` to explicitly adopt the clean fast-forward state into the sidecar registry; never edit the registry directly.
 
 ## Mutation Gate
 

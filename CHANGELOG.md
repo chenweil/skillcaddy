@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.21.0] - 2026-08-07
+
+### Added
+- Added an explicit Git source registry repair flow for clean checkouts advanced manually with `git pull`, including fast-forward and current-project link checks.
+- Added ADR-0008 documenting registry-only adoption of externally advanced Git sources.
+
+### Changed
+- Batch Git update output now includes failure categories and reasons, and dirty sources now emit a non-mutating reminder.
+- Dirty Git worktrees remain untouched; repair never pulls, resets, stashes, or overwrites source content.
+
 ## [0.20.0] - 2026-08-07
 
 ### Added

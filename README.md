@@ -331,6 +331,20 @@ When the command is run from the central library clone, pass `--project` (or set
 `SKILLCADDY_PROJECT`) so breaking updates are checked against the intended
 project's `.agents/skills/` links.
 
+If a registered Git checkout was advanced manually with `git pull`, repair only
+the sidecar registry with an explicit adoption plan:
+
+```bash
+npm run source -- repair github/<owner>/<repo> --project /path/to/project
+npm run source -- repair github/<owner>/<repo> --project /path/to/project --yes
+```
+
+Repair does not pull, overwrite, stash, or reset the checkout. It only adopts a
+clean checkout that is on the registered ref, matches its configured remote,
+has advanced by fast-forward, and passes source validation. Breaking project
+links still require `--allow-breaking`; dirty checkouts are left untouched and
+reported as reminders.
+
 ## Skills bundled with this project
 
 ### skillcaddy-manager

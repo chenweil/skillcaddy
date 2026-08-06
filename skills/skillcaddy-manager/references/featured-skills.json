@@ -1,14 +1,14 @@
 {
-  "version": "0.20.0",
+  "version": "0.21.0",
   "lastUpdated": "2026-08-07",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
     {
-      "version": "0.20.0",
+      "version": "0.21.0",
       "date": "2026-08-07",
       "changes": [
-        "同步至 Skillcaddy v0.20.0",
-        "新增 clone-backed CLI、Web 生命周期与 source update 项目 link 保护"
+        "同步至 Skillcaddy v0.21.0",
+        "新增手动 Git pull 后的 source registry repair 与 batch 失败原因提示"
       ]
     },
     {

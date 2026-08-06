@@ -139,8 +139,8 @@
     {
       "from": "lib/sourceUpgradePolicy.js",
       "allow": ["lib/canonicalJson.js", "lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
-      "importedBy": ["lib/sourceUpgrade.js"],
-      "reason": "Source upgrade policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
+      "importedBy": ["lib/sourceUpgrade.js", "lib/sourceGitRepair.js"],
+      "reason": "Source upgrade and Git registry-repair policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
     },
     {
       "from": "lib/sourceUpgrade.js",
@@ -173,7 +173,7 @@
     {
       "from": "lib/sourceGitUpgradeAdapter.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGitUrl.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceTree.js", "lib/sourceUpgradeAdapter.js", "lib/sourceValidation.js"],
-      "importedBy": ["lib/sourceUpgrade.js"],
+      "importedBy": ["lib/sourceUpgrade.js", "lib/sourceGitRepair.js"],
       "reason": "Git upgrade preparation adapter — exposes inspection and preparation without lifecycle policy"
     },
     {
@@ -181,6 +181,12 @@
       "allow": ["lib/sourceRegistry.js", "lib/sourceUpgrade.js"],
       "importedBy": ["lib/sourceManager.js"],
       "reason": "Git batch workflow — enumerates registered Git sources and aggregates shared lifecycle outcomes"
+    },
+    {
+      "from": "lib/sourceGitRepair.js",
+      "allow": ["lib/canonicalJson.js", "lib/sourceAcquisitionError.js", "lib/sourceGitUpgradeAdapter.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceUpgradePolicy.js"],
+      "importedBy": ["lib/sourceManager.js"],
+      "reason": "Git registry repair lifecycle — validates and explicitly adopts a clean manually advanced checkout"
     },
     {
       "from": "lib/sourceAcquisition.js",
@@ -220,7 +226,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAcquisition.js", "lib/sourceGitBatchUpdate.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAcquisition.js", "lib/sourceGitBatchUpdate.js", "lib/sourceGitRepair.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

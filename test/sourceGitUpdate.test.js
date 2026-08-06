@@ -12,10 +12,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyAddSource,
+  applyRepairSource,
   applyUpdateSource,
   inspectSource,
   planAddSource,
+  planBreakingRepairSource,
   planBreakingUpdateSource,
+  planRepairSource,
   planUpdateSource,
   updateGitSources
 } from '../lib/sourceManager.js';
@@ -84,6 +87,92 @@ test('fast-forwards a registered Git source and reports a subsequent no-op', asy
     await readFile(path.join(project, '.agents', 'skills', 'review', 'SKILL.md'), 'utf8'),
     skillDocument('Review updated code')
   );
+});
+
+test('adopts a manually fast-forwarded clean Git source into the registry', async () => {
+  const fixture = await createGitFixture('repair');
+  const root = await makeTempDir('source-git-repair-root-');
+  const project = await makeTempDir('source-git-repair-project-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    const nextCommit = await commitAndPush(fixture, {
+      'README.md': 'manually pulled\n'
+    });
+    await execFile('git', ['-C', checkout, 'pull', '--ff-only']);
+
+    const plan = await planRepairSource(
+      { rootDir: root, projectPath: project },
+      { sourceId: fixture.sourceId }
+    );
+    assert.equal(plan.status, 'ready');
+    assert.equal(plan.registeredCommit, fixture.initialCommit);
+    assert.equal(plan.currentCommit, nextCommit);
+    assert.deepEqual(plan.changes, {
+      unchanged: ['skills/review'],
+      added: [],
+      removedOrRelocated: []
+    });
+
+    const output = captureOutput();
+    assert.equal(
+      await runSourceCli({
+        argv: ['repair', fixture.sourceId, '--yes', '--project', project],
+        rootDir: root,
+        ...output.streams
+      }),
+      0
+    );
+    assert.match(output.stdout(), /Repair plan: ready/);
+    assert.match(output.stdout(), /Outcome: repaired/);
+    assert.match(output.stdout(), new RegExp(`commit: ${nextCommit}`));
+    assert.equal(
+      (await inspectSource({ rootDir: root }, fixture.sourceId)).origin.commit,
+      nextCommit
+    );
+    assert.equal(await readHead(checkout), nextCommit);
+  });
+});
+
+test('blocks Git registry repair when manual pull would remove a current-project link', async () => {
+  const fixture = await createGitFixture('repair-breaking');
+  const root = await makeTempDir('source-git-repair-breaking-root-');
+  const project = await makeTempDir('source-git-repair-breaking-project-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    await symlinkEnabledSkill(root, project, fixture.repository, 'review');
+    const checkout = path.join(root, 'github', fixture.repository);
+    await removeSkillAndPush(fixture, 'review', 'replacement');
+    await execFile('git', ['-C', checkout, 'pull', '--ff-only']);
+
+    await assert.rejects(
+      () => planRepairSource(
+        { rootDir: root, projectPath: project },
+        { sourceId: fixture.sourceId }
+      ),
+      (error) => error.category === 'breaking-replacement' &&
+        error.affectedProjectLinks[0].alias === 'review'
+    );
+
+    const plan = await planBreakingRepairSource(
+      { rootDir: root, projectPath: project },
+      { sourceId: fixture.sourceId }
+    );
+    assert.deepEqual(plan.affectedProjectLinks, [
+      { alias: 'review', skillPath: 'skills/review' }
+    ]);
+    const result = await applyRepairSource(
+      { rootDir: root, projectPath: project },
+      plan
+    );
+    assert.equal(result.status, 'repaired');
+    assert.equal(
+      (await inspectSource({ rootDir: root }, fixture.sourceId)).origin.commit,
+      fixture.nextCommit
+    );
+  });
 });
 
 test('reports a dirty registered Git source without changing or stashing it', async () => {
@@ -442,7 +531,8 @@ test('batch Git updates re-prepare current sources through the shared lifecycle'
           sourceId: fixture.sourceId,
           status: 'failed',
           category: 'stale-plan',
-          applied: false
+          applied: false,
+          message: 'Git source changed since the update plan'
         }]
       }
     );
@@ -494,13 +584,17 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
         },
         {
           sourceId: fixtures[2].sourceId,
-          status: 'dirty'
+          status: 'dirty',
+          category: 'dirty-worktree',
+          applied: false,
+          message: 'Local Git changes found; update skipped'
         },
         {
           sourceId: fixtures[5].sourceId,
           status: 'failed',
           category: 'source-collision',
-          applied: false
+          applied: false,
+          message: `Registered Git source origin does not match its source record: ${fixtures[5].sourceId}`
         },
         {
           sourceId: fixtures[1].sourceId,
@@ -537,7 +631,14 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
       output.stdout(),
       /github\/fixtures\/batch-breaking-unlinked\n  would break/
     );
-    assert.match(output.stdout(), /\[failed\] github\/fixtures\/batch-failed/);
+    assert.match(
+      output.stdout(),
+      /\[failed\] github\/fixtures\/batch-failed \(source-collision\)\n  reason: Registered Git source origin does not match its source record: github\/fixtures\/batch-failed/
+    );
+    assert.match(
+      output.stdout(),
+      /\[dirty\] github\/fixtures\/batch-dirty\n  reminder: Local Git changes found; update skipped/
+    );
     assert.match(
       output.stdout(),
       /Git source summary: updated=0 current=3 dirty=1 breaking=1 failed=1/
