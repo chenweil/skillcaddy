@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-08-06
+
+### Changed
+- Web 管理器左侧 Agents / Claude Code 已启用列表隐藏路径信息，让列表更紧凑并保留 skill 名称与操作入口。
+
 ## [0.19.0] - 2026-07-30
 
 ### Changed

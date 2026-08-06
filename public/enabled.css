@@ -64,6 +64,7 @@
 }
 
 .enabled p {
+  display: none;
   margin: 4px 0 0;
   color: var(--muted);
   font: 12px/1.45 var(--mono);
