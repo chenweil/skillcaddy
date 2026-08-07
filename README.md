@@ -283,6 +283,8 @@ npm run source -- update <source-id> [input] --allow-breaking --yes [--project /
 
 # Update all registered Git sources through the same safety path
 npm run source -- update-git [--project /path/to/project]
+# Show the affected skill paths in the update summary
+npm run source -- update-git --verbose --project /path/to/project
 ```
 
 `add` and `update` are separate operations. An identical repeated add is a successful no-op, while an identity or destination collision stops without authorizing replacement. Use `--name` or `--namespace` to resolve Archive/Local naming collisions. Remote files require `--name` and reject `--namespace`; use `update` only for a source identity already present in the source registry. A Remote-file update may omit input to reuse the registered origin or supply a new stable URL to migrate that origin.
@@ -330,6 +332,18 @@ npm run source -- update-git --project /path/to/project
 When the command is run from the central library clone, pass `--project` (or set
 `SKILLCADDY_PROJECT`) so breaking updates are checked against the intended
 project's `.agents/skills/` links.
+
+Successful Git updates print a temporary summary containing the commit range and
+the number of added, edited, and deleted skills. Use `--verbose` to list those
+skill paths. The summary is command output only; it does not write descriptions,
+commit messages, or diff content into the source registry or the central skill
+library.
+
+The installed global command supports the same detail mode:
+
+```bash
+skillcaddy -u --verbose /path/to/project
+```
 
 If a registered Git checkout was advanced manually with `git pull`, repair only
 the sidecar registry with an explicit adoption plan:

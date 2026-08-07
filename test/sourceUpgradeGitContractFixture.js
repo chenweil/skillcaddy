@@ -64,6 +64,11 @@ export async function createGitContract(t) {
       incomingCommit,
       skills: ['skills/review'],
       warnings: [],
+      skillChanges: {
+        added: [],
+        edited: ['skills/review'],
+        deleted: []
+      },
       changes,
       affectedProjectLinks: []
     },
@@ -74,6 +79,11 @@ export async function createGitContract(t) {
       commit: incomingCommit,
       skills: ['skills/review'],
       warnings: [],
+      skillChanges: {
+        added: [],
+        edited: ['skills/review'],
+        deleted: []
+      },
       changes
     },
     installedSkill: path.join(

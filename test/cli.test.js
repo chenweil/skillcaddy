@@ -67,6 +67,7 @@ test('CLI preserves no-argument TUI compatibility while recognizing lifecycle co
     rootDir: '',
     port: '4317',
     open: true,
+    verbose: false,
     error: ''
   });
   assert.equal(parseCliArgs(['server', 'stop']).command, 'stop');
@@ -103,6 +104,23 @@ test('CLI -u delegates to the existing safe Git batch update boundary', async ()
   assert.equal(calls[0].rootDir, '/tmp/library');
   assert.equal(calls[0].projectPath, '/tmp/project');
   assert.equal(output.stdout(), 'batch update\n');
+});
+
+test('CLI -u forwards verbose update summaries', async () => {
+  const output = captureOutput();
+  const calls = [];
+  assert.equal(await runCli({
+    argv: ['-u', '--verbose', '/tmp/project'],
+    rootDir: '/tmp/library',
+    ...output.streams,
+    handlers: {
+      runSourceCli: async (options) => {
+        calls.push(options);
+        return 0;
+      }
+    }
+  }), 0);
+  assert.deepEqual(calls[0].argv, ['update-git', '--verbose']);
 });
 
 test('CLI rejects a custom data root for Web lifecycle commands', async () => {

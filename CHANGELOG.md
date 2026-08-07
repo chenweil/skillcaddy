@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.22.0] - 2026-08-07
+
+### Added
+- Added Git source update summaries that distinguish newly added, edited, and deleted skills.
+- Added `--verbose` output for the source CLI and global `skillcaddy -u` command to list affected skill paths.
+
+### Changed
+- Git update summaries now include the old and new commit IDs while remaining transient command output; registry metadata and source content are not polluted with update descriptions.
+
 ## [0.21.0] - 2026-08-07
 
 ### Added

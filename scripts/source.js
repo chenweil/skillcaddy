@@ -80,9 +80,14 @@ export async function runSourceCli({
       return 0;
     }
 
-    if (command === 'update-git' && commandArgs.length === 0) {
+    if (command === 'update-git') {
+      const parsed = parseGitUpdateArgs(commandArgs);
+      if (!parsed) {
+        printUsage(stderr);
+        return 2;
+      }
       const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath });
-      printGitUpdateBatch(result, stdout);
+      printGitUpdateBatch(result, stdout, parsed);
       return result.sources.some(
         (source) => source.status === 'failed' ||
           source.status === 'breaking' && source.applied === false
@@ -255,6 +260,13 @@ function printUpdatePlan(plan, stdout) {
   printSkillPaths('unchanged', plan.changes.unchanged, stdout);
   printSkillPaths('added', plan.changes.added, stdout);
   printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
+  if (plan.skillChanges) {
+    printGitUpdateSummary({
+      fromCommit: plan.currentCommit,
+      toCommit: plan.incomingCommit,
+      skillChanges: plan.skillChanges
+    }, stdout, { verbose: true });
+  }
   if (plan.affectedProjectLinks?.length) {
     printAffectedProjectLinks(plan.affectedProjectLinks, stdout);
   }
@@ -271,7 +283,7 @@ function printAffectedProjectLinks(links, stdout) {
   }
 }
 
-function printGitUpdateBatch(result, stdout) {
+function printGitUpdateBatch(result, stdout, { verbose = false } = {}) {
   const counts = {
     updated: 0,
     current: 0,
@@ -291,6 +303,9 @@ function printGitUpdateBatch(result, stdout) {
       const aliases = source.affected.map((link) => link.alias).join(', ');
       stdout.write(`  would break: ${aliases}\n`);
     }
+    if (source.updateSummary) {
+      printGitUpdateSummary(source.updateSummary, stdout, { verbose });
+    }
     if (source.status === 'dirty') {
       stdout.write(`  reminder: ${source.message || 'local Git changes found; update skipped'}\n`);
     }
@@ -302,6 +317,37 @@ function printGitUpdateBatch(result, stdout) {
     `Git source summary: updated=${counts.updated} current=${counts.current} ` +
     `dirty=${counts.dirty} breaking=${counts.breaking} failed=${counts.failed}\n`
   );
+}
+
+function printGitUpdateSummary(summary, stdout, { verbose = false } = {}) {
+  if (summary.fromCommit && summary.toCommit) {
+    stdout.write(
+      `  commit: ${shortCommit(summary.fromCommit)} -> ${shortCommit(summary.toCommit)}\n`
+    );
+  } else if (summary.toCommit) {
+    stdout.write(`  commit: ${summary.toCommit}\n`);
+  }
+
+  const changes = summary.skillChanges;
+  stdout.write(
+    `  skill changes: add=${changes.added.length} ` +
+    `edit=${changes.edited.length} delete=${changes.deleted.length}\n`
+  );
+  if (!verbose) return;
+
+  printSkillChangePaths('add new skill', changes.added, stdout);
+  printSkillChangePaths('edit skill', changes.edited, stdout);
+  printSkillChangePaths('deleted skill', changes.deleted, stdout);
+}
+
+function printSkillChangePaths(label, paths, stdout) {
+  if (paths.length === 0) return;
+  stdout.write(`  ${label}:\n`);
+  for (const skillPath of paths) stdout.write(`    - ${skillPath}\n`);
+}
+
+function shortCommit(commit) {
+  return commit.slice(0, 7);
 }
 
 function parseProjectOption(args) {
@@ -337,10 +383,29 @@ function parseProjectOption(args) {
   };
 }
 
+function parseGitUpdateArgs(args) {
+  let verbose = false;
+  for (const argument of args) {
+    if (argument === '--verbose' && !verbose) {
+      verbose = true;
+      continue;
+    }
+    return null;
+  }
+  return { verbose };
+}
+
 function printUpdateResult(result, stdout) {
   stdout.write(`Outcome: ${result.status}\n`);
   stdout.write(`source: ${result.sourceId}\n`);
   stdout.write(`install: ${result.installPath}\n`);
+  if (result.skillChanges) {
+    printGitUpdateSummary({
+      fromCommit: undefined,
+      toCommit: result.commit,
+      skillChanges: result.skillChanges
+    }, stdout, { verbose: true });
+  }
 }
 
 function printRepairPlan(plan, stdout) {
@@ -478,7 +543,7 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
   stderr.write('Usage: npm run source -- repair <source-id> [--allow-breaking] [--yes] [--project <dir>]\n');
   stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes] [--project <dir>]\n');
-  stderr.write('Usage: npm run source -- update-git [--project <dir>]\n');
+  stderr.write('Usage: npm run source -- update-git [--verbose] [--project <dir>]\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 

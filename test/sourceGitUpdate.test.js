@@ -53,10 +53,20 @@ test('fast-forwards a registered Git source and reports a subsequent no-op', asy
       added: [],
       removedOrRelocated: []
     });
+    assert.deepEqual(plan.skillChanges, {
+      added: [],
+      edited: ['skills/review'],
+      deleted: []
+    });
 
     const result = await applyUpdateSource({ rootDir: root, projectPath: project }, plan);
     assert.equal(result.status, 'updated');
     assert.equal(result.commit, nextCommit);
+    assert.deepEqual(result.skillChanges, {
+      added: [],
+      edited: ['skills/review'],
+      deleted: []
+    });
 
     const currentPlan = await planUpdateSource(
       { rootDir: root, projectPath: project },
@@ -79,10 +89,9 @@ test('fast-forwards a registered Git source and reports a subsequent no-op', asy
     await readFile(path.join(root, 'github', fixture.repository, 'README.md'), 'utf8'),
     'updated\n'
   );
-  assert.equal(
-    (await inspectSource({ rootDir: root }, fixture.sourceId)).origin.commit,
-    fixture.nextCommit
-  );
+  const inspected = await inspectSource({ rootDir: root }, fixture.sourceId);
+  assert.equal(inspected.origin.commit, fixture.nextCommit);
+  assert.equal(inspected.skillChanges, undefined);
   assert.equal(
     await readFile(path.join(project, '.agents', 'skills', 'review', 'SKILL.md'), 'utf8'),
     skillDocument('Review updated code')
@@ -580,7 +589,16 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
           sourceId: fixtures[4].sourceId,
           status: 'breaking',
           category: 'breaking-replacement',
-          applied: true
+          applied: true,
+          updateSummary: {
+            fromCommit: fixtures[4].initialCommit,
+            toCommit: fixtures[4].nextCommit,
+            skillChanges: {
+              added: ['skills/replacement'],
+              edited: [],
+              deleted: ['skills/review']
+            }
+          }
         },
         {
           sourceId: fixtures[2].sourceId,
@@ -602,7 +620,16 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
         },
         {
           sourceId: fixtures[0].sourceId,
-          status: 'updated'
+          status: 'updated',
+          updateSummary: {
+            fromCommit: fixtures[0].initialCommit,
+            toCommit: fixtures[0].nextCommit,
+            skillChanges: {
+              added: [],
+              edited: [],
+              deleted: []
+            }
+          }
         }
       ].sort((left, right) => left.sourceId.localeCompare(right.sourceId))
     });
@@ -643,6 +670,36 @@ test('batch Git updates expose stable updated, current, dirty, breaking, and fai
       output.stdout(),
       /Git source summary: updated=0 current=3 dirty=1 breaking=1 failed=1/
     );
+  });
+});
+
+test('batch Git update prints the skill content summary and verbose paths', async () => {
+  const root = await makeTempDir('source-git-batch-summary-root-');
+  const project = await makeTempDir('source-git-batch-summary-project-');
+  const fixture = await createGitFixture('batch-summary');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const nextCommit = await commitAndPush(fixture, {
+      'skills/review/SKILL.md': skillDocument('Review edited')
+    });
+    const output = captureOutput();
+
+    assert.equal(
+      await runSourceCli({
+        argv: ['update-git', '--verbose', '--project', project],
+        rootDir: root,
+        ...output.streams
+      }),
+      0
+    );
+    assert.match(output.stdout(), /\[updated\] github\/fixtures\/batch-summary/);
+    assert.match(
+      output.stdout(),
+      new RegExp(`  commit: ${fixture.initialCommit.slice(0, 7)} -> ${nextCommit.slice(0, 7)}`)
+    );
+    assert.match(output.stdout(), /  skill changes: add=0 edit=1 delete=0/);
+    assert.match(output.stdout(), /  edit skill:\n    - skills\/review/);
   });
 });
 

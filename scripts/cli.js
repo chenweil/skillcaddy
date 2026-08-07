@@ -6,7 +6,10 @@ import { readVersion } from '../lib/version.js';
 import { restartWeb, startWeb, stopWeb } from '../lib/webManager.js';
 import { runSourceCli } from './source.js';
 
-const CLI_FLAGS = new Set(['-h', '--help', '-v', '--version', '-u', '--update', '-a', '--analyze']);
+const CLI_FLAGS = new Set([
+  '-h', '--help', '-v', '--version', '-u', '--update', '-a', '--analyze',
+  '--verbose'
+]);
 const CLI_COMMANDS = new Set(['start', 'stop', 'restart', 'update', 'analyze', 'install', 'server', 'web']);
 
 export function isCliCommand(argv = []) {
@@ -24,6 +27,7 @@ export function parseCliArgs(argv = []) {
     rootDir: '',
     port: undefined,
     open: true,
+    verbose: false,
     error: ''
   };
 
@@ -112,6 +116,10 @@ export function parseCliArgs(argv = []) {
       result.open = false;
       continue;
     }
+    if (arg === '--verbose') {
+      result.verbose = true;
+      continue;
+    }
     if (arg.startsWith('-')) {
       result.error = `未知参数：${arg}`;
       return result;
@@ -148,6 +156,7 @@ export function buildHelpText() {
   -p, --port <port>                  Web 端口，默认 4173
   --no-open                          启动 Web 后不自动打开浏览器
   --project <dir>                    显式指定项目目录
+  --verbose                          更新时显示新增、编辑、删除的 Skill 路径
 
 说明：-u 只更新已登记的 Git 源；-a 只读，不会安装、启用或修改 skill。
 `;
@@ -460,7 +469,7 @@ export async function runCli({
     }
     if (parsed.command === 'update') {
       return actions.runSourceCli({
-        argv: ['update-git'],
+        argv: ['update-git', ...(parsed.verbose ? ['--verbose'] : [])],
         rootDir: resolvedRootDir,
         projectPath,
         stdout,
