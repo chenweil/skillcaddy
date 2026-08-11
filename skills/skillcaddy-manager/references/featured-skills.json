@@ -1,8 +1,17 @@
 {
-  "version": "0.22.0",
-  "lastUpdated": "2026-08-07",
+  "version": "0.23.0",
+  "lastUpdated": "2026-08-12",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
+    {
+      "version": "0.23.0",
+      "date": "2026-08-12",
+      "changes": [
+        "同步至 Skillcaddy v0.23.0",
+        "新增 TUI 选项 12，支持 HTTPS/SSH/SCP Git、Remote Archive 与 Remote file 加入中央原件库",
+        "补充 Git tree focus、Remote file 必填名称、取消、幂等、冲突、错误处理与状态刷新"
+      ]
+    },
     {
       "version": "0.22.0",
       "date": "2026-08-07",

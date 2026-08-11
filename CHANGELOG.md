@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.23.0] - 2026-08-12
+
+### Added
+- Added TUI option 12 for central-library-only acquisition of complete HTTPS/SSH/SCP Git repositories, public HTTP(S) ZIP archives, and stable direct HTTP(S) `/SKILL.md` files.
+- Added GitHub tree focus handling, required names for Remote file sources, cancellation, idempotency, destination collision, error reporting, and TUI state refresh for source acquisition.
+
+### Changed
+- Aligned the English and Chinese README files, source acquisition implementation plan, ADR-0007/0008, and Manager operations documentation with the new TUI acquisition boundary while keeping Web acquisition out of scope.
+
 ## [0.22.0] - 2026-08-07
 
 ### Added
