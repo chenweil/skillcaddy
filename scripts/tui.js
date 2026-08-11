@@ -18,6 +18,9 @@ import {
   syncClaude
 } from '../lib/tuiActions.js';
 import { buildCollectionEnablePlan } from '../lib/enablePlan.js';
+import { isRemoteSkillFileInput } from '../lib/sourceHttp.js';
+import { isDefiniteGitSourceInput } from '../lib/sourceGitUrl.js';
+import { applyAddSource, planAddSource } from '../lib/sourceManager.js';
 import { checkCliInstall, installCliCommand } from '../lib/tuiInstall.js';
 import {
   formatCompactSkillChoice,
@@ -68,6 +71,7 @@ async function mainLoop() {
       '9. 更新 GitHub skill 库',
       '10. 批量生成中文 note',
       '11. 安装/检查全局 CLI + TUI 命令',
+      '12. 按地址添加远程 Archive 到原件库',
       'q. 退出'
     ].join('\n'));
 
@@ -89,9 +93,11 @@ async function mainLoop() {
       else if (choice === '9') await updateGithubSkillsFlow();
       else if (choice === '10') await batchTranslateNotesFlow();
       else if (choice === '11') await installGlobalCommandFlow();
+      else if (choice === '12') await addRemoteArchiveFlow();
       else console.log('未知操作');
     } catch (error) {
-      console.log(`错误：${error.message}`);
+      const category = error?.category ? ` [${error.category}]` : '';
+      console.log(`错误${category}：${error.message}`);
     }
 
     await ask('回车继续');
@@ -107,6 +113,91 @@ async function installGlobalCommandFlow() {
   const installed = await installCliCommand(codeRootDir);
   console.log(installed.message);
   console.log(`命令: ${installed.command}`);
+}
+
+async function addRemoteArchiveFlow() {
+  const input = await ask('远程 Archive 地址（留空或 b 返回）');
+  if (!input || isBack(input)) return;
+
+  if (!isRemoteArchiveCandidate(input)) {
+    printUnsupportedRemoteArchiveInput();
+    return;
+  }
+
+  const name = await ask('Archive 名称（留空自动推断，b 返回）');
+  if (isBack(name)) return;
+  const namespace = await ask('Archive namespace（留空自动推断，b 返回）');
+  if (isBack(namespace)) return;
+
+  const request = { input };
+  if (name) request.name = name;
+  if (namespace) request.namespace = namespace;
+
+  const plan = await planAddSource({ rootDir }, request);
+  if (plan.input.type !== 'remote-zip') {
+    printUnsupportedRemoteArchiveInput();
+    return;
+  }
+
+  printRemoteArchivePlan(plan);
+  if (plan.status !== 'ready') {
+    if (plan.status === 'already-installed') {
+      await applyRemoteArchivePlan(plan);
+    } else {
+      console.log(`未执行添加：${plan.status}`);
+    }
+    return;
+  }
+
+  const confirm = await ask('确认添加? y/N');
+  if (!['y', 'yes'].includes(confirm.toLowerCase())) {
+    console.log('已取消添加');
+    return;
+  }
+
+  await applyRemoteArchivePlan(plan);
+}
+
+async function applyRemoteArchivePlan(plan) {
+  const result = await applyAddSource({ rootDir }, plan);
+  state = await loadTuiState(rootDir, state.projectPath);
+  printRemoteArchiveResult(result);
+}
+
+function isRemoteArchiveCandidate(input) {
+  let url;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return false;
+  }
+  return ['http:', 'https:'].includes(url.protocol) &&
+    !isDefiniteGitSourceInput(input) &&
+    !isRemoteSkillFileInput(input);
+}
+
+function printUnsupportedRemoteArchiveInput() {
+  console.log('当前 TUI 仅支持公共 HTTP(S) Archive；Git 和 Remote file 暂不支持');
+}
+
+function printRemoteArchivePlan(plan) {
+  console.log(`Add plan: ${plan.status}`);
+  console.log(`source: ${plan.sourceId}`);
+  console.log(`install: ${plan.installPath}`);
+  console.log(`input: ${plan.input.type} ${plan.input.display}`);
+  console.log(`integrity: ${plan.integrity.algorithm} ${plan.integrity.value}`);
+  console.log(`skills (${plan.skills.length}):`);
+  for (const skillPath of plan.skills) console.log(`  - ${skillPath}`);
+  console.log(`warnings (${plan.warnings.length}):`);
+  for (const warning of plan.warnings) {
+    console.log(`  - [${warning.category}] ${warning.skillPath}: ${warning.message}`);
+  }
+}
+
+function printRemoteArchiveResult(result) {
+  console.log(`Outcome: ${result.status}`);
+  console.log(`source: ${result.sourceId}`);
+  console.log(`install: ${result.installPath}`);
 }
 
 function printSummary() {
