@@ -17,13 +17,14 @@ npm run source -- migrate --yes
 
 `<input>` may be:
 
-- an HTTPS or SSH Git repository URL;
+- an HTTPS or SSH/SCP-style Git repository address;
 - a GitHub repository subdirectory URL;
 - a public HTTP(S) ZIP URL;
+- a stable direct HTTP(S) `/SKILL.md` URL;
 - a local ZIP file; or
 - a local directory.
 
-The same core operations serve the CLI and `skillcaddy-manager`. Web and TUI controls are deferred.
+The same core operations serve the CLI, TUI, and `skillcaddy-manager`. TUI exposes acquisition-only remote address entry for complete Git repositories, public HTTP(S) ZIP files, and stable direct HTTP(S) `/SKILL.md` files; it writes the central library only and does not create project links, run setup, or invoke runtime preflight. Web source acquisition, replacement, and removal remain out of scope.
 
 ## Non-goals
 
@@ -38,7 +39,8 @@ The first release does not:
 - retain replaced Archive versions or backups;
 - support tar, tar.gz, tgz, rar, 7z, or npm packages;
 - persist Archive authentication headers, cookies, tokens, or signed URL parameters;
-- add Web or TUI acquisition controls;
+- add Web source acquisition, replacement, or removal controls;
+- add TUI source replacement or removal controls;
 - install a global `skillcaddy` executable; or
 - move existing source directories into a new layout.
 
@@ -452,7 +454,7 @@ Checks:
 - a fresh state scan sees newly acquired skills;
 - acquisition alone creates no project symlink;
 - combined intent creates only the explicitly selected links; and
-- documentation does not claim Web, TUI, global-binary, removal, or automatic-latest support.
+- documentation does not claim Web acquisition/replacement/removal, TUI replacement/removal, global-binary, or automatic-latest support.
 
 Done when another project with the globally installed Manager skill can perform the workflow without manual source-directory placement.
 

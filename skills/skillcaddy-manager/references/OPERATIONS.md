@@ -96,7 +96,7 @@ For an explicit combined request:
 
 Unknown setup readiness creates neither a reminder nor a gate. Surface a declared setup reminder after enablement without blocking the link. Never infer credentials or publisher setup from prose; the acquired skill's runtime preflight remains responsible for requirements such as IMA credentials.
 
-Web and TUI can enable already acquired skills but do not expose source acquisition or replacement in the first release. Source removal, automatic latest Archive selection, and non-ZIP archives are also deferred. The optional clone-backed global `skillcaddy` command keeps the existing no-argument TUI and additionally exposes Web lifecycle commands plus `-u` for the existing safe registered-Git batch update and read-only `-a` analysis. These CLI additions do not change source-management or enablement boundaries.
+TUI can acquire complete Git repositories through HTTPS/SSH/SCP, public HTTP(S) ZIP files, and stable direct HTTP(S) `/SKILL.md` files through the `sourceManager` lifecycle. TUI acquisition writes the central library only; it does not create project links, run setup, or invoke runtime preflight. Web still does not expose source acquisition, replacement, or removal, while TUI source replacement and removal remain deferred. Source removal, automatic latest Archive selection, and non-ZIP archives are also deferred. The optional clone-backed global `skillcaddy` command keeps the existing no-argument TUI and additionally exposes Web lifecycle commands plus `-u` for the existing safe registered-Git batch update and read-only `-a` analysis. These CLI additions do not change source-management or enablement boundaries.
 
 ## Source Registry Migration and Recovery
 

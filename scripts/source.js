@@ -526,7 +526,7 @@ async function requestConfirmation({ confirm, stdin, stdout }, plan, prompt) {
   }
 }
 
-function formatOrigin(origin) {
+export function formatOrigin(origin) {
   if (origin.kind === 'git') {
     const ref = origin.ref ? ` ${origin.ref}` : '';
     const commit = origin.commit ? ` @ ${origin.commit}` : '';

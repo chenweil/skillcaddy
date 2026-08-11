@@ -110,10 +110,11 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **Update GitHub sources** — Batch fast-forward pull `github/` repos
 - **Batch Chinese notes** — Interactive flow (option 10) to fill missing Chinese `note` fields for skills that only have an English description
 - **Install/check the global command** — Option 11 installs the CLI + TUI command from this clone
+- **Acquire remote sources** — Option 12 adds complete HTTPS/SSH/SCP Git repositories, public HTTP(S) ZIP files, or stable direct HTTP(S) `/SKILL.md` files to the central library
 
 Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
-Menu navigation uses number keys (1-11) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
+Menu navigation uses number keys (1-12) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
@@ -306,7 +307,7 @@ npm run source -- migrate --yes
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 
-The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories. It does not provide source acquisition or replacement in Web/TUI, source removal, automatic latest-version selection, or non-ZIP archives. The clone-backed global `skillcaddy` command now also exposes Web lifecycle, read-only analysis, and registered-Git update entry points while retaining the existing source-management boundaries; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
+The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories through the CLI. TUI option 12 also acquires complete HTTPS/SSH/SCP Git repositories, public HTTP(S) ZIP files, and stable direct HTTP(S) `/SKILL.md` files into the central library only; it does not create project links, run setup, or invoke runtime preflight. Web source acquisition, replacement, and removal remain out of scope, as do TUI source replacement and removal, automatic latest-version selection, and non-ZIP archives. The clone-backed global `skillcaddy` command now also exposes Web lifecycle, read-only analysis, and registered-Git update entry points while retaining the existing source-management boundaries; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 

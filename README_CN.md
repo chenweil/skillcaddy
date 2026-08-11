@@ -110,10 +110,11 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **更新 GitHub 源** — 批量 fast-forward pull `github/` 仓库
 - **批量生成中文 note** — 交互式流程（选项 10），为仅有英文 `description`、缺少中文 `note` 的 skill 补全中文介绍
 - **安装/检查全局命令** — 选项 11，安装当前 clone 提供的 CLI + TUI 命令
+- **按地址获取远程 Source** — 选项 12，将完整 HTTPS/SSH/SCP Git 仓库、公开 HTTP(S) ZIP 或稳定的 HTTP(S) `/SKILL.md` 直链加入中央原件库
 
 浏览库时改为紧凑分页表格展示（`n`/`p` 翻页，`a` 一键加入该库）。skill 介绍优先使用 metadata 中的 `note`，而非原始英文 `description`。
 
-菜单导航使用数字键（1-11）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
+菜单导航使用数字键（1-12）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
 
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 
@@ -304,7 +305,7 @@ npm run source -- migrate --yes
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 
-首个版本支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。不支持 Web/TUI source 获取或替换、source 删除、自动选择最新版或非 ZIP archive。clone-backed 全局 `skillcaddy` 命令现在还提供 Web 生命周期、只读分析和已登记 Git 源更新入口，但仍复用现有 source 管理边界。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
+首个版本通过 CLI 支持完整 Git 仓库、公开 HTTP(S) ZIP、稳定 HTTP(S) `/SKILL.md` 直链、本地 ZIP 和本地目录。TUI 选项 12 也支持通过 HTTPS/SSH/SCP Git 获取完整仓库、公开 HTTP(S) ZIP 和稳定的 HTTP(S) `/SKILL.md` 直链，但只写入中央原件库，不创建项目链接、不运行 setup，也不调用 runtime preflight。Web 仍不支持 source 获取、替换或删除；TUI 不支持 source 替换或删除，自动选择最新版和非 ZIP archive 也仍未提供。clone-backed 全局 `skillcaddy` 命令现在还提供 Web 生命周期、只读分析和已登记 Git 源更新入口，但仍复用现有 source 管理边界。Remote file 只获取一个 `SKILL.md`，不会跟随相对引用或获取 companion files；此类 skill 应改用 ZIP、Local 或完整 Git source。
 
 随本仓库发布（仅在贡献 Skillcaddy 本身时使用）：
 

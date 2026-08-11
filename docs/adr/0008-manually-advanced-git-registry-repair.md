@@ -29,6 +29,7 @@ failure, or stale plan is actionable without inspecting internal logs.
   collision checks.
 - Registry repair is auditable as a separate command and cannot silently turn
   an arbitrary local checkout into a registered source.
-- Source acquisition and Web/TUI enablement boundaries remain unchanged; repair
-  is available through the source-management CLI and public `sourceManager`
-  seam only.
+- Registry repair remains separate from source acquisition. TUI remote
+  acquisition does not expose repair, and repair remains available through the
+  source-management CLI and public `sourceManager` seam only; Web/TUI
+  enablement boundaries remain unchanged.

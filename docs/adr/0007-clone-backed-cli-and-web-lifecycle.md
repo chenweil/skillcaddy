@@ -12,9 +12,14 @@ explicit and uses `npm link`; Skillcaddy is not published or downloaded as a
 global npm package.
 
 This decision supersedes the first-release exclusion of a global executable
-and Web/TUI controls in ADR-0001. It does not expose source acquisition,
-source replacement, or source removal through Web/TUI. Source updates continue
-to route through the `sourceManager` lifecycle.
+and Web/TUI controls in ADR-0001. TUI now exposes acquisition-only remote
+address entry for complete Git repositories, public HTTP(S) ZIP files, and
+stable direct HTTP(S) `/SKILL.md` files through the `sourceManager` lifecycle.
+TUI acquisition writes the central library only: it does not create project
+links, run setup, or invoke runtime preflight. Web still does not expose source
+acquisition, replacement, or removal; TUI source replacement and removal
+remain out of scope. Source updates continue to route through the
+`sourceManager` lifecycle.
 
 ## Consequences
 
