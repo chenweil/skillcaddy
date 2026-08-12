@@ -355,6 +355,127 @@ test('fetches and advances the explicit ref recorded for a Git source', async ()
   });
 });
 
+test('retries transient Git fetch failures and preserves a sanitized final reason', async (t) => {
+  await t.test('succeeds after two transient failures', async () => {
+    const fixture = await createGitFixture('retry-success');
+    const root = await makeTempDir('source-git-retry-success-root-');
+
+    await withGitUrlRewrite(fixture.remoteRoot, async () => {
+      await addFixtureSource(root, fixture);
+      const checkout = path.join(root, 'github', fixture.repository);
+      const counterPath = await configureUploadPackFailures({
+        checkout,
+        fixture,
+        failureCount: 2
+      });
+
+      const plan = await planUpdateSource(
+        { rootDir: root, gitFetchRetryDelaysMs: [0, 0] },
+        { sourceId: fixture.sourceId }
+      );
+
+      assert.equal(plan.status, 'current');
+      assert.equal(await readCounter(counterPath), 3);
+    });
+  });
+
+  await t.test('reports the redacted transport failure after exhausting retries', async () => {
+    const fixture = await createGitFixture('retry-failed');
+    const root = await makeTempDir('source-git-retry-failed-root-');
+
+    await withGitUrlRewrite(fixture.remoteRoot, async () => {
+      await addFixtureSource(root, fixture);
+      const checkout = path.join(root, 'github', fixture.repository);
+      const counterPath = await configureUploadPackFailures({
+        checkout,
+        fixture,
+        failureCount: 99,
+        errorMessage: "fatal: unable to access 'https://secret-token@github.com/example/repo.git/': Could not resolve host: github.com"
+      });
+
+      await assert.rejects(
+        () => planUpdateSource(
+          { rootDir: root, gitFetchRetryDelaysMs: [0, 0] },
+          { sourceId: fixture.sourceId }
+        ),
+        (error) => {
+          assert.equal(error.category, 'git-network');
+          assert.match(error.message, /Could not resolve host: github\.com/);
+          assert.match(error.message, /attempts=3/);
+          assert.doesNotMatch(error.message, /secret-token/);
+          return true;
+        }
+      );
+      assert.equal(await readCounter(counterPath), 3);
+    });
+  });
+});
+
+test('preserves a registered commit collision when the network fetch also fails', async () => {
+  const fixture = await createGitFixture('collision-before-fetch');
+  const root = await makeTempDir('source-git-collision-before-fetch-root-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    await commitInCheckout(checkout, { 'local-only.md': 'advanced locally\n' }, 'advance locally');
+    const counterPath = await configureUploadPackFailures({
+      checkout,
+      fixture,
+      failureCount: 99
+    });
+
+    await assert.rejects(
+      () => planUpdateSource(
+        { rootDir: root, gitFetchRetryDelaysMs: [0, 0] },
+        { sourceId: fixture.sourceId }
+      ),
+      (error) => error.category === 'source-collision' &&
+        error.message === `Registered Git source commit does not match its source record: ${fixture.sourceId}`
+    );
+    assert.equal(await readCounter(counterPath), 1);
+  });
+});
+
+test('opens the batch network circuit after consecutive exhausted fetches', async () => {
+  const first = await createGitFixture('circuit-a');
+  const fixtures = [
+    first,
+    await createGitFixture('circuit-b', first.remoteRoot),
+    await createGitFixture('circuit-c', first.remoteRoot)
+  ];
+  const root = await makeTempDir('source-git-circuit-root-');
+  const project = await makeTempDir('source-git-circuit-project-');
+
+  await withGitUrlRewrite(first.remoteRoot, async () => {
+    const counters = new Map();
+    for (const fixture of fixtures) {
+      await addFixtureSource(root, fixture);
+      const checkout = path.join(root, 'github', fixture.repository);
+      counters.set(fixture.sourceId, await configureUploadPackFailures({
+        checkout,
+        fixture,
+        failureCount: 99
+      }));
+    }
+
+    const result = await updateGitSources({
+      rootDir: root,
+      projectPath: project,
+      gitFetchRetryDelaysMs: [0, 0],
+      gitNetworkFailureLimit: 2
+    });
+    const byId = new Map(result.sources.map((source) => [source.sourceId, source]));
+
+    assert.equal(byId.get(fixtures[0].sourceId).category, 'git-network');
+    assert.equal(byId.get(fixtures[1].sourceId).category, 'git-network');
+    assert.equal(byId.get(fixtures[2].sourceId).category, 'git-network-circuit-open');
+    assert.equal(await readCounter(counters.get(fixtures[0].sourceId)), 3);
+    assert.equal(await readCounter(counters.get(fixtures[1].sourceId)), 3);
+    assert.equal(await readCounter(counters.get(fixtures[2].sourceId)), 0);
+  });
+});
+
 test('blocks a breaking Git update for a known project link until authorized', async () => {
   const fixture = await createGitFixture('breaking');
   const root = await makeTempDir('source-git-breaking-root-');
@@ -877,6 +998,47 @@ async function commitInCheckout(checkout, files, message) {
   await writeFiles(checkout, files);
   await execFile('git', ['-C', checkout, 'add', '.']);
   await commit(checkout, message);
+}
+
+async function configureUploadPackFailures({
+  checkout,
+  fixture,
+  failureCount,
+  errorMessage = 'fatal: unable to access remote: Could not resolve host: github.com'
+}) {
+  const counterPath = path.join(fixture.fixtureRoot, `${fixture.repository}-fetch-count`);
+  const wrapperPath = path.join(fixture.fixtureRoot, `${fixture.repository}-upload-pack-wrapper`);
+  await writeFile(wrapperPath, [
+    '#!/bin/sh',
+    `counter_file=${shellQuote(counterPath)}`,
+    'count="$(cat "$counter_file" 2>/dev/null || printf 0)"',
+    'count=$((count + 1))',
+    'printf \'%s\\n\' "$count" > "$counter_file"',
+    `if [ "$count" -le ${failureCount} ]; then`,
+    `  printf '%s\\n' ${shellQuote(errorMessage)} >&2`,
+    '  exit 128',
+    'fi',
+    'exec git-upload-pack "$@"',
+    ''
+  ].join('\n'));
+  await chmod(wrapperPath, 0o755);
+  await execFile('git', [
+    '-C',
+    checkout,
+    'config',
+    'remote.origin.uploadpack',
+    wrapperPath
+  ]);
+  return counterPath;
+}
+
+async function readCounter(counterPath) {
+  try {
+    return Number.parseInt(await readFile(counterPath, 'utf8'), 10);
+  } catch (error) {
+    if (error.code === 'ENOENT') return 0;
+    throw error;
+  }
 }
 
 async function commit(directory, message) {

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.24.1] - 2026-08-12
+
+### Added
+- Added a cron-oriented Git source sync helper that reports unresolved failures through its exit status.
+
+### Changed
+- Registered Git source fetches now retry transient network failures twice, retain sanitized transport diagnostics, and stop contacting additional sources after three consecutive exhausted network failures.
+
+### Fixed
+- Automated cron repair now runs only for source-record collisions, never authorizes breaking repairs implicitly, and reruns the batch only after a repair succeeds.
+- Source-record collisions now remain actionable when a simultaneous fetch failure would otherwise hide the registry mismatch.
+
 ## [0.24.0] - 2026-08-12
 
 ### Added
