@@ -13,6 +13,7 @@ import { readVersion } from './lib/version.js';
 import { enableProjectSkill } from './lib/projectActions.js';
 import { buildCollectionEnablePlan } from './lib/enablePlan.js';
 import { updateSkillMetadata } from './lib/skillMetadata.js';
+import { normalizeEnablementScope } from './lib/enablementScope.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = __dirname;
@@ -63,21 +64,37 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/enable') {
     const body = await readJson(req);
-    sendJson(res, 200, await enableProjectSkill(rootDir, body));
+    const scope = requireApiScope(body);
+    requireProjectForScope(body, scope);
+    sendJson(res, 200, await enableProjectSkill(rootDir, {
+      scope,
+      ...(scope === 'project' ? { projectPath: body.projectPath } : {}),
+      skillPath: body.skillPath,
+      alias: body.alias
+    }));
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/enable-plan') {
     const body = await readJson(req);
+    const scope = requireApiScope(body);
+    requireProjectForScope(body, scope);
     const state = await getState(rootDir, body.projectPath || rootDir);
-    sendJson(res, 200, buildCollectionEnablePlan(state, Array.isArray(body.skillIds) ? body.skillIds : []));
+    sendJson(res, 200, buildCollectionEnablePlan(
+      state,
+      Array.isArray(body.skillIds) ? body.skillIds : [],
+      { scope }
+    ));
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/enable-collection') {
     const body = await readJson(req);
+    const scope = requireApiScope(body);
+    requireProjectForScope(body, scope);
     sendJson(res, 200, await executeCollectionEnablement(rootDir, {
-      projectPath: body.projectPath || rootDir,
+      scope,
+      ...(body.projectPath ? { projectPath: body.projectPath } : {}),
       skillIds: body.skillIds
     }));
     return;
@@ -91,7 +108,14 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/disable') {
     const body = await readJson(req);
-    sendJson(res, 200, await disableSkill(body));
+    const scope = requireApiScope(body);
+    requireProjectForScope(body, scope);
+    sendJson(res, 200, await disableSkill({
+      scope,
+      rootDir,
+      ...(scope === 'project' ? { projectPath: body.projectPath } : {}),
+      alias: body.alias
+    }));
     return;
   }
 
@@ -153,4 +177,17 @@ async function readJson(req) {
 function sendJson(res, status, payload) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(payload));
+}
+
+function requireApiScope(body) {
+  if (!body || !Object.hasOwn(body, 'scope')) {
+    throw new Error('scope 必须显式指定为 project 或 global');
+  }
+  return normalizeEnablementScope(body.scope);
+}
+
+function requireProjectForScope(body, scope) {
+  if (scope === 'project' && (!body.projectPath || typeof body.projectPath !== 'string')) {
+    throw new Error('project scope 需要 projectPath');
+  }
 }

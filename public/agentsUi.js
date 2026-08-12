@@ -1,12 +1,17 @@
 import { emptyState } from './emptyState.js';
 
-export function renderAgentsSkills({ enabled, skills, elements, onDisable }) {
-  elements.disableAgents.disabled = !enabled.some((skill) => skill.isSymlink);
-  elements.enabledList.replaceChildren();
+export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope = 'project' }) {
+  const isGlobal = scope === 'global';
+  const list = isGlobal ? elements.globalList : elements.enabledList;
+  const clearButton = isGlobal ? elements.disableGlobal : elements.disableAgents;
+  clearButton.disabled = !enabled.some((skill) => skill.canDisable ?? skill.isSymlink);
+  list.replaceChildren();
   if (enabled.length === 0) {
-    elements.enabledList.append(emptyState(
-      '当前项目还没有启用 skill',
-      '在右侧「Skill 原件库」里展开任意分组，点「启用 agents skill」即可加入这里。'
+    list.append(emptyState(
+      isGlobal ? '还没有全局 skill' : '当前项目还没有启用 skill',
+      isGlobal
+        ? '在原件库中选择「启用到全局」，即可让所有项目使用。'
+        : '在右侧「Skill 原件库」里展开任意分组，点「启用 agents skill」即可加入这里。'
     ));
     return;
   }
@@ -37,13 +42,13 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable }) {
     // 单条用「移除」，只有整栏批量才叫「清空」：此前两者共用一个词，
     // 光看标签分不出作用域。
     button.textContent = '移除';
-    button.dataset.focusKey = `agents-remove:${skill.alias}`;
-    button.dataset.focusFallbackSelector = '#enabledList [data-focus-key^="agents-remove:"]:not(:disabled)';
+    button.dataset.focusKey = `${isGlobal ? 'global' : 'agents'}-remove:${skill.alias}`;
+    button.dataset.focusFallbackSelector = `${isGlobal ? '#globalList' : '#enabledList'} [data-focus-key^="${isGlobal ? 'global' : 'agents'}-remove:"]:not(:disabled)`;
     button.dataset.focusFallbackKey = 'skill-search';
-    button.setAttribute('aria-label', `从 .agents/skills 移除 ${skill.alias}`);
-    button.disabled = !skill.isSymlink;
+    button.setAttribute('aria-label', `从${isGlobal ? '全局' : '当前项目'} .agents/skills 移除 ${skill.alias}`);
+    button.disabled = !(skill.canDisable ?? skill.isSymlink);
     button.addEventListener('click', () => onDisable(skill.alias));
     item.querySelector('.actions').append(button);
-    elements.enabledList.append(item);
+    list.append(item);
   });
 }

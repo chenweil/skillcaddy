@@ -95,6 +95,32 @@ test('refreshes pending setup guidance without executing setup instructions', as
   await assert.rejects(() => access(path.join(project, 'docs', 'agents', 'domain.md')));
 });
 
+test('enables a collection globally without project setup or Claude synchronization', async () => {
+  const root = await makeTempDir('collection-global-root-');
+  const project = await makeTempDir('collection-global-project-');
+  const globalDir = await makeTempDir('collection-global-dir-');
+  const skill = await createSkill(root, 'global-tool');
+  const state = await getState(root, project, { globalDir });
+
+  const result = await executeCollectionEnablement(root, {
+    scope: 'global',
+    globalDir,
+    skillIds: [state.skills.find((item) => item.name === 'global-tool').id]
+  });
+
+  assert.equal(result.scope, 'global');
+  assert.deepEqual(result.counts, {
+    enabled: 1,
+    unchanged: 0,
+    skipped: 0,
+    failed: 0
+  });
+  assert.deepEqual(result.setups, []);
+  assert.equal(result.outcomes[0].claudeSync, undefined);
+  assert.equal((await getState(root, project, { globalDir })).global[0].targetPath, skill);
+  assert.equal((await getState(root, project, { globalDir })).enabled.length, 0);
+});
+
 async function createSkill(root, name) {
   await ensureSourceFolders(root);
   const skill = path.join(root, 'github', 'toolbox', 'skills', name);

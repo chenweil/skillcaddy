@@ -73,6 +73,60 @@ test('CLI preserves no-argument TUI compatibility while recognizing lifecycle co
   assert.equal(parseCliArgs(['server', 'stop']).command, 'stop');
   assert.equal(parseCliArgs(['-u', '/tmp/project']).command, 'update');
   assert.equal(parseCliArgs(['install', 'tui']).installTarget, 'tui');
+  const globalEnable = parseCliArgs(['enable', 'personal/review', '--global', '--alias', 'team-review']);
+  assert.equal(globalEnable.command, 'enable');
+  assert.equal(globalEnable.skillRef, 'personal/review');
+  assert.equal(globalEnable.scope, 'global');
+  assert.equal(globalEnable.alias, 'team-review');
+  const projectDisable = parseCliArgs(['disable', 'team-review', '--project', '/tmp/project']);
+  assert.equal(projectDisable.command, 'disable');
+  assert.equal(projectDisable.alias, 'team-review');
+  assert.equal(projectDisable.scope, 'project');
+});
+
+test('CLI enables a selected skill explicitly in the global scope', async () => {
+  const output = captureOutput();
+  const calls = [];
+  const result = await runCli({
+    argv: ['enable', 'personal/review', '--global', '--alias', 'team-review'],
+    rootDir: '/tmp/library',
+    ...output.streams,
+    handlers: {
+      scanSkills: async () => [{
+        id: 'personal/review',
+        name: 'review',
+        path: '/tmp/library/personal/review'
+      }],
+      enableProjectSkill: async (rootDir, input) => {
+        calls.push({ rootDir, input });
+        return { ok: true, scope: 'global', alias: input.alias, unchanged: false };
+      }
+    }
+  });
+
+  assert.equal(result, 0);
+  assert.deepEqual(calls, [{
+    rootDir: '/tmp/library',
+    input: {
+      scope: 'global',
+      skillPath: '/tmp/library/personal/review',
+      alias: 'team-review'
+    }
+  }]);
+  assert.match(output.stdout(), /全局已启用：team-review/);
+});
+
+test('CLI requires an explicit scope for enablement commands', async () => {
+  const output = captureOutput();
+  assert.equal(
+    await runCli({
+      argv: ['enable', 'personal/review'],
+      rootDir: '/tmp/library',
+      ...output.streams
+    }),
+    2
+  );
+  assert.match(output.stderr(), /enable 需要 --project 或 --global/);
 });
 
 test('CLI help and version are deterministic', async () => {
@@ -100,7 +154,7 @@ test('CLI -u delegates to the existing safe Git batch update boundary', async ()
       }
     }
   }), 0);
-  assert.deepEqual(calls[0].argv, ['update-git']);
+  assert.deepEqual(calls[0].argv, ['update-git', '--project', '/tmp/project']);
   assert.equal(calls[0].rootDir, '/tmp/library');
   assert.equal(calls[0].projectPath, '/tmp/project');
   assert.equal(output.stdout(), 'batch update\n');
@@ -120,7 +174,7 @@ test('CLI -u forwards verbose update summaries', async () => {
       }
     }
   }), 0);
-  assert.deepEqual(calls[0].argv, ['update-git', '--verbose']);
+  assert.deepEqual(calls[0].argv, ['update-git', '--verbose', '--project', '/tmp/project']);
 });
 
 test('CLI rejects a custom data root for Web lifecycle commands', async () => {

@@ -1,10 +1,12 @@
 import {
   readFile,
+  lstat,
   rename as fsRename,
   rm as fsRm
 } from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import {
   applyAddSource,
   applyUpdateSource,
@@ -13,6 +15,7 @@ import {
   planBreakingUpdateSource,
   planUpdateSource
 } from '../lib/sourceManager.js';
+import { enableSkill, getState } from '../lib/skillStore.js';
 import {
   directoryReplayCases,
   sourceUpgradeContractCases
@@ -290,6 +293,66 @@ test('Breaking source replacement protection is limited to the current project',
     ).status,
     'updated'
   );
+});
+
+test('Breaking source replacement also protects the shared global link', async () => {
+  const root = await makeTempDir('source-upgrade-contract-global-root-');
+  const globalDir = await makeTempDir('source-upgrade-contract-global-dir-');
+  const original = await createLocalInput('source-upgrade-contract-global-v1-', {
+    'skills/kept': skillDocument('Kept skill', 'Kept'),
+    'skills/removed': skillDocument('Removed skill', 'Removed')
+  });
+  const replacement = await createLocalInput('source-upgrade-contract-global-v2-', {
+    'skills/kept': skillDocument('Updated kept skill', 'Kept')
+  });
+  const addPlan = await planAddSource(
+    { rootDir: root },
+    { input: original, name: 'contract-global-links' }
+  );
+  await applyAddSource({ rootDir: root }, addPlan);
+  const removedSkill = path.join(root, addPlan.installPath, 'skills/removed');
+  await enableSkill(root, {
+    scope: 'global',
+    globalDir,
+    skillPath: removedSkill,
+    alias: 'global-removed'
+  });
+
+  const request = {
+    sourceId: 'personal/contract-global-links',
+    input: replacement
+  };
+  const project = await makeTempDir('source-upgrade-contract-global-project-');
+  const authorizedProject = await makeTempDir('source-upgrade-contract-global-authorized-project-');
+  const applyProject = await makeTempDir('source-upgrade-contract-global-apply-project-');
+  await assert.rejects(
+    () => planUpdateSource({ rootDir: root, projectPath: project, globalDir }, request),
+    (error) => {
+      assert.equal(error.category, 'breaking-replacement');
+      assert.deepEqual(error.affectedProjectLinks, []);
+      assert.deepEqual(error.affectedGlobalLinks, [{
+        alias: 'global-removed',
+        skillPath: 'skills/removed'
+      }]);
+      assert.match(error.message, /global links: global-removed/);
+      return true;
+    }
+  );
+
+  const plan = await planBreakingUpdateSource(
+    { rootDir: root, projectPath: authorizedProject, globalDir },
+    request
+  );
+  assert.deepEqual(plan.affectedGlobalLinks, [{
+    alias: 'global-removed',
+    skillPath: 'skills/removed'
+  }]);
+  await applyUpdateSource(
+    { rootDir: root, projectPath: applyProject, globalDir },
+    plan
+  );
+  assert.equal((await lstat(path.join(globalDir, 'global-removed'))).isSymbolicLink(), true);
+  assert.equal((await getState(root, root, { globalDir })).global[0].exists, false);
 });
 
 test('directory replacement preserves its publication failure contract', async (t) => {

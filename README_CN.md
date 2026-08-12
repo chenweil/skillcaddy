@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-本地 AI Skills 中央库 + 按项目软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到任意项目。
+本地 AI Skills 中央库 + 按作用域软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到项目或用户共享的 Agents 目录。
 
 ![](public/skillcaddy_CN.png)
 
@@ -16,10 +16,11 @@
 - 需要 Claude Code 专属入口，同时还要保留 agents 列表干净
 - archived 的 skill 不小心又被启用了——因为没人设门禁
 
-Skillcaddy 用一个 AISkills 目录作单一事实来源，用按项目的 symlink 作投递机制，把这些问题一次性解决。
+Skillcaddy 用一个 AISkills 目录作单一事实来源，用明确的项目/全局 symlink 作用域作投递机制，把这些问题一次性解决。
 
 - **单一事实来源** — `~/AISkills/` 汇总 `official / github / personal / archived / skills`
 - **零项目污染** — 启用靠 symlink 落到 `.agents/skills/`，绝不复制
+- **项目或全局作用域** — 项目链接留在项目内；全局链接只写入 `~/.agents/skills/`
 - **天生多 Agent 友好** — 一个 symlink 同时被 Claude Code / Codex / OpenCode / Pi 走各自标准路径识别
 - **独立管理启用 / 禁用** — agents 列与 Claude Code 列各自跟踪
 - **安全默认** — 禁用只删 symlink；`archived/` 必须显式点名才启用
@@ -59,9 +60,13 @@ skillcaddy -v                      # 查看版本
 skillcaddy -h                      # 查看帮助
 skillcaddy -u [projectPath]        # 安全更新已登记的 Git skill 源
 skillcaddy -a [projectPath]        # 分析项目状态、诊断和推荐
+skillcaddy enable <skill-id> --project <dir> [--alias <name>]
+skillcaddy enable <skill-id> --global [--alias <name>]
+skillcaddy disable <alias> --project <dir>
+skillcaddy disable <alias> --global
 ```
 
-`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，source 管理 API 必须明确提供当前项目路径。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 用于 source 和分析操作选择中央原件库，Web 生命周期使用提供 CLI 的 clone。未带参数的 `skillcaddy` 仍然进入 TUI。
+`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 用于 source 和分析操作选择中央原件库，Web 生命周期使用提供 CLI 的 clone。未带参数的 `skillcaddy` 仍然进入 TUI。
 
 在无法验证进程归属的平台上，Web stop/restart 会安全失败，不会猜测并终止进程。
 
@@ -100,7 +105,9 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **查看已启用 skill** — Agents 和 Claude Code 双列并排展示
 - **浏览/搜索 skill 库** — 关键词搜索、来源过滤、库级钻取
 - **启用 skill** — 创建 `.agents/skills/` 软链接并自动同步 Claude Code
+- **全局启用 skill** — 不依赖项目，在 `~/.agents/skills/` 创建共享链接
 - **清理已启用 skill** — 仅删除项目软链接，原件安全
+- **管理全局 skill** — 选项 13 查看、启用并安全清理当前原件库在 `~/.agents/skills/` 拥有的全局链接
 - **同步 Claude Code** — 一键同步 `.claude/skills/` 与 `.agents/skills/`
 - **编辑 metadata** — 内联编辑备注、tags、一键加入开关
 - **查看诊断建议** — 检测重复名、断链、来源漂移等问题
@@ -114,7 +121,7 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 
 浏览库时改为紧凑分页表格展示（`n`/`p` 翻页，`a` 一键加入该库）。skill 介绍优先使用 metadata 中的 `note`，而非原始英文 `description`。
 
-菜单导航使用数字键（1-12）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
+菜单导航使用数字键（1-13）选择操作，`/关键词` 搜索，`b` 返回，`q` 退出。适合终端快速操作或无头环境使用。
 
 如果希望 AI Agent 在任意项目里都能使用仓库自带的 `skillcaddy-manager`，首次安装后执行一次：
 
@@ -158,9 +165,9 @@ npm run migrate:metadata -- --yes
 
 ## 库初始化生命周期
 
-部分 collection 在启用 skills 后，还需要针对每个项目执行一次 setup。Skillcaddy 把契约保存在第三方 clone 之外的 `collection-metadata/<source>/<collection>.json`，并通过 `/api/state` 把状态报告为 `missing`、`partial`、`ready` 或 `invalid`。
+部分 collection 在启用 skills 后，还需要针对每个项目执行一次 setup。Skillcaddy 把契约保存在第三方 clone 之外的 `collection-metadata/<source>/<collection>.json`，并通过 `/api/state` 把状态报告为 `missing`、`partial`、`ready` 或 `invalid`。全局启用不会运行或要求项目 setup。
 
-库级一键启用通过 `POST /api/enable-plan` 在需要时把 setup skill 纳入启用计划，再通过 `POST /api/enable-collection` 执行共享计划。统一生命周期会把每个候选 skill 分类为已启用、已存在、已跳过或失败，并为 Web/TUI 重新扫描 setup 指引。软链接仍可先启用，但配置不完整的库只显示为“待配置”，不会被宣称为“已就绪”。交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
+库级一键启用通过 `scope`（`project` 或 `global`）调用 `POST /api/enable-plan` 和 `POST /api/enable-collection`。项目作用域会纳入声明的 setup 指引；全局作用域只创建 `~/.agents/skills` 链接。统一生命周期会把每个候选 skill 分类为已启用、已存在、已跳过或失败。项目配置不完整时只显示为“待配置”，不会被宣称为“已就绪”；交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
 
 ## 平台兼容性
 
@@ -240,6 +247,7 @@ Skillcaddy 通过 Node.js 的 `fs.symlink(..., 'dir')` 创建目录符号链接�
 **核心设计**：
 - `.agents/skills` 是跨 Agent 标准路径，所有 Agent 都能识别
 - `.claude/skills` 为 Claude Code 专用，但通过二次软链接指向 `.agents/skills`
+- Skillcaddy 的全局作用域只管理 `~/.agents/skills/`；全局 Claude 目录只被 Agent 扫描，本管理器不会写入
 - 一次启用，多 Agent 共享；禁用时只删软链接，原件安全
 
 ## 目录约定
@@ -279,11 +287,11 @@ npm run source -- add https://example.com/SKILL.md --name example --yes
 
 # 替换一个已登记 source；Archive/Local 更新需要新 input，
 # Git/Remote file 可复用 registry 中的 origin
-npm run source -- update <source-id> [input]
-npm run source -- update <source-id> [input] --allow-breaking --yes [--project /path/to/project]
+npm run source -- update <source-id> [input] --project /path/to/project
+npm run source -- update <source-id> [input] --allow-breaking --yes --project /path/to/project
 
 # 通过同一安全路径更新全部已登记 Git source
-npm run source -- update-git [--project /path/to/project]
+npm run source -- update-git --project /path/to/project
 ```
 
 `add` 与 `update` 是不同操作。重复添加完全相同的内容会成功且不改动；source identity 或目标目录冲突会停止，不能因此获得替换权限。Archive/Local 新 source 的命名冲突可用 `--name` 或 `--namespace` 解决。Remote file 必须提供 `--name`，不接受 `--namespace`；只有 source registry 已存在对应 identity 时才能使用 `update`。Remote file 更新可省略 input 以复用已登记 origin，也可提供新的稳定 URL 来迁移 origin。
@@ -322,15 +330,15 @@ skills/<skill-name>/
 
 ## 更新 Git source
 
-通过统一的 fast-forward-only 安全路径更新所有已登记 Git 源。脏工作树会自动跳过；会影响当前项目已知链接的 breaking 更新会被阻止：
+通过统一的 fast-forward-only 安全路径更新所有已登记 Git 源。脏工作树会自动跳过；会影响当前项目或全局已知链接的 breaking 更新会被阻止：
 
 ```bash
 npm run source -- update-git --project /path/to/project
 ```
 
-如果命令是在中央原件库 clone 内执行，请传入 `--project`（或设置
-`SKILLCADDY_PROJECT`），确保 breaking 更新检查的是目标项目的
-`.agents/skills/` 软链接。
+`--project` 是必填项，用于检查目标项目的 `.agents/skills/` 软链接；全局
+`~/.agents/skills/` 链接总会一并扫描。breaking 更新会分别报告项目和全局
+链接；`--allow-breaking` 只授权替换原件，不会自动删除或重新绑定受影响链接，受影响链接可能因此断开。
 
 如果你手动执行了 `git pull`，导致已登记 Git clone 前进但 registry 没有同步，
 可以用显式 repair 流程采纳当前状态：
@@ -358,16 +366,20 @@ repair 不会 pull、覆盖、stash 或 reset 当前 clone；只有干净、位�
 - 健康检查（断链、别名冲突、archvied 误启用）
 - 检测冲突并要求用户确认
 
-**安全规则**：永远只操作项目内的 `.agents/skills` symlink；不删中央原件；不动 `archived/` 除非显式点名；任何状态变更前先给 dry-run 摘要。
+**安全规则**：只在明确选择的项目或全局 `.agents/skills` 作用域操作；不删中央原件；不接管普通目录或外部全局链接；不动 `archived/` 除非显式点名；任何状态变更前先给 dry-run 摘要。
 
 **触发方式**：`agents/openai.yaml` 设置了 `allow_implicit_invocation: true`，Agent 看到相关请求时会自动加载。
 
 ## 启用 / 禁用
 
-**启用**：在项目 `.agents/skills/` 下创建软链接，指向中央库中的 skill 原件。
+**启用**：在选定作用域创建软链接，指向中央库中的 skill 原件。项目作用域还会 best-effort 同步 Claude Code；全局作用域只写入 `~/.agents/skills/`。
 
 ```text
 <project>/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>
+```
+
+```text
+~/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>
 ```
 
 **同步 Claude**：为 Claude Code 创建 `.claude/skills/` 入口，每个 skill 软链接指向 `.agents/skills/`。
@@ -376,11 +388,12 @@ repair 不会 pull、覆盖、stash 或 reset 当前 clone；只有干净、位�
 <project>/.claude/skills/<alias> -> ../../.agents/skills/<alias>
 ```
 
-**禁用**：删除软链接,不删原件。
+**禁用**：删除选定作用域的软链接,不删原件。清理全局链接前会确认目标属于当前 Skillcaddy 原件库；外部链接和普通目录保持只读。
 
 **为什么是两层软链接？**
 - `.agents/skills` 是 Agent Skills 标准,Codex / OpenCode / Pi 都能识别
 - `.claude/skills` 让 Claude Code 也能使用,且支持单独管理（部分启用/禁用）
+- 全局启用明确只面向 Agents，不会写入 `~/.claude/skills`
 - 一次启用,多 Agent 共享；禁用不影响原件,安全可靠
 
 ## 推荐系统

@@ -5,6 +5,10 @@
   background: var(--hairline);
 }
 
+.global-enabled {
+  border-top: 1px solid var(--hairline);
+}
+
 .enabled-column {
   min-width: 0;
   background: var(--canvas);

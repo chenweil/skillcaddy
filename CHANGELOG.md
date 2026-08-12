@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.24.0] - 2026-08-12
+
+### Added
+- Added explicit project and global skill enablement across the shared API, CLI, TUI, and Web manager.
+- Added global collection enablement that writes only `~/.agents/skills/` and safely distinguishes links owned by the current Skillcaddy library.
+- Added project/global coexistence, global-link collision protection, and global-link source update and registry repair checks.
+
+### Changed
+- Source update and repair output now reports affected project and global links separately; authorized breaking updates leave affected links in place.
+- Web library actions now separate project controls (`+`, `×`) from global controls (`G+`, `G×`) with a visual divider.
+- Updated the domain model, ADR-0009, Manager skill documentation, README files, and API contracts for scoped enablement.
+
+### Fixed
+- Global collection completion now uses the same green success state as project collection completion.
+
 ## [0.23.0] - 2026-08-12
 
 ### Added

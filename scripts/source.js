@@ -23,6 +23,7 @@ export async function runSourceCli({
   argv = [],
   rootDir = process.cwd(),
   projectPath = process.cwd(),
+  globalDir,
   stdin = process.stdin,
   stdout = process.stdout,
   stderr = process.stderr,
@@ -44,6 +45,12 @@ export async function runSourceCli({
       return 2;
     }
 
+    if (['repair', 'update', 'update-git'].includes(command) && !projectOption.specified) {
+      stderr.write('Error: source updates require an explicit --project path\n');
+      printUsage(stderr);
+      return 2;
+    }
+
     const commandArgs = projectOption.args;
     const effectiveProjectPath = path.resolve(projectOption.projectPath || projectPath);
 
@@ -58,7 +65,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const context = { rootDir, projectPath: effectiveProjectPath };
+      const context = { rootDir, projectPath: effectiveProjectPath, globalDir };
       const planUpdate = parsed.allowBreaking
         ? planBreakingUpdateSource
         : planUpdateSource;
@@ -86,7 +93,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath });
+      const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath, globalDir });
       printGitUpdateBatch(result, stdout, parsed);
       return result.sources.some(
         (source) => source.status === 'failed' ||
@@ -100,7 +107,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const context = { rootDir, projectPath: effectiveProjectPath };
+      const context = { rootDir, projectPath: effectiveProjectPath, globalDir };
       const planRepair = parsed.allowBreaking
         ? planBreakingRepairSource
         : planRepairSource;
@@ -270,6 +277,9 @@ function printUpdatePlan(plan, stdout) {
   if (plan.affectedProjectLinks?.length) {
     printAffectedProjectLinks(plan.affectedProjectLinks, stdout);
   }
+  if (plan.affectedGlobalLinks?.length) {
+    printAffectedGlobalLinks(plan.affectedGlobalLinks, stdout);
+  }
 }
 
 function printAffectedProjectLinks(links, stdout) {
@@ -278,6 +288,13 @@ function printAffectedProjectLinks(links, stdout) {
     return;
   }
   stdout.write('would break project links:\n');
+  for (const link of links) {
+    stdout.write(`  - ${link.alias} -> ${link.skillPath}\n`);
+  }
+}
+
+function printAffectedGlobalLinks(links, stdout) {
+  stdout.write('would break global links:\n');
   for (const link of links) {
     stdout.write(`  - ${link.alias} -> ${link.skillPath}\n`);
   }
@@ -302,6 +319,10 @@ function printGitUpdateBatch(result, stdout, { verbose = false } = {}) {
     if (source.status === 'breaking' && source.affected?.length) {
       const aliases = source.affected.map((link) => link.alias).join(', ');
       stdout.write(`  would break: ${aliases}\n`);
+    }
+    if (source.status === 'breaking' && source.affectedGlobalLinks?.length) {
+      const aliases = source.affectedGlobalLinks.map((link) => link.alias).join(', ');
+      stdout.write(`  would break global: ${aliases}\n`);
     }
     if (source.updateSummary) {
       printGitUpdateSummary(source.updateSummary, stdout, { verbose });
@@ -419,6 +440,9 @@ function printRepairPlan(plan, stdout) {
   printSkillPaths('removed or relocated', plan.changes.removedOrRelocated, stdout);
   if (plan.affectedProjectLinks?.length) {
     printAffectedProjectLinks(plan.affectedProjectLinks, stdout);
+  }
+  if (plan.affectedGlobalLinks?.length) {
+    printAffectedGlobalLinks(plan.affectedGlobalLinks, stdout);
   }
   if (plan.status === 'dirty') {
     stdout.write('reminder: local Git changes found; registry was not changed\n');
@@ -541,9 +565,9 @@ function printUsage(stderr) {
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');
-  stderr.write('Usage: npm run source -- repair <source-id> [--allow-breaking] [--yes] [--project <dir>]\n');
-  stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes] [--project <dir>]\n');
-  stderr.write('Usage: npm run source -- update-git [--verbose] [--project <dir>]\n');
+  stderr.write('Usage: npm run source -- repair <source-id> [--allow-breaking] [--yes] --project <dir>\n');
+  stderr.write('Usage: npm run source -- update <source-id> [input] [--allow-breaking] [--yes] --project <dir>\n');
+  stderr.write('Usage: npm run source -- update-git [--verbose] --project <dir>\n');
   stderr.write('Usage: npm run source -- migrate [--yes]\n');
 }
 

@@ -31,6 +31,7 @@ const elements = {
   loadProject: document.querySelector('#loadProject'),
   refreshButton: document.querySelector('#refreshButton'),
   disableAgents: document.querySelector('#disableAgents'),
+  disableGlobal: document.querySelector('#disableGlobal'),
   unlinkClaude: document.querySelector('#unlinkClaude'),
   syncClaude: document.querySelector('#syncClaude'),
   claudeSkillList: document.querySelector('#claudeSkillList'),
@@ -38,7 +39,9 @@ const elements = {
   sourceFilter: document.querySelector('#sourceFilter'),
   skillSearch: document.querySelector('#skillSearch'),
   enabledList: document.querySelector('#enabledList'),
+  globalList: document.querySelector('#globalList'),
   agentsCount: document.querySelector('#agentsCount'),
+  globalCount: document.querySelector('#globalCount'),
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   adviceList: document.querySelector('#adviceList'),
@@ -69,6 +72,7 @@ elements.skillSearch.addEventListener('input', (event) => {
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
+elements.disableGlobal.addEventListener('click', () => disableAgents('global'));
 
 initializeProjectPathFromUrl();
 await Promise.all([loadState(), loadVersion()]);
@@ -98,12 +102,14 @@ function render() {
 function renderAll() {
   elements.totalSkills.textContent = state.stats.total;
   elements.agentsCount.textContent = state.enabled.length;
+  elements.globalCount.textContent = state.global.length;
   elements.claudeCount.textContent = state.claude?.skills?.length || 0;
   elements.heroTotalSkills.textContent = state.stats.total;
   elements.heroAgentsCount.textContent = state.enabled.length;
   elements.heroClaudeCount.textContent = state.claude?.skills?.length || 0;
   elements.activeProject.textContent = state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable });
+  renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
   renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill });
   renderAdvice();
   renderProjectHistory();
@@ -232,6 +238,7 @@ function renderSkills() {
 function renderSkillList() {
   const filter = elements.sourceFilter.value;
   const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
+  const globalByTarget = new Map(state.global.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
   const enabledTargets = new Set(enabledByTarget.keys());
   const sourceSkills = filter ? state.skills.filter((skill) => skill.source === filter) : state.skills;
   const searchedSkills = state.searchQuery ? sourceSkills.filter((skill) => matchesSearchQuery(skill, state.searchQuery)) : sourceSkills;
@@ -257,8 +264,15 @@ function renderSkillList() {
             </button>
           </h3>
           <div class="group-actions">
-            <button class="icon-button group-enable-all" type="button">+</button>
-            <button class="icon-button group-disable-all danger" type="button" title="清空该库已启用的 skill" aria-label="清空该库已启用的 skill">×</button>
+            <div class="scope-action-group project-scope-actions">
+              <button class="icon-button group-enable-all" type="button">+</button>
+              <button class="icon-button group-disable-all danger" type="button" title="清空该库已启用的 skill" aria-label="清空该库已启用的 skill">×</button>
+            </div>
+            <span class="scope-divider" aria-hidden="true"></span>
+            <div class="scope-action-group global-scope-actions">
+              <button class="icon-button group-enable-global" type="button" title="批量启用到全局">G+</button>
+              <button class="icon-button group-disable-global danger" type="button" title="清空该库的全局 skill" aria-label="清空该库的全局 skill">G×</button>
+            </div>
           </div>
           <p></p>
         </div>
@@ -280,6 +294,10 @@ function renderSkillList() {
     toggleButton.addEventListener('click', () => toggleGroup(group.key));
     const enableAllButton = groupElement.querySelector('.group-enable-all');
     const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
+    const globalEnableButton = groupElement.querySelector('.group-enable-global');
+    const globalPendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, new Set(globalByTarget.keys())));
+    const globalEnabledSkills = group.skills.filter((skill) => globalByTarget.has(skill.path));
+    const removableGlobalSkills = group.skills.filter((skill) => (globalByTarget.get(skill.path)?.canDisable ?? false));
     const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
     const pendingSetupSkill = setup?.status !== 'ready' && setup?.status !== 'invalid' && !setup?.setupSkillEnabled;
     enableAllButton.disabled = pendingSkills.length === 0 && !pendingSetupSkill;
@@ -293,13 +311,22 @@ function renderSkillList() {
     enableAllButton.setAttribute('aria-label', enableAllLabel);
     if (enabledSkills.length === group.skills.length) enableAllButton.classList.add('is-complete');
     enableAllButton.addEventListener('click', () => enableGroup(group));
+    globalEnableButton.disabled = globalPendingSkills.length === 0;
+    globalEnableButton.dataset.focusKey = `group-enable-global:${group.key}`;
+    globalEnableButton.setAttribute('aria-label', '批量启用该库全部 skill 到全局');
+    if (globalEnabledSkills.length === group.skills.length) globalEnableButton.classList.add('is-complete');
+    globalEnableButton.addEventListener('click', () => enableGroup(group, 'global'));
     const disableAllButton = groupElement.querySelector('.group-disable-all');
     disableAllButton.disabled = enabledSkills.length === 0;
     disableAllButton.dataset.focusKey = `group-disable:${group.key}`;
     disableAllButton.addEventListener('click', () => disableGroup(group));
+    const globalDisableButton = groupElement.querySelector('.group-disable-global');
+    globalDisableButton.disabled = removableGlobalSkills.length === 0;
+    globalDisableButton.dataset.focusKey = `group-disable-global:${group.key}`;
+    globalDisableButton.addEventListener('click', () => disableGroup(group, 'global'));
 
     const items = groupElement.querySelector('.group-items');
-    group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets)));
+    group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets, new Set(globalByTarget.keys()))));
     elements.skillList.append(groupElement);
   });
 }
@@ -383,8 +410,9 @@ function collapseNewGroup(key) {
   state.knownGroups.add(key); state.collapsedGroups.add(key);
 }
 
-function renderSkill(skill, enabledTargets) {
+function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
     const isEnabled = enabledTargets.has(skill.path);
+    const isGloballyEnabled = globalTargets.has(skill.path);
     const item = document.createElement('article');
     item.className = 'skill';
     item.dataset.focusScope = '';
@@ -412,6 +440,13 @@ function renderSkill(skill, enabledTargets) {
     if (state.editingSkillId === skill.id) renderMetadataEditor(item.querySelector('.metadata-editor'), skill);
 
     const actions = item.querySelector('.actions');
+    const projectActions = document.createElement('div');
+    projectActions.className = 'scope-action-group project-scope-actions';
+    const globalActions = document.createElement('div');
+    globalActions.className = 'scope-action-group global-scope-actions';
+    const scopeDivider = document.createElement('span');
+    scopeDivider.className = 'scope-divider';
+    scopeDivider.setAttribute('aria-hidden', 'true');
     const editButton = document.createElement('button');
     editButton.className = 'secondary';
     editButton.type = 'button';
@@ -421,8 +456,6 @@ function renderSkill(skill, enabledTargets) {
       state.editingSkillId = state.editingSkillId === skill.id ? '' : skill.id;
       renderSkills();
     });
-    actions.append(editButton);
-
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.focusKey = `skill-enable:${skill.id}`;
@@ -439,7 +472,24 @@ function renderSkill(skill, enabledTargets) {
       if (button.getAttribute('aria-disabled') === 'true') return;
       enable(skill);
     });
-    actions.append(button);
+    projectActions.append(editButton, button);
+
+    const globalButton = document.createElement('button');
+    globalButton.type = 'button';
+    globalButton.dataset.focusKey = `skill-enable-global:${skill.id}`;
+    globalButton.textContent = isGloballyEnabled ? '已全局启用' : '启用到全局';
+    if (isGloballyEnabled) {
+      globalButton.classList.add('is-enabled');
+      globalButton.setAttribute('aria-disabled', 'true');
+    } else {
+      globalButton.disabled = skill.source === 'archived';
+    }
+    globalButton.addEventListener('click', () => {
+      if (globalButton.getAttribute('aria-disabled') === 'true') return;
+      enable(skill, 'global');
+    });
+    globalActions.append(globalButton);
+    actions.append(projectActions, scopeDivider, globalActions);
 
     return item;
 }
@@ -578,20 +628,29 @@ function toggleGroup(key) {
   renderSkills();
 }
 
-async function enable(skill) {
-  if (!confirmSetupPreflight([skill.id])) return;
+async function enable(skill, scope = 'project') {
+  if (scope === 'project' && !confirmSetupPreflight([skill.id])) return;
   const result = await api('/api/enable', {
     method: 'POST',
-    body: { projectPath: elements.projectPath.value, skillPath: skill.path, alias: skill.name }
+    body: {
+      scope,
+      ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+      skillPath: skill.path,
+      alias: skill.name
+    }
   });
-  setMessage(enableMessage(skill.name, result));
+  setMessage(enableMessage(skill.name, result, scope));
   await loadState({ button: null });
 }
 
-async function enableGroup(group) {
+async function enableGroup(group, scope = 'project') {
   const plan = await api('/api/enable-plan', {
     method: 'POST',
-    body: { projectPath: elements.projectPath.value, skillIds: group.skills.map((skill) => skill.id) }
+    body: {
+      scope,
+      ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+      skillIds: group.skills.map((skill) => skill.id)
+    }
   });
   const skills = plan.targetSkillIds.map((skillId) => state.skills.find((skill) => skill.id === skillId)).filter(Boolean);
   const skipped = plan.skippedSkillIds;
@@ -602,12 +661,13 @@ async function enableGroup(group) {
     return;
   }
 
-  if (pendingSetups.length > 0 && !confirmSetupPreflight(skills.map((skill) => skill.id))) return;
+  if (scope === 'project' && pendingSetups.length > 0 && !confirmSetupPreflight(skills.map((skill) => skill.id))) return;
 
   const result = await api('/api/enable-collection', {
     method: 'POST',
     body: {
-      projectPath: elements.projectPath.value,
+      scope,
+      ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
       skillIds: group.skills.map((skill) => skill.id)
     }
   });
@@ -628,7 +688,7 @@ async function enableGroup(group) {
   await loadState({ button: null });
   const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
   const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
-  if (remainingSetups.length > 0) parts.push(`待配置：${remainingSetups.map((setup) => setup.setupSkillName).join('、')}`);
+  if (scope === 'project' && remainingSetups.length > 0) parts.push(`待配置：${remainingSetups.map((setup) => setup.setupSkillName).join('、')}`);
   if (!result.refresh.ok) parts.push(`配置提醒刷新失败：${result.refresh.error}`);
   setMessage(parts.join('，'), result.counts.failed > 0 || !result.refresh.ok);
 }
@@ -677,14 +737,15 @@ function canBulkEnableSkill(skill, enabledTargets) {
   return skill.source !== 'archived' && skill.autoEnable !== false && !enabledTargets.has(skill.path);
 }
 
-async function disableGroup(group) {
-  const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
+async function disableGroup(group, scope = 'project') {
+  const enabledItems = scope === 'global' ? state.global : state.enabled;
+  const enabledByTarget = new Map(enabledItems.filter((item) => (item.canDisable ?? item.isSymlink) && item.targetPath).map((item) => [item.targetPath, item]));
   const aliases = group.skills
     .map((skill) => enabledByTarget.get(skill.path)?.alias)
     .filter(Boolean);
 
   if (aliases.length === 0) {
-    setMessage(`${group.collection} 没有可清空的 agents skill`);
+    setMessage(`${group.collection} 没有可清空的${scope === 'global' ? '全局' : ' agents'} skill`);
     return;
   }
 
@@ -699,22 +760,28 @@ async function disableGroup(group) {
     try {
       const result = await api('/api/disable', {
         method: 'POST',
-        body: { projectPath: elements.projectPath.value, alias }
+        body: {
+          scope,
+          ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+          alias
+        }
       });
       result.removed ? removed += 1 : unchanged += 1;
 
-      const claudeResult = await api('/api/unlink-claude-skill', {
-        method: 'POST',
-        body: { projectPath: elements.projectPath.value, alias }
-      });
-      if (claudeResult.removed) claudeRemoved += 1;
+      if (scope === 'project') {
+        const claudeResult = await api('/api/unlink-claude-skill', {
+          method: 'POST',
+          body: { projectPath: elements.projectPath.value, alias }
+        });
+        if (claudeResult.removed) claudeRemoved += 1;
+      }
     } catch {
       failed.push(alias);
     }
   }
 
-  const parts = [`已清空 ${group.collection}`];
-  if (removed) parts.push(`${removed} 个 agents skill`);
+  const parts = [`已清空${scope === 'global' ? '全局 ' : ' '}${group.collection}`];
+  if (removed) parts.push(`${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`);
   if (claudeRemoved) parts.push(`${claudeRemoved} 个 Claude Code skill`);
   if (unchanged) parts.push(`已不存在 ${unchanged}`);
   // 只报失败个数的话，用户既不知道是哪些，也无从判断该重试还是手工处理。
@@ -744,46 +811,58 @@ async function saveMetadata(skill, form) {
   return result;
 }
 
-function enableMessage(skillName, result) {
+function enableMessage(skillName, result, scope = 'project') {
   if (result.claudeSync?.ok === false) {
     return `已启用 ${skillName}；Claude Code 自动同步失败：${result.claudeSync.error}。可点 Claude Code 栏的 + 手动同步。`;
   }
 
-  return result.claudeSync ? `已启用 ${skillName}，并同步 Claude Code` : `已启用 ${skillName}`;
+  return result.claudeSync
+    ? `已启用 ${skillName}，并同步 Claude Code`
+    : `${scope === 'global' ? '已全局启用' : '已启用'} ${skillName}`;
 }
 
-async function disable(alias) {
+async function disable(alias, scope = 'project') {
   await api('/api/disable', {
     method: 'POST',
-    body: { projectPath: elements.projectPath.value, alias }
+    body: {
+      scope,
+      ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+      alias
+    }
   });
-  setMessage(`已从 .agents/skills 移除 ${alias}`);
+  setMessage(`已从${scope === 'global' ? '全局' : '当前项目'} .agents/skills 移除 ${alias}`);
   await loadState({ button: null });
 }
 
-async function disableAgents() {
-  const aliases = state.enabled.filter((skill) => skill.isSymlink).map((skill) => skill.alias);
+async function disableAgents(scope = 'project') {
+  const enabledItems = scope === 'global' ? state.global : state.enabled;
+  const aliases = enabledItems.filter((skill) => skill.canDisable ?? skill.isSymlink).map((skill) => skill.alias);
   if (aliases.length === 0) {
-    setMessage('没有可清空的 agents skill');
+    setMessage(`没有可清空的${scope === 'global' ? '全局' : ' agents'} skill`);
     return;
   }
 
   if (!confirmBulkClear(`清空 .agents/skills 里全部 ${aliases.length} 个 skill？`, aliases.length)) return;
 
-  await withButtonState(elements.disableAgents, '…', async () => {
+  const clearButton = scope === 'global' ? elements.disableGlobal : elements.disableAgents;
+  await withButtonState(clearButton, '…', async () => {
     const results = await Promise.allSettled(aliases.map((alias) => api('/api/disable', {
       method: 'POST',
-      body: { projectPath: elements.projectPath.value, alias }
+      body: {
+        scope,
+        ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+        alias
+      }
     })));
     const failed = results
       .map((result, index) => result.status === 'rejected' ? aliases[index] : null)
       .filter(Boolean);
     const removed = aliases.length - failed.length;
-    const message = [`已清空 ${removed} 个 agents skill`];
+    const message = [`已清空 ${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`];
     if (failed.length) message.push(`以下 ${failed.length} 个未能清空，可单独重试：${failed.join('、')}`);
     setMessage(message.join('，'), failed.length > 0);
     await loadState({ button: null });
-  }, () => state.enabled.filter((skill) => skill.isSymlink).length === 0);
+  }, () => (scope === 'global' ? state.global : state.enabled).filter((skill) => skill.canDisable ?? skill.isSymlink).length === 0);
 }
 
 async function syncClaude() {

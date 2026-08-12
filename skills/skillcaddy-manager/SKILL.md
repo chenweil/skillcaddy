@@ -5,7 +5,7 @@ description: Manage Skillcaddy source acquisition, source updates, migrations, p
 
 # Skillcaddy Manager
 
-Treat Skillcaddy as a central skill library with project-level symlink activation. Keep one execution loop across every branch: **state -> route -> preflight -> act -> verify**.
+Treat Skillcaddy as a central skill library with explicit project/global symlink activation. Keep one execution loop across every branch: **state -> route -> preflight -> act -> verify**.
 
 ## Core Loop
 
@@ -32,12 +32,17 @@ Treat Skillcaddy as a central skill library with project-level symlink activatio
 | Source registry | `.skillcaddy/sources/` | Sidecar identity, provenance, integrity, install path, and discovered skill paths |
 | Project | `<project>/.agents/skills/` | Codex-compatible activation symlinks |
 | Project Claude | `<project>/.claude/skills/` | Claude compatibility symlinks |
-| Global | `~/.agents/skills/`, `~/.claude/skills/` | User-level skills that may conflict or shadow |
+| Global Agents | `~/.agents/skills/` | Shared user-level links managed by Skillcaddy |
+| Global Claude | `~/.claude/skills/` | Read-only external Agent directory; Skillcaddy does not write it |
 | Collection setup | `collection-metadata/<source>/<collection>.json` | Tracked, read-only setup contract and readiness checks |
 
 Preserve these invariants:
 
-- Enable and disable operations create or remove project symlinks; source skill directories remain intact.
+- Enable and disable operations are explicit about `project` or `global` scope; source skill directories remain intact.
+- Project enablement writes `<project>/.agents/skills/` and best-effort syncs project Claude links. Global enablement writes only `~/.agents/skills/` and does not require a project.
+- Project and global aliases may coexist; project state is the higher-priority context when an Agent applies its normal precedence rules.
+- Never take over an occupied ordinary entry, foreign symlink, or broken link. Same-target enablement is an unchanged result.
+- Global disable may remove only a symlink whose target is provably inside the current Skillcaddy root's allowed source folders; foreign links and ordinary entries are read-only.
 - Source acquisition changes only the central library. It never implies enablement, setup, or execution of acquired code.
 - `add` is for a new source identity. Only a matching source-registry record authorizes `update`; a destination collision never does.
 - An explicit combined request runs acquisition first, rescans state, resolves one requested acquired skill, and enables only that selection.
@@ -50,7 +55,7 @@ Preserve these invariants:
 - The fixed default Web manager URL is `http://127.0.0.1:4173`.
 - The clone-backed `skillcaddy` entry keeps no-argument TUI compatibility and also supports `start`, `stop`, `restart`, `-u` for registered Git source updates, and read-only `-a` analysis.
 - Global bootstrap is explicit: run `npm run install:cli` and `npm run check:cli` from the clone; the installed command provides both CLI and TUI, while `install:tui` remains a compatibility alias.
-- Batch Git source updates require an explicit current project context; use `--project` or `SKILLCADDY_PROJECT` so breaking project links are not silently skipped.
+- Source update and repair CLIs require an explicit `--project`; global links are always scanned in addition to that project context.
 - If a registered Git checkout was manually advanced with `git pull`, use `npm run source -- repair <source-id> --project <project-dir>` to explicitly adopt the clean fast-forward state into the sidecar registry; never edit the registry directly.
 
 ## Mutation Gate
@@ -65,10 +70,10 @@ Account for skills that will be changed, left unchanged, skipped, or rejected. I
 Require confirmation before proceeding when:
 
 - one request matches multiple skills and the user has not selected one;
-- a project alias points to a different target;
-- the project entry is not a symlink or is externally managed;
+- a project or global alias points to a different target;
+- a project or global entry is not a symlink or is externally managed;
 - a GitHub source has uncommitted changes before update;
-- a breaking source replacement affects a known current-project link;
+- a breaking source replacement affects a known project or global link;
 - a source identity is ambiguous or a destination collision is not backed by a matching registry record;
 - the request reaches into `archived/` without naming the archived target;
 - the request would delete a source skill rather than a project link;

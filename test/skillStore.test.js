@@ -67,6 +67,97 @@ test('project enable syncs Claude skills best-effort', async () => {
   assert.equal(state.claude.skills[0].alias, 'project-sync');
 });
 
+test('global enable creates only the shared Agents link and is visible independently of a project', async () => {
+  const root = await makeTempDir('skills-global-root-');
+  const project = await makeTempDir('skills-global-project-');
+  const globalDir = await makeTempDir('skills-global-dir-');
+  const skill = path.join(root, 'personal', 'global-review');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Global review\n');
+
+  const result = await enableSkill(root, {
+    scope: 'global',
+    globalDir,
+    skillPath: skill,
+    alias: 'global-review'
+  });
+
+  assert.equal(result.scope, 'global');
+  assert.equal(result.linkPath, path.join(globalDir, 'global-review'));
+  assert.equal(result.claudeSync, undefined);
+  assert.equal((await lstat(path.join(globalDir, 'global-review'))).isSymbolicLink(), true);
+
+  const state = await getState(root, project, { globalDir });
+  assert.equal(state.enabled.length, 0);
+  assert.equal(state.global.length, 1);
+  assert.equal(state.global[0].alias, 'global-review');
+  assert.equal(state.global[0].directory, globalDir);
+});
+
+test('project and global scopes can share an alias without affecting each other', async () => {
+  const root = await makeTempDir('skills-scope-coexist-root-');
+  const project = await makeTempDir('skills-scope-coexist-project-');
+  const globalDir = await makeTempDir('skills-scope-coexist-global-');
+  const skill = path.join(root, 'personal', 'shared');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Shared\n');
+  await enableSkill(root, { projectPath: project, skillPath: skill, alias: 'shared' });
+  await enableSkill(root, { scope: 'global', globalDir, skillPath: skill, alias: 'shared' });
+
+  const state = await getState(root, project, { globalDir });
+  assert.equal(state.enabled[0].alias, 'shared');
+  assert.equal(state.global[0].alias, 'shared');
+
+  await disableSkill({ projectPath: project, alias: 'shared' });
+  const afterProjectDisable = await getState(root, project, { globalDir });
+  assert.equal(afterProjectDisable.enabled.length, 0);
+  assert.equal(afterProjectDisable.global.length, 1);
+});
+
+test('global enable rejects an occupied alias and global disable only removes links owned by the current root', async () => {
+  const root = await makeTempDir('skills-global-safety-root-');
+  const project = await makeTempDir('skills-global-safety-project-');
+  const globalDir = await makeTempDir('skills-global-safety-dir-');
+  const skill = path.join(root, 'personal', 'managed');
+  const external = await makeTempDir('skills-global-external-');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Managed\n');
+  await writeFile(path.join(external, 'SKILL.md'), '# External\n');
+  await symlink(external, path.join(globalDir, 'managed'), 'dir');
+
+  await assert.rejects(
+    () => enableSkill(root, {
+      scope: 'global',
+      globalDir,
+      skillPath: skill,
+      alias: 'managed'
+    }),
+    /别名已指向其他 skill/
+  );
+  await assert.rejects(
+    () => disableSkill({ scope: 'global', rootDir: root, globalDir, alias: 'managed' }),
+    /不属于当前 Skillcaddy 原件库/
+  );
+  assert.equal((await lstat(path.join(globalDir, 'managed'))).isSymbolicLink(), true);
+
+  await mkdir(path.join(globalDir, 'ordinary'), { recursive: true });
+  await assert.rejects(
+    () => disableSkill({ scope: 'global', rootDir: root, globalDir, alias: 'ordinary' }),
+    /拒绝删除非软链接/
+  );
+
+  await symlink(path.join(root, 'personal', 'missing'), path.join(globalDir, 'broken'), 'dir');
+  const removed = await disableSkill({ scope: 'global', rootDir: root, globalDir, alias: 'broken' });
+  assert.equal(removed.removed, true);
+  assert.equal(removed.scope, 'global');
+});
+
 test('rejects unsafe project paths before creating skill links', async () => {
   const root = await makeTempDir('skills-root-');
   const skill = path.join(root, 'personal', 'safe-path');

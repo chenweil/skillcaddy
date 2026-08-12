@@ -462,6 +462,7 @@ test('CLI adds and updates a named remote file source', async (t) => {
     response.end(content);
   });
   const root = await makeTempDir('source-remote-file-cli-root-');
+  const project = await makeTempDir('source-remote-file-cli-project-');
   const input = `http://127.0.0.1:${fixture.port}/SKILL.md`;
   const addOutput = captureOutput();
 
@@ -480,7 +481,7 @@ test('CLI adds and updates a named remote file source', async (t) => {
   const updateOutput = captureOutput();
   assert.equal(
     await runSourceCli({
-      argv: ['update', 'official/herdr', '--yes'],
+      argv: ['update', 'official/herdr', '--yes', '--project', project],
       rootDir: root,
       ...updateOutput.streams
     }),

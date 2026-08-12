@@ -72,7 +72,8 @@ textarea {
 
 .brand,
 .topbar-actions,
-.actions {
+.actions,
+.scope-action-group {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -648,6 +649,13 @@ button.danger:disabled,
   gap: 8px;
 }
 
+.scope-divider {
+  width: 1px;
+  height: 24px;
+  flex: 0 0 1px;
+  background: var(--hairline);
+}
+
 .group-enable-all {
   min-width: 44px;
   height: 36px;
@@ -671,6 +679,11 @@ button.danger:disabled,
 }
 
 .group-enable-all.is-complete {
+  background: var(--success);
+  color: var(--on-primary);
+}
+
+.group-enable-global.is-complete {
   background: var(--success);
   color: var(--on-primary);
 }

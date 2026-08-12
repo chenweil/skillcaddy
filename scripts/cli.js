@@ -1,7 +1,8 @@
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { getState } from '../lib/skillStore.js';
+import { disableSkill, getState, scanSkills } from '../lib/skillStore.js';
 import { installCliCommand } from '../lib/tuiInstall.js';
+import { enableProjectSkill } from '../lib/projectActions.js';
 import { readVersion } from '../lib/version.js';
 import { restartWeb, startWeb, stopWeb } from '../lib/webManager.js';
 import { runSourceCli } from './source.js';
@@ -10,7 +11,7 @@ const CLI_FLAGS = new Set([
   '-h', '--help', '-v', '--version', '-u', '--update', '-a', '--analyze',
   '--verbose'
 ]);
-const CLI_COMMANDS = new Set(['start', 'stop', 'restart', 'update', 'analyze', 'install', 'server', 'web']);
+const CLI_COMMANDS = new Set(['start', 'stop', 'restart', 'update', 'analyze', 'install', 'server', 'web', 'enable', 'disable']);
 
 export function isCliCommand(argv = []) {
   return argv.some((arg) =>
@@ -54,6 +55,13 @@ export function parseCliArgs(argv = []) {
       result.command = arg;
       continue;
     }
+    if (arg === 'enable' || arg === 'disable') {
+      result.command = arg;
+      result.scope = '';
+      if (arg === 'enable') result.skillRef = '';
+      if (arg === 'disable') result.alias = '';
+      continue;
+    }
     if (arg === 'install') {
       const target = argv[index + 1];
       if (!['cli', 'tui'].includes(target)) {
@@ -93,12 +101,34 @@ export function parseCliArgs(argv = []) {
     if (arg === '--project') {
       result.projectPath = argv[index + 1] || '';
       if (!result.projectPath) result.error = '--project 需要一个目录路径';
+      if (result.scope === 'global') result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
+      if (result.command === 'enable' || result.command === 'disable') result.scope = 'project';
       index += 1;
       continue;
     }
     if (arg.startsWith('--project=')) {
       result.projectPath = arg.slice('--project='.length);
       if (!result.projectPath) result.error = '--project 需要一个目录路径';
+      if (result.scope === 'global') result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
+      if (result.command === 'enable' || result.command === 'disable') result.scope = 'project';
+      continue;
+    }
+    if (arg === '--global') {
+      if (result.command !== 'enable' && result.command !== 'disable') {
+        result.error = '--global 只适用于 enable 或 disable';
+        return result;
+      }
+      result.scope = 'global';
+      continue;
+    }
+    if (arg === '--alias') {
+      if (result.command !== 'enable') {
+        result.error = '--alias 只适用于 enable';
+        return result;
+      }
+      result.alias = argv[index + 1] || '';
+      if (!result.alias) result.error = '--alias 需要一个名称';
+      index += 1;
       continue;
     }
     if (arg === '-p' || arg === '--port') {
@@ -124,11 +154,36 @@ export function parseCliArgs(argv = []) {
       result.error = `未知参数：${arg}`;
       return result;
     }
+    if (result.command === 'enable') {
+      if (result.skillRef) {
+        result.error = `只能指定一个 skill：${arg}`;
+        return result;
+      }
+      result.skillRef = arg;
+      continue;
+    }
+    if (result.command === 'disable') {
+      if (result.alias) {
+        result.error = `只能指定一个 alias：${arg}`;
+        return result;
+      }
+      result.alias = arg;
+      continue;
+    }
     if (!result.projectPath) {
       result.projectPath = arg;
     } else {
       result.error = `只能指定一个项目路径：${arg}`;
       return result;
+    }
+  }
+
+  if (result.command === 'enable' || result.command === 'disable') {
+    const value = result.command === 'enable' ? result.skillRef : result.alias;
+    if (!value) result.error = `${result.command} 需要一个 skill 或 alias`;
+    if (!result.scope && !result.error) result.error = `${result.command} 需要 --project 或 --global`;
+    if (result.scope === 'global' && result.projectPath && !result.error) {
+      result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
     }
   }
 
@@ -150,12 +205,18 @@ export function buildHelpText() {
   skillcaddy -h                      查看帮助
   skillcaddy -u [projectPath]        安全更新已登记的 Git skill 源
   skillcaddy -a [projectPath]        分析项目 skill 状态并给出推荐
+  skillcaddy enable <skill-id> --project <dir> [--alias <name>]
+  skillcaddy enable <skill-id> --global [--alias <name>]
+  skillcaddy disable <alias> --project <dir>
+  skillcaddy disable <alias> --global
 
 选项：
   --root <dir>                       指定 Skillcaddy 原件库根目录
   -p, --port <port>                  Web 端口，默认 4173
   --no-open                          启动 Web 后不自动打开浏览器
-  --project <dir>                    显式指定项目目录
+  --project <dir>                    显式指定项目目录（enable/disable 必须明确选择 scope）
+  --global                            enable/disable 到用户共享的 ~/.agents/skills
+  --alias <name>                     enable 时指定链接 alias
   --verbose                          更新时显示新增、编辑、删除的 Skill 路径
 
 说明：-u 只更新已登记的 Git 源；-a 只读，不会安装、启用或修改 skill。
@@ -436,6 +497,9 @@ export async function runCli({
     runSourceCli,
     installCliCommand,
     getState,
+    scanSkills,
+    enableProjectSkill,
+    disableSkill,
     loadCatalog,
     detectProjectContext,
     ...handlers
@@ -469,7 +533,7 @@ export async function runCli({
     }
     if (parsed.command === 'update') {
       return actions.runSourceCli({
-        argv: ['update-git', ...(parsed.verbose ? ['--verbose'] : [])],
+        argv: ['update-git', ...(parsed.verbose ? ['--verbose'] : []), '--project', projectPath],
         rootDir: resolvedRootDir,
         projectPath,
         stdout,
@@ -484,6 +548,9 @@ export async function runCli({
       ]);
       stdout.write(buildAnalysisReport(state, catalog, context));
       return 0;
+    }
+    if (parsed.command === 'enable' || parsed.command === 'disable') {
+      return runEnablementCommand({ actions, parsed, rootDir: resolvedRootDir, stdout });
     }
 
     const lifecycleOptions = {
@@ -511,4 +578,39 @@ export async function runCli({
     stderr.write(`错误：${error.message}\n`);
     return error.exitCode || 1;
   }
+}
+
+async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
+  if (parsed.command === 'enable') {
+    const skills = await actions.scanSkills(rootDir);
+    const skill = resolveSkill(skills, parsed.skillRef);
+    const input = {
+      scope: parsed.scope,
+      ...(parsed.scope === 'project' ? { projectPath: path.resolve(parsed.projectPath) } : {}),
+      skillPath: skill.path,
+      alias: parsed.alias || skill.name
+    };
+    const result = await actions.enableProjectSkill(rootDir, input);
+    const status = result.unchanged ? '已存在' : '已启用';
+    stdout.write(`${parsed.scope === 'global' ? '全局' : '项目'}${status}：${result.alias}\n`);
+    return 0;
+  }
+
+  const result = await actions.disableSkill({
+    scope: parsed.scope,
+    rootDir,
+    ...(parsed.scope === 'project' ? { projectPath: path.resolve(parsed.projectPath) } : {}),
+    alias: parsed.alias
+  });
+  stdout.write(`${parsed.scope === 'global' ? '全局' : '项目'}${result.removed ? '已清理' : '未找到'}：${result.alias}\n`);
+  return 0;
+}
+
+function resolveSkill(skills, value) {
+  const byId = skills.find((skill) => skill.id === value);
+  if (byId) return byId;
+  const byName = skills.filter((skill) => skill.name === value);
+  if (byName.length === 1) return byName[0];
+  if (byName.length > 1) throw new Error(`存在多个同名 skill：${value}，请使用完整 id`);
+  throw new Error(`找不到 skill：${value}`);
 }

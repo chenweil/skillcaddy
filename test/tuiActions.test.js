@@ -90,6 +90,22 @@ test('enables a duplicate-name skill with a custom alias', async () => {
   assert.deepEqual(listEnabledAliases(state).map((item) => item.alias), ['toolbox-review']);
 });
 
+test('TUI actions can explicitly enable, list, and disable a global skill', async () => {
+  const root = await makeTempDir('tui-global-root-');
+  const project = await makeTempDir('tui-global-project-');
+  const globalDir = await makeTempDir('tui-global-dir-');
+  await createSkill(root, 'personal', 'shared', 'Shared skill');
+
+  let state = await loadTuiState(root, project, { globalDir });
+  const enabled = await enableSkillChoice(root, state, 'personal/shared', { scope: 'global', globalDir });
+  assert.equal(enabled.scope, 'global');
+
+  state = await loadTuiState(root, project, { globalDir });
+  assert.deepEqual(listEnabledAliases(state, 'global').map((item) => item.alias), ['shared']);
+  const disabled = await disableAlias(state, 'shared', { scope: 'global', rootDir: root, globalDir });
+  assert.equal(disabled.removed, true);
+});
+
 test('saves metadata through sidecar storage', async () => {
   const root = await makeTempDir('tui-root-');
   const project = await makeTempDir('tui-project-');

@@ -131,6 +131,28 @@ test('enablement-only Manager requests use an acquired skill', async () => {
   await access(path.join(project, '.agents', 'skills', 'review'));
 });
 
+test('global Manager enablement does not require a project context', async () => {
+  const root = await makeTempDir('manager-global-enable-root-');
+  const globalDir = await makeTempDir('manager-global-enable-dir-');
+  const input = await makeSource('manager-global-enable-input-', ['review']);
+
+  const plan = await planManagerSourceWorkflow(
+    { rootDir: root, globalDir },
+    {
+      acquisition: { input, name: 'review-pack' },
+      enablement: { sourceSkillPath: 'skills/review', scope: 'global' }
+    }
+  );
+  const result = await applyManagerSourceWorkflow(
+    { rootDir: root, globalDir },
+    plan
+  );
+
+  assert.equal(result.enablement.scope, 'global');
+  assert.equal(result.enablement.reminders.length, 0);
+  await access(path.join(globalDir, 'review'));
+});
+
 test('combined Manager requests rescan and enable only the selected acquired skill', async () => {
   const root = await makeTempDir('manager-combined-root-');
   const project = await makeTempDir('manager-combined-project-');

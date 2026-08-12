@@ -1,6 +1,6 @@
 # Skillcaddy
 
-Skillcaddy manages locally acquired skill sources and selectively enables their skills in individual projects.
+Skillcaddy manages locally acquired skill sources and selectively enables their skills for individual projects or for the user's shared Agent environment.
 
 ## Language
 
@@ -73,7 +73,7 @@ Replacement of an installed skill source with another valid package for the same
 _Avoid_: Side-by-side install, version copy
 
 **Breaking source replacement**:
-A source upgrade that removes or relocates a previously discovered skill path and may therefore break a link in the project considered for the upgrade. It is distinct from version comparison and requires explicit authorization when an affected current-project link is known; links in other projects are outside this decision.
+A source upgrade that removes or relocates a previously discovered skill path and may therefore break a project or global link. It is distinct from version comparison and requires explicit authorization when an affected link is known.
 _Avoid_: New version, content update
 
 **Setup readiness**:
@@ -93,13 +93,25 @@ A source-provided check performed when a skill is used to detect missing credent
 _Avoid_: Source validation, Skillcaddy setup reminder
 
 **Enablement**:
-The creation of a project-level link to a skill already present in the central library. Source acquisition never implies enablement; both occur in one workflow only when the user expresses both intents.
+The creation of a scope-specific link to a skill already present in the central library. Source acquisition never implies enablement; both occur in one workflow only when the user expresses both intents.
 _Avoid_: Download, installation
 
+**Enablement scope**:
+The boundary that owns an enabled skill: one project or the user's shared Agent environment.
+_Avoid_: Target path, install mode
+
+**Project enablement**:
+Enablement owned by one project and available through that project's Agent skill configuration. It can take precedence over a same-named global skill without changing the global enablement.
+_Avoid_: Local installation, repository skill
+
+**Global enablement**:
+Enablement owned by the user and available to projects through the shared Agent environment. It is explicit, independent of any one project, and does not establish project setup readiness.
+_Avoid_: System installation, global package
+
 **Collection enablement**:
-A project operation that applies enablement to every eligible skill in one collection and classifies each candidate as enabled, unchanged, skipped, or failed. It never establishes setup readiness.
+A scoped operation that applies enablement to every eligible skill in one collection and classifies each candidate as enabled, unchanged, skipped, or failed. Project setup readiness remains project-scoped, and Collection enablement never establishes it.
 _Avoid_: Bulk installation, collection setup
 
 **Skill**:
-An Agent-facing capability rooted at a directory containing `SKILL.md`, discovered within a skill source and enabled independently per project.
+An Agent-facing capability rooted at a directory containing `SKILL.md`, discovered within a skill source and enabled independently by enablement scope.
 _Avoid_: Library, repository

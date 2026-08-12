@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-Local AI skills central library + per-project symlink enablement. One AISkills directory holds every skill source; symlink what you need into any project on demand.
+Local AI skills central library + scoped symlink enablement. One AISkills directory holds every skill source; symlink what you need into a project or the shared user-level Agents directory on demand.
 
 ![](public/skillcaddy_EN.png)
 
@@ -16,10 +16,11 @@ If you use Claude Code, Codex, OpenCode, or Pi across multiple projects, you eve
 - A Claude-Code-only entry needs to coexist with the agents-side list
 - An archived skill slips back in because no one gated it
 
-Skillcaddy fixes this with one AISkills directory as the source of truth and per-project symlinks as the delivery mechanism.
+Skillcaddy fixes this with one AISkills directory as the source of truth and explicit project/global symlink scopes as the delivery mechanism.
 
 - **One source of truth** — `~/AISkills/` aggregates `official / github / personal / archived / skills`
 - **Zero project pollution** — enable by symlink into `.agents/skills/`; never copy
+- **Project or global scope** — project links stay local; global links go only to `~/.agents/skills/`
 - **Multi-Agent by default** — one symlink reaches Claude Code, Codex, OpenCode, Pi via their standard paths
 - **Independent enable / disable** — agents-side and Claude-Code-side are tracked separately
 - **Safe by default** — disable only removes the symlink; `archived/` requires explicit naming
@@ -59,9 +60,13 @@ skillcaddy -v                      # show the version
 skillcaddy -h                      # show help
 skillcaddy -u [projectPath]        # safely update registered Git skill sources
 skillcaddy -a [projectPath]        # report project state, advice, and recommendations
+skillcaddy enable <skill-id> --project <dir> [--alias <name>]
+skillcaddy enable <skill-id> --global [--alias <name>]
+skillcaddy disable <alias> --project <dir>
+skillcaddy disable <alias> --global
 ```
 
-`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires the current project path when invoked through the source-management API. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the central library for source and analysis operations; Web lifecycle commands use the clone that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
+`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the central library for source and analysis operations; Web lifecycle commands use the clone that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
 
 On platforms without a process-ownership probe, Web stop/restart fail closed rather than guessing which process to terminate.
 
@@ -100,7 +105,9 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **View enabled skills** — Agents and Claude Code columns side by side
 - **Browse/search skill library** — Keyword search, source filter, library drill-down
 - **Enable skill** — Creates symlink in `.agents/skills/` and auto-syncs Claude Code
+- **Enable globally** — Adds an explicit shared link under `~/.agents/skills/` without requiring a project
 - **Clear enabled skill** — Removes project symlink only; source stays safe
+- **Manage global skills** — Option 13 inspects, enables, and safely removes links owned by this central library under `~/.agents/skills/`
 - **Sync Claude Code** — One-click sync `.claude/skills/` with `.agents/skills/`
 - **Edit metadata** — Inline note, tags, auto-enable toggle per skill
 - **View diagnostics** — Advice on duplicates, broken links, source drift
@@ -114,7 +121,7 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 
 Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
-Menu navigation uses number keys (1-12) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
+Menu navigation uses number keys (1-13) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
@@ -158,9 +165,9 @@ The apply command writes equivalent sidecar metadata and retains the legacy file
 
 ## Collection setup lifecycle
 
-Some collections require a one-time, per-project setup after their skills are enabled. Skillcaddy keeps these contracts outside third-party clones under `collection-metadata/<source>/<collection>.json`. `/api/state` reports each configured collection as `missing`, `partial`, `ready`, or `invalid`.
+Some collections require a one-time, per-project setup after their skills are enabled. Skillcaddy keeps these contracts outside third-party clones under `collection-metadata/<source>/<collection>.json`. `/api/state` reports each configured collection as `missing`, `partial`, `ready`, or `invalid`. Global enablement never runs or requests project setup.
 
-Library-level enablement uses `POST /api/enable-plan` to include the declared setup skill when needed and `POST /api/enable-collection` to apply the shared plan. One lifecycle now classifies every candidate as enabled, unchanged, skipped, or failed and refreshes setup guidance for both Web and TUI. Enabling links remains allowed, but an incomplete collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
+Library-level enablement uses an explicit `scope` (`project` or `global`) with `POST /api/enable-plan` and `POST /api/enable-collection` to apply the shared plan. Project scope includes declared setup guidance; global scope only creates `~/.agents/skills` links. One lifecycle classifies every candidate as enabled, unchanged, skipped, or failed. Enabling links remains allowed, but an incomplete project collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
 
 ## Platform compatibility
 
@@ -240,6 +247,7 @@ To make Skillcaddy work out of the box on Windows, the following strategies will
 **Core design**:
 - `.agents/skills` is the cross-Agent standard path; every Agent recognizes it.
 - `.claude/skills` is Claude-Code-specific, but uses secondary symlinks pointing back into `.agents/skills`.
+- Skillcaddy's global scope manages only `~/.agents/skills/`; the global Claude directory is scanned by agents, not written by this manager.
 - Enable once, share across multiple Agents; disable only removes the symlink, source files stay safe.
 
 ## Directory layout
@@ -279,11 +287,11 @@ npm run source -- add https://example.com/SKILL.md --name example --yes
 
 # Replace one registered source; Archive/Local updates require a new input,
 # while Git/Remote file updates may reuse their registered origin
-npm run source -- update <source-id> [input]
-npm run source -- update <source-id> [input] --allow-breaking --yes [--project /path/to/project]
+npm run source -- update <source-id> [input] --project /path/to/project
+npm run source -- update <source-id> [input] --allow-breaking --yes --project /path/to/project
 
 # Update all registered Git sources through the same safety path
-npm run source -- update-git [--project /path/to/project]
+npm run source -- update-git --project /path/to/project
 # Show the affected skill paths in the update summary
 npm run source -- update-git --verbose --project /path/to/project
 ```
@@ -324,15 +332,16 @@ On startup the manager scans every source directory (`official / github / person
 
 ## Updating Git sources
 
-Update every registered Git source through the unified fast-forward-only safety path. Dirty working trees are skipped, and breaking updates that affect a known current-project link are blocked:
+Update every registered Git source through the unified fast-forward-only safety path. Dirty working trees are skipped, and breaking updates that affect a known project or global link are blocked:
 
 ```bash
 npm run source -- update-git --project /path/to/project
 ```
 
-When the command is run from the central library clone, pass `--project` (or set
-`SKILLCADDY_PROJECT`) so breaking updates are checked against the intended
-project's `.agents/skills/` links.
+`--project` is required so project links are checked; global `~/.agents/skills/`
+links are always scanned as well. A breaking update reports project and global
+links separately. `--allow-breaking` authorizes the source replacement but
+leaves affected links in place, where they may become broken.
 
 Successful Git updates print a temporary summary containing the commit range and
 the number of added, edited, and deleted skills. Use `--verbose` to list those
@@ -373,16 +382,20 @@ Lets an Agent (especially Codex) know how to use Skillcaddy itself correctly:
 - Health check (broken links, alias conflicts, archived mis-enabled)
 - Detect conflicts and require user confirmation
 
-**Safety rules**: only operate on project-side `.agents/skills` symlinks; never delete central source files; never touch `archived/` unless explicitly named; always produce a dry-run summary before any state change.
+**Safety rules**: operate only on explicit project or global `.agents/skills` scopes; never delete central source files; never take over ordinary or foreign global entries; never touch `archived/` unless explicitly named; always produce a dry-run summary before any state change.
 
 **Invocation**: `agents/openai.yaml` sets `allow_implicit_invocation: true`, so the Agent auto-loads it when seeing a relevant request.
 
 ## Enable / Disable
 
-**Enable**: creates a symlink under the project's `.agents/skills/` pointing back into the central library.
+**Enable**: creates a symlink in the selected scope pointing back into the central library. Project scope also best-effort syncs Claude Code; global scope writes only `~/.agents/skills/`.
 
 ```text
 <project>/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>
+```
+
+```text
+~/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>
 ```
 
 **Sync Claude**: creates a `.claude/skills/` entry point for Claude Code, where each skill symlinks into `.agents/skills/`.
@@ -391,11 +404,12 @@ Lets an Agent (especially Codex) know how to use Skillcaddy itself correctly:
 <project>/.claude/skills/<alias> -> ../../.agents/skills/<alias>
 ```
 
-**Disable**: removes the symlink. The source file is left untouched.
+**Disable**: removes the selected-scope symlink. The source file is left untouched. Global cleanup removes only links whose target is proven to belong to the current Skillcaddy library; foreign links and ordinary directories remain read-only.
 
 **Why two layers of symlinks?**
 - `.agents/skills` is the Agent Skills standard; Codex / OpenCode / Pi all recognize it.
 - `.claude/skills` lets Claude Code use them too, with independent enable/disable.
+- Global enablement is Agents-only by design; it never writes `~/.claude/skills`.
 - Enable once, share across Agents; disable doesn't touch the source files — safe and reversible.
 
 ## Recommendation System

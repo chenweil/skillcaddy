@@ -104,6 +104,19 @@ test('source CLI returns the unresolved-identity exit category for incomplete mi
   assert.match(output.stdout(), /\[unresolved\] personal\/escaped: unsafe-path/);
 });
 
+test('source update CLI requires an explicit current project path', async () => {
+  const output = captureOutput();
+  assert.equal(
+    await runSourceCli({
+      argv: ['update-git'],
+      rootDir: await makeTempDir('source-cli-project-required-root-'),
+      ...output.streams
+    }),
+    2
+  );
+  assert.match(output.stderr(), /explicit --project path/);
+});
+
 test('source CLI prints an add plan and keeps it read-only when confirmation is declined', async () => {
   const root = await makeTempDir('source-cli-add-preview-root-');
   const input = await makeTempDir('source-cli-add-preview-input-');
@@ -193,6 +206,7 @@ test('source CLI returns the collision exit category without overwriting', async
 
 test('source CLI replaces a registered local source through update', async () => {
   const root = await makeTempDir('source-cli-update-root-');
+  const project = await makeTempDir('source-cli-update-project-');
   const original = path.join(await makeTempDir('source-cli-update-original-'), 'bundle');
   const replacement = path.join(await makeTempDir('source-cli-update-replacement-'), 'bundle-v2');
   await mkdir(path.join(original, 'skills', 'old'), { recursive: true });
@@ -217,7 +231,9 @@ test('source CLI replaces a registered local source through update', async () =>
         'personal/managed',
         replacement,
         '--allow-breaking',
-        '--yes'
+        '--yes',
+        '--project',
+        project
       ],
       rootDir: root,
       ...output.streams

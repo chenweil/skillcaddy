@@ -46,7 +46,7 @@ When multiple results remain, show their full IDs, paths, and descriptions for u
 | `collection-setup-recommended` | Enabled skills would benefit from optional setup | Surface without blocking activation |
 | `collection-setup-invalid` | The tracked setup contract is invalid | Report the contract path and error; never guess or execute commands |
 
-If the API is unavailable, inspect `<project>/.agents/skills`, `<project>/.claude/skills`, `~/.agents/skills`, and `~/.claude/skills`, then compare aliases and link targets.
+If the API is unavailable, inspect `<project>/.agents/skills`, `<project>/.claude/skills`, and `~/.agents/skills`, then compare aliases and link targets. `~/.claude/skills` is an external Agent directory and is not a Skillcaddy global write target.
 
 ## Source Acquisition and Enablement
 
@@ -68,17 +68,17 @@ npm run source -- add <input> --yes
 
 Inputs may be a hosted Git URL, GitHub tree URL, public HTTP(S) ZIP URL, stable direct HTTP(S) `/SKILL.md` URL, local ZIP, or local directory. A Remote file source requires `--name`, installs as `official/<name>/SKILL.md`, and does not accept `--namespace`. `add` is idempotent only for identical registered content. If identity or destination collision is reported, stop; use `--name` or `--namespace` where supported for a distinct new source, or select an existing registered source explicitly for update.
 
-For a registered source, preview and apply:
+For a registered source, preview and apply. The source update CLI requires an explicit `--project`; it also scans global `~/.agents/skills` links automatically:
 
 ```bash
-npm run source -- update <source-id> [input] [--project <project-dir>]
-npm run source -- update <source-id> [input] --yes [--project <project-dir>]
+npm run source -- update <source-id> [input] --project <project-dir>
+npm run source -- update <source-id> [input] --yes --project <project-dir>
 ```
 
-Archive and Local replacement require a new input. Git and Remote file updates reuse the registered origin when input is omitted. Supplying a new stable direct `/SKILL.md` URL for a Remote file update migrates its registered origin. When the plan reports an affected current-project link, stop unless the user explicitly authorizes:
+Archive and Local replacement require a new input. Git and Remote file updates reuse the registered origin when input is omitted. Supplying a new stable direct `/SKILL.md` URL for a Remote file update migrates its registered origin. Plans and errors report `affectedProjectLinks` and `affectedGlobalLinks` separately. When either list is non-empty, stop unless the user explicitly authorizes:
 
 ```bash
-npm run source -- update <source-id> [input] --allow-breaking --yes [--project <project-dir>]
+npm run source -- update <source-id> [input] --allow-breaking --yes --project <project-dir>
 ```
 
 Acquisition-only requests complete after a source-registry inspection and fresh state scan prove the source is present; do not create project links.
@@ -91,8 +91,8 @@ For an explicit combined request:
 2. rescan `GET /api/state`;
 3. restrict matching to skill paths reported by the acquired source;
 4. if more than one remains, show full skill IDs and wait for selection;
-5. run the existing enable preflight and enable only the selected skill;
-6. rescan and verify both source presence and the one requested project link.
+5. run the existing enable preflight with the requested scope and enable only the selected skill;
+6. rescan and verify both source presence and the one requested project or global link.
 
 Unknown setup readiness creates neither a reminder nor a gate. Surface a declared setup reminder after enablement without blocking the link. Never infer credentials or publisher setup from prose; the acquired skill's runtime preflight remains responsible for requirements such as IMA credentials.
 
@@ -117,20 +117,39 @@ Complete when every returned item can be identified without relying on a bare fo
 
 ## Enable
 
+Every enablement request has an explicit scope:
+
+| Scope | Link target | Project path | Claude sync |
+|---|---|---|---|
+| `project` | `<project>/.agents/skills/<alias>` | Required | Best-effort to `<project>/.claude/skills/` |
+| `global` | `~/.agents/skills/<alias>` | Not required | Never writes `~/.claude/skills/` |
+
 ### Single skill
 
 1. Resolve one source skill and an alias; default the alias to the folder name.
 2. Skip `archived/` unless explicitly selected.
-3. Run the mutation gate against project/global entries and advice.
-4. Prefer:
+3. Select `project` or `global` explicitly. A project alias may coexist with a global alias of the same name; it does not block the other scope.
+4. Run the mutation gate against the selected scope and advice.
+5. Prefer the shared API or CLI:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:4173/api/enable \
   -H 'Content-Type: application/json' \
-  -d '{"projectPath":"/path/to/project","skillPath":"/path/to/skill","alias":"skill-name"}'
+  -d '{"scope":"project","projectPath":"/path/to/project","skillPath":"/path/to/skill","alias":"skill-name"}'
+
+skillcaddy enable <skill-id> --project /path/to/project [--alias <name>]
+skillcaddy enable <skill-id> --global [--alias <name>]
 ```
 
-5. Verify `.agents/skills/<alias>` targets the selected source and Claude compatibility matches repository behavior.
+For global enablement, omit `projectPath`; the only managed destination is `~/.agents/skills/<alias>`:
+
+```bash
+curl -sS -X POST http://127.0.0.1:4173/api/enable \
+  -H 'Content-Type: application/json' \
+  -d '{"scope":"global","skillPath":"/path/to/skill","alias":"skill-name"}'
+```
+
+Verify the selected `.agents/skills/<alias>` target. Project scope may report Claude sync; global scope must report no Claude write.
 
 Complete when the rescan reports the expected alias and target, with remaining advice stated.
 
@@ -138,15 +157,15 @@ Complete when the rescan reports the expected alias and target, with remaining a
 
 Expand the collection and request the shared enable plan. Exclude archived skills and skip `autoEnable: false`, except for a setup skill added by the plan because affected skills require it. Before mutation, show every pending setup with its status, missing artifacts, and setup skill.
 
-After confirmation, execute the shared Collection enablement lifecycle:
+After confirmation, execute the shared Collection enablement lifecycle with an explicit scope:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:4173/api/enable-collection \
   -H 'Content-Type: application/json' \
-  -d '{"projectPath":"/path/to/project","skillIds":["source/collection/skill-a","source/collection/skill-b"]}'
+  -d '{"scope":"project","projectPath":"/path/to/project","skillIds":["source/collection/skill-a","source/collection/skill-b"]}'
 ```
 
-The lifecycle owns project-link application, classifies every candidate as enabled, unchanged, skipped, or failed, and refreshes setup reminders after execution. Do not reproduce that loop in an adapter or Agent workflow.
+For a global collection, use `{"scope":"global",...}` and omit `projectPath`. The lifecycle owns link application, classifies every candidate as enabled, unchanged, skipped, or failed, and refreshes setup reminders only for project scope. Do not reproduce that loop in an adapter or Agent workflow.
 
 For interactive setup, offer:
 
@@ -175,14 +194,19 @@ Setup contracts are declarative and may reference only a setup skill, affected s
 
 ## Disable
 
-Resolve enabled aliases from project state. Remove only managed project symlinks and matching Claude compatibility links. A non-symlink or external target goes back through the mutation gate.
+Resolve enabled aliases from the selected scope. Remove only managed project symlinks and matching Claude compatibility links. For global scope, remove only a symlink whose target is provably inside the current Skillcaddy source folders; ordinary entries, foreign links, and ambiguous ownership are read-only. A non-symlink or external target goes back through the mutation gate.
 
 Prefer:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:4173/api/disable \
   -H 'Content-Type: application/json' \
-  -d '{"projectPath":"/path/to/project","alias":"skill-name"}'
+  -d '{"scope":"project","projectPath":"/path/to/project","alias":"skill-name"}'
+```
+
+```bash
+skillcaddy disable <alias> --project /path/to/project
+skillcaddy disable <alias> --global
 ```
 
 For a collection, map enabled targets back to source paths and select only aliases owned by that collection.

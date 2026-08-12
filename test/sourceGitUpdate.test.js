@@ -22,6 +22,7 @@ import {
   planUpdateSource,
   updateGitSources
 } from '../lib/sourceManager.js';
+import { enableSkill } from '../lib/skillStore.js';
 import { publishStagedSourceRecord } from '../lib/sourceRegistry.js';
 import { runSourceCli } from '../scripts/source.js';
 import { makeTempDir } from './testHelpers.js';
@@ -180,6 +181,48 @@ test('blocks Git registry repair when manual pull would remove a current-project
     assert.equal(
       (await inspectSource({ rootDir: root }, fixture.sourceId)).origin.commit,
       fixture.nextCommit
+    );
+  });
+});
+
+test('blocks Git registry repair when manual pull would remove a global link', async () => {
+  const fixture = await createGitFixture('repair-global-breaking');
+  const root = await makeTempDir('source-git-repair-global-breaking-root-');
+  const project = await makeTempDir('source-git-repair-global-breaking-project-');
+  const globalDir = await makeTempDir('source-git-repair-global-breaking-dir-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    await enableSkill(root, {
+      scope: 'global',
+      globalDir,
+      skillPath: path.join(checkout, 'skills', 'review'),
+      alias: 'global-review'
+    });
+    await removeSkillAndPush(fixture, 'review', 'replacement');
+    await execFile('git', ['-C', checkout, 'pull', '--ff-only']);
+
+    await assert.rejects(
+      () => planRepairSource(
+        { rootDir: root, projectPath: project, globalDir },
+        { sourceId: fixture.sourceId }
+      ),
+      (error) => error.category === 'breaking-replacement' &&
+        error.affectedGlobalLinks[0].alias === 'global-review'
+    );
+
+    const plan = await planBreakingRepairSource(
+      { rootDir: root, projectPath: project, globalDir },
+      { sourceId: fixture.sourceId }
+    );
+    assert.deepEqual(plan.affectedProjectLinks, []);
+    assert.deepEqual(plan.affectedGlobalLinks, [
+      { alias: 'global-review', skillPath: 'skills/review' }
+    ]);
+    assert.equal(
+      (await applyRepairSource({ rootDir: root, projectPath: project, globalDir }, plan)).status,
+      'repaired'
     );
   });
 });

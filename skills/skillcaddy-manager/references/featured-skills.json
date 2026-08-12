@@ -1,8 +1,17 @@
 {
-  "version": "0.23.0",
+  "version": "0.24.0",
   "lastUpdated": "2026-08-12",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
+    {
+      "version": "0.24.0",
+      "date": "2026-08-12",
+      "changes": [
+        "同步至 Skillcaddy v0.24.0",
+        "新增项目与全局 skill 启用作用域，统一支持 API、CLI、TUI 与 Web 管理",
+        "全局只管理 ~/.agents/skills，并增加全局链接冲突、来源更新和安全清理保护"
+      ]
+    },
     {
       "version": "0.23.0",
       "date": "2026-08-12",
