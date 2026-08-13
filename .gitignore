@@ -32,3 +32,6 @@ archived/*
 
 # agent
 .pi/
+
+# impeccable 工具本地产物
+.impeccable/
