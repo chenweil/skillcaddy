@@ -25,6 +25,8 @@ const state = {
 };
 
 const elements = {
+  hero: document.querySelector('.hero'),
+  controlsForm: document.querySelector('#controlsForm'),
   projectPath: document.querySelector('#projectPath'),
   addProject: document.querySelector('#addProject'),
   projectHistory: document.querySelector('#projectHistory'),
@@ -60,21 +62,58 @@ const elements = {
 let lastFilterSignature = '';
 let filterExpandedGroups = new Set();
 let isRestoringFocus = false;
+let messageTimer = null;
+let searchDebounceTimer = null;
 
-elements.loadProject.addEventListener('click', () => loadState({ feedback: true }));
+// 项目路径框在 form 里，Enter 走隐式提交；点「读取项目」也是同一条 submit 路径。
+// 读取进行中按钮处于忙碌态，此时的重复提交（如连按 Enter）直接忽略。
+elements.controlsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (elements.loadProject.disabled) return;
+  loadState({ feedback: true });
+});
 elements.addProject.addEventListener('click', addCurrentProject);
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
 elements.sourceFilter.addEventListener('change', render);
+// 每个按键全量重建列表 DOM 在几百个 skill 时会卡顿，防抖到停顿后再渲染。
 elements.skillSearch.addEventListener('input', (event) => {
-  state.searchQuery = event.target.value.trim().toLowerCase();
-  render();
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    state.searchQuery = event.target.value.trim().toLowerCase();
+    render();
+  }, 120);
 });
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
 elements.disableGlobal.addEventListener('click', () => disableAgents('global'));
 
+// 只做两个高频快捷键：/ 聚焦搜索，Esc 逐级清除（先清搜索词，再清全部筛选）。
+// 输入控件内不劫持按键，避免与正常输入冲突。
+document.addEventListener('keydown', (event) => {
+  const isEditable = Boolean(event.target.closest?.('input, textarea, select, [contenteditable="true"]'));
+
+  if (event.key === '/' && !isEditable && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    event.preventDefault();
+    elements.skillSearch.focus();
+    return;
+  }
+
+  if (event.key !== 'Escape') return;
+
+  if (event.target === elements.skillSearch && elements.skillSearch.value) {
+    clearTimeout(searchDebounceTimer);
+    elements.skillSearch.value = '';
+    state.searchQuery = '';
+    render();
+    return;
+  }
+
+  if (!isEditable && hasActiveFilter()) clearFilters();
+});
+
 initializeProjectPathFromUrl();
+initializeHeroState();
 await Promise.all([loadState(), loadVersion()]);
 
 async function loadState(options = {}) {
@@ -194,6 +233,15 @@ function initializeProjectPathFromUrl() {
   if (projectPath) elements.projectPath.value = projectPath;
 }
 
+// loadState 会把服务端回退的 rootDir 写进历史，因此不能用会话中的状态判断
+// 「首次访客」，只能看启动瞬间：有历史或 URL 带项目的是老用户，hero 坍缩成
+// 状态带；两者皆无的首次访客保留完整 hero 一整个会话。
+function initializeHeroState() {
+  const hasProjectParam = new URLSearchParams(window.location.search).has('projectPath');
+  const isReturningUser = state.projectHistory.length > 0 || hasProjectParam;
+  elements.hero.classList.toggle('is-compact', isReturningUser);
+}
+
 function syncProjectPathToUrl(projectPath) {
   const url = new URL(window.location.href);
   url.searchParams.set('projectPath', projectPath);
@@ -212,11 +260,16 @@ function renderAdvice() {
         <strong></strong>
         <p></p>
       </div>
-      <span></span>
+      <div class="advice-aside">
+        <span class="advice-severity"></span>
+        <span class="advice-type"></span>
+      </div>
     `;
     item.querySelector('strong').textContent = advice.title;
     item.querySelector('p').textContent = advice.detail;
-    item.querySelector('span').textContent = advice.type;
+    // 严重级别必须有文字表达，不能只靠颜色区分。
+    item.querySelector('.advice-severity').textContent = advice.severity === 'warning' ? '注意' : '提示';
+    item.querySelector('.advice-type').textContent = advice.type;
     const setupAction = (advice.actions || []).find((action) => action.type === 'run-setup-skill');
     if (setupAction) {
       const button = document.createElement('button');
@@ -265,13 +318,15 @@ function renderSkillList() {
           </h3>
           <div class="group-actions">
             <div class="scope-action-group project-scope-actions">
+              <span class="scope-label">项目</span>
               <button class="icon-button group-enable-all" type="button">+</button>
               <button class="icon-button group-disable-all danger" type="button" title="清空该库已启用的 skill" aria-label="清空该库已启用的 skill">×</button>
             </div>
             <span class="scope-divider" aria-hidden="true"></span>
             <div class="scope-action-group global-scope-actions">
-              <button class="icon-button group-enable-global" type="button" title="批量启用到全局">G+</button>
-              <button class="icon-button group-disable-global danger" type="button" title="清空该库的全局 skill" aria-label="清空该库的全局 skill">G×</button>
+              <span class="scope-label">全局</span>
+              <button class="icon-button group-enable-global" type="button" title="批量启用到全局">+</button>
+              <button class="icon-button group-disable-global danger" type="button" title="清空该库的全局 skill" aria-label="清空该库的全局 skill">×</button>
             </div>
           </div>
           <p></p>
@@ -310,20 +365,20 @@ function renderSkillList() {
     enableAllButton.title = enableAllLabel;
     enableAllButton.setAttribute('aria-label', enableAllLabel);
     if (enabledSkills.length === group.skills.length) enableAllButton.classList.add('is-complete');
-    enableAllButton.addEventListener('click', () => enableGroup(group));
+    enableAllButton.addEventListener('click', () => enableGroup(group, 'project', enableAllButton));
     globalEnableButton.disabled = globalPendingSkills.length === 0;
     globalEnableButton.dataset.focusKey = `group-enable-global:${group.key}`;
     globalEnableButton.setAttribute('aria-label', '批量启用该库全部 skill 到全局');
     if (globalEnabledSkills.length === group.skills.length) globalEnableButton.classList.add('is-complete');
-    globalEnableButton.addEventListener('click', () => enableGroup(group, 'global'));
+    globalEnableButton.addEventListener('click', () => enableGroup(group, 'global', globalEnableButton));
     const disableAllButton = groupElement.querySelector('.group-disable-all');
     disableAllButton.disabled = enabledSkills.length === 0;
     disableAllButton.dataset.focusKey = `group-disable:${group.key}`;
-    disableAllButton.addEventListener('click', () => disableGroup(group));
+    disableAllButton.addEventListener('click', () => disableGroup(group, 'project', disableAllButton));
     const globalDisableButton = groupElement.querySelector('.group-disable-global');
     globalDisableButton.disabled = removableGlobalSkills.length === 0;
     globalDisableButton.dataset.focusKey = `group-disable-global:${group.key}`;
-    globalDisableButton.addEventListener('click', () => disableGroup(group, 'global'));
+    globalDisableButton.addEventListener('click', () => disableGroup(group, 'global', globalDisableButton));
 
     const items = groupElement.querySelector('.group-items');
     group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets, new Set(globalByTarget.keys()))));
@@ -369,6 +424,7 @@ function filteredEmpty() {
 }
 
 function clearFilters() {
+  clearTimeout(searchDebounceTimer);
   elements.sourceFilter.value = '';
   elements.skillSearch.value = '';
   state.searchQuery = '';
@@ -460,13 +516,17 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
     button.type = 'button';
     button.dataset.focusKey = `skill-enable:${skill.id}`;
     button.textContent = isEnabled ? '已启用' : '启用 agents skill';
+    // 无理由的灰按钮会让用户反复尝试后放弃：禁用必须给出原因和解法。
+    const archivedReason = 'archived 来源不参与启用；如需使用，请先把 skill 目录移回 official、github 或 personal';
     if (isEnabled) {
       // 已启用是状态而非禁用：用 aria-disabled 保留可聚焦性，
       // 键盘和读屏用户才能停在这里听到「已启用」。
       button.classList.add('is-enabled');
       button.setAttribute('aria-disabled', 'true');
-    } else {
-      button.disabled = skill.source === 'archived';
+    } else if (skill.source === 'archived') {
+      button.disabled = true;
+      button.title = archivedReason;
+      button.setAttribute('aria-label', `启用 agents skill（不可用）：${archivedReason}`);
     }
     button.addEventListener('click', () => {
       if (button.getAttribute('aria-disabled') === 'true') return;
@@ -481,8 +541,10 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
     if (isGloballyEnabled) {
       globalButton.classList.add('is-enabled');
       globalButton.setAttribute('aria-disabled', 'true');
-    } else {
-      globalButton.disabled = skill.source === 'archived';
+    } else if (skill.source === 'archived') {
+      globalButton.disabled = true;
+      globalButton.title = archivedReason;
+      globalButton.setAttribute('aria-label', `启用到全局（不可用）：${archivedReason}`);
     }
     globalButton.addEventListener('click', () => {
       if (globalButton.getAttribute('aria-disabled') === 'true') return;
@@ -643,7 +705,7 @@ async function enable(skill, scope = 'project') {
   await loadState({ button: null });
 }
 
-async function enableGroup(group, scope = 'project') {
+async function enableGroup(group, scope = 'project', button = null) {
   const plan = await api('/api/enable-plan', {
     method: 'POST',
     body: {
@@ -663,34 +725,39 @@ async function enableGroup(group, scope = 'project') {
 
   if (scope === 'project' && pendingSetups.length > 0 && !confirmSetupPreflight(skills.map((skill) => skill.id))) return;
 
-  const result = await api('/api/enable-collection', {
-    method: 'POST',
-    body: {
-      scope,
-      ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
-      skillIds: group.skills.map((skill) => skill.id)
-    }
-  });
+  // 圆形图标按钮容不下多字文案，忙碌态只用省略号，结果交给 toast。
+  const run = async () => {
+    const result = await api('/api/enable-collection', {
+      method: 'POST',
+      body: {
+        scope,
+        ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+        skillIds: group.skills.map((skill) => skill.id)
+      }
+    });
 
-  const parts = [`已处理 ${group.collection}`];
-  if (result.counts.enabled) parts.push(`启用 ${result.counts.enabled}`);
-  if (result.counts.unchanged) parts.push(`已存在 ${result.counts.unchanged}`);
-  if (result.counts.skipped) parts.push(`跳过 ${result.counts.skipped}`);
-  if (result.counts.failed) {
-    const failedAliases = (result.outcomes || [])
-      .filter((outcome) => outcome.status === 'failed')
-      .map((outcome) => outcome.alias)
-      .filter(Boolean);
-    parts.push(failedAliases.length
-      ? `以下 ${failedAliases.length} 个未能启用，可单独重试：${failedAliases.join('、')}`
-      : `失败 ${result.counts.failed}`);
-  }
-  await loadState({ button: null });
-  const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
-  const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
-  if (scope === 'project' && remainingSetups.length > 0) parts.push(`待配置：${remainingSetups.map((setup) => setup.setupSkillName).join('、')}`);
-  if (!result.refresh.ok) parts.push(`配置提醒刷新失败：${result.refresh.error}`);
-  setMessage(parts.join('，'), result.counts.failed > 0 || !result.refresh.ok);
+    const parts = [`已处理 ${group.collection}`];
+    if (result.counts.enabled) parts.push(`启用 ${result.counts.enabled}`);
+    if (result.counts.unchanged) parts.push(`已存在 ${result.counts.unchanged}`);
+    if (result.counts.skipped) parts.push(`跳过 ${result.counts.skipped}`);
+    if (result.counts.failed) {
+      const failedAliases = (result.outcomes || [])
+        .filter((outcome) => outcome.status === 'failed')
+        .map((outcome) => outcome.alias)
+        .filter(Boolean);
+      parts.push(failedAliases.length
+        ? `以下 ${failedAliases.length} 个未能启用，可单独重试：${failedAliases.join('、')}`
+        : `失败 ${result.counts.failed}`);
+    }
+    await loadState({ button: null });
+    const refreshedSetups = result.refresh.ok ? result.setups : pendingSetups;
+    const remainingSetups = refreshedSetups.filter((setup) => setup.status !== 'ready');
+    if (scope === 'project' && remainingSetups.length > 0) parts.push(`待配置：${remainingSetups.map((setup) => setup.setupSkillName).join('、')}`);
+    if (!result.refresh.ok) parts.push(`配置提醒刷新失败：${result.refresh.error}`);
+    setMessage(parts.join('，'), result.counts.failed > 0 || !result.refresh.ok);
+  };
+
+  button ? await withButtonState(button, '…', run) : await run();
 }
 
 function findCollectionSetup(source, collection) {
@@ -737,7 +804,21 @@ function canBulkEnableSkill(skill, enabledTargets) {
   return skill.source !== 'archived' && skill.autoEnable !== false && !enabledTargets.has(skill.path);
 }
 
-async function disableGroup(group, scope = 'project') {
+// 串行 2N 次往返会让 20 个 skill 的清空静止十几秒；全并发又可能瞬间打满本地
+// 服务。固定小并发消费队列，调用方在 worker 里自行捕获错误并驱动进度提示。
+const BULK_CONCURRENCY = 4;
+
+async function mapWithConcurrency(items, limit, worker) {
+  const queue = [...items];
+  const runners = Array.from({ length: Math.min(limit, queue.length) }, async () => {
+    while (queue.length > 0) {
+      await worker(queue.shift());
+    }
+  });
+  await Promise.all(runners);
+}
+
+async function disableGroup(group, scope = 'project', button = null) {
   const enabledItems = scope === 'global' ? state.global : state.enabled;
   const enabledByTarget = new Map(enabledItems.filter((item) => (item.canDisable ?? item.isSymlink) && item.targetPath).map((item) => [item.targetPath, item]));
   const aliases = group.skills
@@ -751,43 +832,51 @@ async function disableGroup(group, scope = 'project') {
 
   if (!confirmBulkClear(`清空 ${group.collection} 的 ${aliases.length} 个 skill？`, aliases.length)) return;
 
-  let removed = 0;
-  let claudeRemoved = 0;
-  let unchanged = 0;
-  const failed = [];
+  const run = async () => {
+    let removed = 0;
+    let claudeRemoved = 0;
+    let unchanged = 0;
+    let settled = 0;
+    const failed = [];
 
-  for (const alias of aliases) {
-    try {
-      const result = await api('/api/disable', {
-        method: 'POST',
-        body: {
-          scope,
-          ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
-          alias
-        }
-      });
-      result.removed ? removed += 1 : unchanged += 1;
-
-      if (scope === 'project') {
-        const claudeResult = await api('/api/unlink-claude-skill', {
+    await mapWithConcurrency(aliases, BULK_CONCURRENCY, async (alias) => {
+      try {
+        const result = await api('/api/disable', {
           method: 'POST',
-          body: { projectPath: elements.projectPath.value, alias }
+          body: {
+            scope,
+            ...(scope === 'project' ? { projectPath: elements.projectPath.value } : {}),
+            alias
+          }
         });
-        if (claudeResult.removed) claudeRemoved += 1;
-      }
-    } catch {
-      failed.push(alias);
-    }
-  }
+        result.removed ? removed += 1 : unchanged += 1;
 
-  const parts = [`已清空${scope === 'global' ? '全局 ' : ' '}${group.collection}`];
-  if (removed) parts.push(`${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`);
-  if (claudeRemoved) parts.push(`${claudeRemoved} 个 Claude Code skill`);
-  if (unchanged) parts.push(`已不存在 ${unchanged}`);
-  // 只报失败个数的话，用户既不知道是哪些，也无从判断该重试还是手工处理。
-  if (failed.length) parts.push(`以下 ${failed.length} 个未能清空，可单独重试：${failed.join('、')}`);
-  setMessage(parts.join('，'), failed.length > 0);
-  await loadState({ button: null });
+        if (scope === 'project') {
+          const claudeResult = await api('/api/unlink-claude-skill', {
+            method: 'POST',
+            body: { projectPath: elements.projectPath.value, alias }
+          });
+          if (claudeResult.removed) claudeRemoved += 1;
+        }
+      } catch {
+        failed.push(alias);
+      } finally {
+        settled += 1;
+        setMessage(`清空 ${group.collection} 中：${settled}/${aliases.length}`);
+      }
+    });
+
+    const parts = [`已清空${scope === 'global' ? '全局 ' : ' '}${group.collection}`];
+    if (removed) parts.push(`${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`);
+    if (claudeRemoved) parts.push(`${claudeRemoved} 个 Claude Code skill`);
+    if (unchanged) parts.push(`已不存在 ${unchanged}`);
+    // 只报失败个数的话，用户既不知道是哪些，也无从判断该重试还是手工处理。
+    if (failed.length) parts.push(`以下 ${failed.length} 个未能清空，可单独重试：${failed.join('、')}`);
+    setMessage(parts.join('，'), failed.length > 0);
+    await loadState({ button: null });
+  };
+
+  button ? await withButtonState(button, '…', run) : await run();
 }
 
 // 批量清空会一次性删掉多个软链接，且没有撤销入口，因此先复述后果再执行。
@@ -866,7 +955,7 @@ async function disableAgents(scope = 'project') {
 }
 
 async function syncClaude() {
-  await withButtonState(elements.syncClaude, '…', async () => {
+  await withButtonState(elements.syncClaude, '同步中', async () => {
     const result = await api('/api/sync-claude', {
       method: 'POST',
       body: { projectPath: elements.projectPath.value }
@@ -937,11 +1026,19 @@ async function loadVersion() {
 
 // 成功走 role="status"，失败走 role="alert"：失败此前和成功共用礼貌区域，
 // 可能被排在队列后面才读到。写入一侧必须清空另一侧，否则会读出陈旧内容。
+// toast 形态下成功确认读完即撤（按文案长度延时）；错误与失败清单需要用户
+// 处理，常驻到下一条消息覆盖为止。
 function setMessage(text, isError = false) {
   const target = isError ? elements.errorMessage : elements.message;
   const other = isError ? elements.message : elements.errorMessage;
   other.textContent = '';
   target.textContent = text;
+  clearTimeout(messageTimer);
+  if (!isError && text) {
+    messageTimer = setTimeout(() => {
+      elements.message.textContent = '';
+    }, Math.min(8000 + text.length * 50, 20000));
+  }
 }
 
 // DOM 全量重建会把焦点掉回 <body>：键盘用户每展开一个分组、启用一个 skill，

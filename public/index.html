@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Skillcaddy</title>
+    <title>SkillCaddy</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/enabled.css">
@@ -14,7 +14,7 @@
       <nav class="topbar" aria-label="主导航">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
-          <span>Skillcaddy</span>
+          <span>SkillCaddy</span>
         </div>
         <div class="topbar-actions">
           <span id="versionTag" class="version" aria-label="版本号"></span>
@@ -24,7 +24,6 @@
 
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Local Skill Library</p>
           <h1>把本地 skills 像产品资产一样管理。</h1>
           <p class="lede">集中整理 official、github、personal 与 archived 来源，再把需要的 skill 安全启用到当前项目和 Claude Code。</p>
         </div>
@@ -53,22 +52,21 @@
         </div>
       </section>
 
-      <section class="controls">
+      <form class="controls" id="controlsForm">
         <label>
           <span>目标项目路径</span>
-          <small class="field-hint">输入项目路径后点「添加项目」保存到下方历史</small>
+          <small class="field-hint">输入项目路径后点「添加项目」保存到下方历史，回车直接读取</small>
           <input id="projectPath" type="text" data-focus-key="project-path" spellcheck="false" placeholder="/Users/your-name/projects/my-app">
         </label>
-        <button id="addProject" class="secondary" type="button">添加项目</button>
-        <button id="loadProject" data-focus-key="load-project">读取项目</button>
+        <button id="addProject" class="secondary" type="button" title="仅把路径存入下方历史，不读取">添加项目</button>
+        <button id="loadProject" type="submit" data-focus-key="load-project" title="读取该项目的启用状态（回车同效）">读取项目</button>
         <div id="projectHistory" class="project-history" aria-label="历史项目"></div>
-      </section>
+      </form>
 
       <section class="workspace">
         <aside class="panel">
           <div class="panel-title">
             <div>
-              <p class="eyebrow">Enabled</p>
               <h2>已启用</h2>
             </div>
             <span>当前项目</span>
@@ -85,7 +83,7 @@
               <div class="column-title">
                 <span>Claude Code <span id="claudeCount" class="count">0</span></span>
                 <div class="actions">
-                  <button id="syncClaude" class="icon-button" data-focus-key="claude-sync" title="同步到 Claude Code" aria-label="同步到 Claude Code">+</button>
+                  <button id="syncClaude" data-focus-key="claude-sync" title="把项目已启用的 skill 同步到 Claude Code">同步</button>
                   <button id="unlinkClaude" class="icon-button danger" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code" aria-label="一键清空 Claude Code">×</button>
                 </div>
               </div>
@@ -104,7 +102,6 @@
         <section class="panel">
           <div class="panel-title">
             <div>
-              <p class="eyebrow">Library</p>
               <h2>Skill 原件库 <strong id="totalSkills" class="count">0</strong></h2>
             </div>
             <select id="sourceFilter" data-focus-key="source-filter" title="来源过滤">
@@ -118,7 +115,7 @@
           </div>
           <section id="adviceList" class="advice-list"></section>
           <div class="library-search">
-            <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索 skill 名称、描述或标签..." aria-label="搜索 skills">
+            <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索 skill 名称、描述或标签...（/ 聚焦，Esc 清除）" aria-label="搜索 skills" aria-keyshortcuts="/">
           </div>
           <nav id="tagTabs" class="tag-tabs" aria-label="Skill 标签过滤"></nav>
           <div id="skillList" class="list"></div>

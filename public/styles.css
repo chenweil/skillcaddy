@@ -1,34 +1,44 @@
 :root {
   color-scheme: light;
-  /* --primary 只用于非文本装饰：白字压在上面只有 3.28:1。 */
-  --primary: #cc785c;
-  /* 文本与按钮静息底：白字 5.06:1，canvas 上作文本 4.80:1。 */
-  --primary-strong: #a9583e;
-  /* hover/active：白字 6.57:1。 */
-  --primary-active: #8f4a34;
-  --primary-disabled: #e6dfd8;
-  --ink: #141413;
-  --body: #3d3d3a;
-  --body-strong: #252523;
-  --muted: #6c6a64;
-  --muted-soft: #6f6c66;
-  --hairline: #e6dfd8;
-  --hairline-soft: #ebe6df;
-  --canvas: #faf9f5;
-  --surface-soft: #f5f0e8;
-  --surface-card: #efe9de;
-  --surface-cream-strong: #e8e0d2;
-  --surface-dark: #181715;
-  --surface-dark-elevated: #252320;
-  --surface-dark-soft: #1f1e1b;
+  /* 从 public/skillcaddy_CN.png 与 public/skillcaddy_EN.png 的书包图标、字标取样。
+     主蓝负责品牌与行动，深海军蓝承载文字和工作台，暖橙/柔绿只做语义强调。 */
+  --brand-blue: #2f70fd;
+  --brand-blue-strong: #155df9;
+  --brand-blue-active: #0a4ffb;
+  --brand-navy: #08122c;
+  --brand-blue-wash: #eaf2ff;
+  --primary: var(--brand-blue);
+  /* 主按钮/正文蓝：白字 5.30:1，canvas 上作文本 5.06:1。 */
+  --primary-strong: var(--brand-blue-strong);
+  /* hover/active：白字 5.96:1。 */
+  --primary-active: var(--brand-blue-active);
+  --primary-disabled: var(--brand-blue-wash);
+  --ink: var(--brand-navy);
+  --body: #3e485c;
+  --body-strong: #12243d;
+  --muted: #5f687a;
+  --muted-soft: #65748a;
+  --hairline: #d2deed;
+  --hairline-soft: #e3edf9;
+  --canvas: #f7fafe;
+  --surface-soft: #eef5fd;
+  --surface-card: #e6f0fd;
+  --surface-dark: var(--brand-navy);
+  --surface-dark-elevated: #12243d;
+  --surface-dark-soft: #0a152b;
   --on-primary: #ffffff;
-  --on-dark: #faf9f5;
-  --on-dark-soft: #a09d96;
-  --accent-teal: #5db8a6;
-  --accent-amber: #e8a55a;
-  --success: #2f6f41;
-  --warning: #d4a017;
+  --on-dark: #f8fafd;
+  --on-dark-soft: #b6caea;
+  --accent-green: #94bbaa;
+  --accent-amber: #f18744;
+  --success: #2f805f;
+  /* warning 只在 advice 徽标上成对使用：暖色背景配深色文字。 */
+  --warning-surface: #fff0e4;
+  --warning-ink: #8a4a1f;
   --error: #c64545;
+  /* 深色 toast 上的错误文本：#c64545 压深底只有 ~2.5:1，需提亮到 8.7:1。 */
+  --error-on-dark: #f2a6a6;
+  --scroll-thumb: #a9bddb;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -39,6 +49,31 @@
 }
 
 * { box-sizing: border-box; }
+
+html {
+  scrollbar-color: var(--scroll-thumb) var(--canvas);
+  scrollbar-width: thin;
+}
+
+::selection {
+  background: #ccddff;
+  color: var(--ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--canvas);
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--canvas);
+  border-radius: 999px;
+  background: var(--scroll-thumb);
+}
 
 body {
   margin: 0;
@@ -53,6 +88,11 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+input,
+textarea {
+  caret-color: var(--primary-strong);
 }
 
 .shell {
@@ -100,7 +140,7 @@ textarea {
   width: 18px;
   height: 2px;
   border-radius: 999px;
-  background: var(--ink);
+  background: var(--brand-blue-strong);
   content: "";
   transform: translate(-50%, -50%);
 }
@@ -117,14 +157,6 @@ textarea {
 
 .hero-copy {
   max-width: 650px;
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: var(--primary-strong);
-  font: 500 12px/1.4 var(--sans);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
 }
 
 h1,
@@ -197,7 +229,7 @@ h3 {
 }
 
 .surface-header span:nth-child(2) { background: var(--accent-amber); }
-.surface-header span:nth-child(3) { background: var(--accent-teal); }
+.surface-header span:nth-child(3) { background: var(--accent-green); }
 .surface-header strong { margin-left: auto; font-weight: 400; }
 
 .surface-grid {
@@ -243,6 +275,62 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+/* 老用户（有项目历史或 URL 带 projectPath）不需要每天读一遍产品说服文案：
+   hero 坍缩成一条状态带，工作区回到首屏。完整 hero 只留给首次访客。 */
+.hero.is-compact {
+  display: block;
+  padding: 20px 0 24px;
+}
+
+.hero.is-compact .hero-copy {
+  display: none;
+}
+
+.hero.is-compact .product-surface {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+}
+
+.hero.is-compact .surface-header {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.hero.is-compact .surface-grid {
+  display: flex;
+  gap: 16px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.hero.is-compact .surface-grid div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+}
+
+.hero.is-compact .surface-grid strong {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.hero.is-compact .surface-path {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+}
+
 .advice-list {
   display: grid;
   gap: 8px;
@@ -263,20 +351,38 @@ h3 {
   color: var(--muted-soft);
 }
 
+/* 严重级别由文字徽标（提示/注意）承载，颜色只做辅助——
+   此前的 4px 侧边彩条是级别的唯一编码，也是最典型的 AI 生成 UI 图案。 */
 .advice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: start;
   border: 1px solid var(--hairline);
-  border-left: 4px solid var(--accent-teal);
   border-radius: var(--radius-md);
   background: var(--surface-soft);
   padding: 12px;
 }
 
-.advice.warning {
-  border-left-color: var(--warning);
+.advice-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.advice-severity {
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--body-strong);
+  padding: 2px 8px;
+  font: 500 11px/1.4 var(--sans);
+  white-space: nowrap;
+}
+
+.advice.warning .advice-severity {
+  background: var(--warning-surface);
+  color: var(--warning-ink);
 }
 
 .advice strong {
@@ -295,7 +401,7 @@ h3 {
   overflow-wrap: anywhere;
 }
 
-.advice span {
+.advice-type {
   color: var(--muted-soft);
   font: 11px/1.4 var(--mono);
 }
@@ -392,9 +498,13 @@ label span {
 
 .field-hint {
   display: block;
-  margin: -4px 0 8px;
+  margin: 0 0 8px;
   color: var(--muted-soft);
   font: 12px/1.4 var(--sans);
+}
+
+.controls label > span {
+  margin-bottom: 4px;
 }
 
 input,
@@ -421,6 +531,13 @@ textarea:focus-visible {
   border-color: var(--primary-strong);
   outline: 2px solid var(--primary-strong);
   outline-offset: 1px;
+}
+
+/* 输入框此前有焦点环而按钮没有：键盘用户会在全站最主要的交互体上丢失位置。
+   offset 2px 在按钮与环之间留出画布底色，深色按钮上环也保持可辨。 */
+button:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
 }
 
 button {
@@ -545,11 +662,6 @@ button.danger:disabled,
   padding: 18px 20px;
 }
 
-.panel-title .eyebrow {
-  margin-bottom: 4px;
-  color: var(--muted);
-}
-
 .panel-title > span,
 .meta,
 .path {
@@ -654,6 +766,14 @@ button.danger:disabled,
   height: 24px;
   flex: 0 0 1px;
   background: var(--hairline);
+}
+
+/* 作用域图例：此前全局按钮用「G+」「G×」自造记号，含义只存在于悬停 title 里。 */
+.scope-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font: 500 11px/1 var(--sans);
+  letter-spacing: 0.5px;
 }
 
 .group-enable-all {
@@ -883,23 +1003,51 @@ button.danger:disabled,
   overflow-wrap: anywhere;
 }
 
+/* 反馈必须落在视野内：库面板几千像素长，页尾的一行小字等于没有反馈。
+   固定右下 toast；空态用 opacity 而非 display:none，元素留在可达性树里，
+   live region 写入时读屏才能稳定播报。 */
 .message-region {
-  min-height: 24px;
-  margin: 18px 0 0;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(480px, calc(100vw - 48px));
+  margin: 0;
+  pointer-events: none;
 }
 
 .message {
   margin: 0;
-  color: var(--primary-active);
-  font: 13px/1.45 var(--mono);
+  border-radius: var(--radius-md);
+  background: var(--surface-dark);
+  color: var(--on-dark);
+  padding: 12px 16px;
+  font: 13px/1.5 var(--mono);
+  box-shadow: 0 8px 24px rgba(8, 18, 44, 0.24);
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .message:empty {
-  display: none;
+  opacity: 0;
+  transform: translateY(6px);
+  padding: 0;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 .message.is-error {
-  color: var(--error);
+  color: var(--error-on-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    transition: none;
+  }
 }
 
 @media (max-width: 1120px) {
@@ -925,12 +1073,51 @@ button.danger:disabled,
     padding-top: 14px;
   }
 
+  .message-region {
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100vw - 24px);
+  }
+
   .topbar {
     min-height: 56px;
   }
 
   .hero {
     padding: 40px 0 28px;
+  }
+
+  .hero.is-compact {
+    padding: 20px 0 24px;
+  }
+
+  .hero.is-compact .product-surface {
+    gap: 10px 14px;
+  }
+
+  .hero.is-compact .surface-header strong {
+    display: none;
+  }
+
+  .hero.is-compact .surface-grid {
+    flex: 1 1 220px;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .hero.is-compact .surface-grid div {
+    min-width: 0;
+  }
+
+  .hero.is-compact .surface-grid span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero.is-compact .surface-path {
+    flex-basis: 100%;
+    text-align: left;
   }
 
   h1 {

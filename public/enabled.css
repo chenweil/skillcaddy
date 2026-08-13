@@ -75,15 +75,15 @@
   overflow-wrap: anywhere;
 }
 
+/* 「同步」用文字按钮：此前的「+」字形与库分组的批量启用「+」语义冲突。 */
 #syncClaude {
-  width: 36px;
   height: 36px;
   min-height: 36px;
-  flex: 0 0 36px;
+  flex: 0 0 auto;
   background: var(--primary-strong);
   color: var(--on-primary);
-  padding: 0;
-  font-size: 20px;
+  padding: 0 14px;
+  font-size: 13px;
   line-height: 1;
   white-space: nowrap;
 }

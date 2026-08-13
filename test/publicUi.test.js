@@ -19,10 +19,11 @@ test('global collection enable button keeps its success state after completion',
 test('library actions keep project controls left of global controls', () => {
   assert.match(
     appSource,
-    /class="scope-action-group project-scope-actions"[\s\S]*group-enable-all[\s\S]*group-disable-all[\s\S]*class="scope-divider"[\s\S]*class="scope-action-group global-scope-actions"[\s\S]*group-enable-global[\s\S]*>G\+<\/button>[\s\S]*group-disable-global[\s\S]*>G×<\/button>/
+    /class="scope-action-group project-scope-actions"[\s\S]*?class="scope-label">项目<\/span>[\s\S]*?group-enable-all[\s\S]*?group-disable-all[\s\S]*?class="scope-divider"[\s\S]*?class="scope-action-group global-scope-actions"[\s\S]*?class="scope-label">全局<\/span>[\s\S]*?group-enable-global[\s\S]*?>\+<\/button>[\s\S]*?group-disable-global[\s\S]*?>×<\/button>/
   );
-  assert.doesNotMatch(appSource, />G<\/button>/);
-  assert.doesNotMatch(appSource, />GX<\/button>/);
+  // 全局按钮不再使用「G+」「G×」自造记号：作用域由 scope-label 图例表达。
+  assert.doesNotMatch(appSource, />G\+<\/button>/);
+  assert.doesNotMatch(appSource, />G×<\/button>/);
   assert.match(appSource, /projectActions\.className = 'scope-action-group project-scope-actions'/);
   assert.match(appSource, /globalActions\.className = 'scope-action-group global-scope-actions'/);
 });
