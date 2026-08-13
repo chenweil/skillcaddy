@@ -50,14 +50,6 @@
   vertical-align: middle;
 }
 
-.column-title .icon-button {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  flex: 0 0 36px;
-  font-size: 16px;
-}
-
 /* 列头清空改文字按钮：破坏性操作的目标大小与可见范围（「清空」+ 上方计数）
    都大于此前的 36px 圆形 ×。 */
 .column-title button {
@@ -131,16 +123,14 @@
     min-height: 44px;
   }
 
-  .column-title .icon-button {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    flex-basis: 44px;
-  }
-
   #syncClaude {
     height: 44px;
     min-height: 44px;
+  }
+
+  /* 触屏没有 hover：路径（同名 skill 的区分手段）常显。 */
+  .enabled p {
+    display: block;
   }
 }
 

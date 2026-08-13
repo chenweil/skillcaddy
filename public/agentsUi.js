@@ -1,17 +1,20 @@
 import { emptyState } from './emptyState.js';
 
-export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope = 'project' }) {
+export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope = 'project', isPreview = false }) {
   const isGlobal = scope === 'global';
   const list = isGlobal ? elements.globalList : elements.enabledList;
   const clearButton = isGlobal ? elements.disableGlobal : elements.disableAgents;
-  clearButton.disabled = !enabled.some((skill) => skill.canDisable ?? skill.isSymlink);
+  clearButton.disabled = isPreview && !isGlobal ? true : !enabled.some((skill) => skill.canDisable ?? skill.isSymlink);
+  if (isPreview && !isGlobal) {
+    clearButton.title = '预览模式只读：先在下方读取你自己的项目再操作';
+  }
   list.replaceChildren();
   if (enabled.length === 0) {
     list.append(emptyState(
       isGlobal ? '还没有全局 skill' : '当前项目还没有启用 skill',
       isGlobal
         ? '在原件库中选择「启用到全局」，即可让所有项目使用。'
-        : '在右侧「Skill 原件库」里展开任意分组，点「启用 agents skill」即可加入这里。'
+        : '在「Skill 原件库」里展开任意分组，点「启用 agents skill」即可加入这里。'
     ));
     return;
   }
@@ -57,7 +60,10 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     button.dataset.focusFallbackSelector = `${isGlobal ? '#globalList' : '#enabledList'} [data-focus-key^="${isGlobal ? 'global' : 'agents'}-remove:"]:not(:disabled)`;
     button.dataset.focusFallbackKey = 'skill-search';
     button.setAttribute('aria-label', `从${isGlobal ? '全局' : '当前项目'} .agents/skills 移除 ${skill.alias}${sourceSkill ? `（${sourceSkill.source}）` : ''}`);
-    button.disabled = !(skill.canDisable ?? skill.isSymlink);
+    button.disabled = isPreview && !isGlobal ? true : !(skill.canDisable ?? skill.isSymlink);
+    if (isPreview && !isGlobal) {
+      button.title = '预览模式只读：先在下方读取你自己的项目再操作';
+    }
     button.addEventListener('click', () => onDisable(skill.alias));
     item.querySelector('.actions').append(button);
     list.append(item);

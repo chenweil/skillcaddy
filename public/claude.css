@@ -27,6 +27,13 @@
   display: block;
 }
 
+@media (max-width: 760px) {
+  /* 触屏没有 hover：路径常显。 */
+  .claude-skill p {
+    display: block;
+  }
+}
+
 .claude-skill strong {
   color: var(--body-strong);
   font-weight: 500;

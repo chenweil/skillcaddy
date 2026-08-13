@@ -1,26 +1,31 @@
 import { emptyState } from './emptyState.js';
 
-export function renderClaudeStatus({ claude, skills, elements, onUnlink }) {
-  elements.unlinkClaude.disabled = !claude || !claude.exists || claude.skills.length === 0;
+export function renderClaudeStatus({ claude, skills, elements, onUnlink, isPreview = false }) {
+  elements.unlinkClaude.disabled = isPreview || !claude || !claude.exists || claude.skills.length === 0;
+  if (isPreview) {
+    elements.unlinkClaude.title = '预览模式只读：先在下方读取你自己的项目再操作';
+    elements.syncClaude.disabled = true;
+    elements.syncClaude.title = '预览模式只读：先在下方读取你自己的项目再操作';
+  }
   if (!claude || !claude.exists) {
     // 此前这里直接清空，整栏渲染成一片空白：用户既不知道这栏是什么，
-    // 也不知道同栏标题里的 + 就是填充它的入口。
+    // 也不知道同栏标题里的「同步」就是填充它的入口。
     elements.claudeSkillList.replaceChildren(emptyState(
       '还没有 Claude Code 入口',
-      '点这一栏标题右侧的 + ，把 .agents/skills 已启用的 skill 同步到 Claude Code。'
+      '点这一栏标题右侧的「同步」，把 .agents/skills 已启用的 skill 同步到 Claude Code。'
     ));
     return;
   }
 
-  renderClaudeSkills({ skills: claude.skills, sourceSkills: skills, elements, onUnlink });
+  renderClaudeSkills({ skills: claude.skills, sourceSkills: skills, elements, onUnlink, isPreview });
 }
 
-function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink }) {
+function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink, isPreview = false }) {
   elements.claudeSkillList.replaceChildren();
   if (skills.length === 0) {
     elements.claudeSkillList.append(emptyState(
       'Claude Code 还没有同步任何 skill',
-      '点这一栏标题右侧的 + ，把 .agents/skills 已启用的 skill 同步过来。'
+      '点这一栏标题右侧的「同步」，把 .agents/skills 已启用的 skill 同步过来。'
     ));
     return;
   }
@@ -55,7 +60,8 @@ function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink }) {
     unlinkButton.setAttribute('aria-label', skill.isSymlink
       ? `从 Claude Code 移除 ${skill.alias}`
       : `${skill.alias} 不是软链接，无法移除`);
-    unlinkButton.disabled = !skill.isSymlink;
+    unlinkButton.disabled = isPreview || !skill.isSymlink;
+    if (isPreview) unlinkButton.title = '预览模式只读：先在下方读取你自己的项目再操作';
     unlinkButton.addEventListener('click', () => onUnlink(skill.alias));
     elements.claudeSkillList.append(item);
   });

@@ -32,7 +32,7 @@
   --on-dark-soft: #b6caea;
   --accent-green: #94bbaa;
   --accent-amber: #f18744;
-  --success: #2f805f;
+  --success: #2a7a5a;
   /* warning 只在 advice 徽标上成对使用：暖色背景配深色文字。 */
   --warning-surface: #fff0e4;
   --warning-ink: #8a4a1f;
@@ -410,7 +410,7 @@ h3 {
 
 .advice-type {
   color: var(--muted-soft);
-  font: 11px/1.4 var(--mono);
+  font: 12px/1.4 var(--mono);
 }
 
 .advice-action {
@@ -471,7 +471,7 @@ h3 {
 .project-chip-path {
   min-width: 0;
   overflow: hidden;
-  padding: 0 10px 0 12px;
+  padding: 4px 10px 4px 12px;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -486,7 +486,7 @@ h3 {
   display: grid;
   place-items: center;
   width: 28px;
-  padding: 0;
+  padding: 4px 0;
   border-left: 1px solid var(--hairline);
   color: var(--muted);
 }
@@ -682,11 +682,24 @@ button.danger:disabled,
 
 .tag-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--hairline);
   background: var(--canvas);
   padding: 12px 20px;
+}
+
+/* 可滚动线索：右缘渐隐遮罩，窄屏下滚动条已隐藏时提示还有更多标签。 */
+.tag-tabs::after {
+  position: sticky;
+  right: -20px;
+  flex: 0 0 28px;
+  width: 28px;
+  margin-left: -28px;
+  background: linear-gradient(to right, transparent, var(--canvas) 85%);
+  content: "";
+  pointer-events: none;
 }
 
 .tag-tabs:empty {
@@ -746,7 +759,7 @@ button.danger:disabled,
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 0;
+  min-height: 28px;
   min-width: 0;
   border: 0;
   border-radius: 0;
@@ -937,11 +950,11 @@ button.danger:disabled,
   white-space: nowrap;
 }
 
-/* 组头徽标窄屏下允许收缩省略：此前 flex-shrink:0 + nowrap 会把 group-bar
-   撑出面板被 overflow 裁切，计数被物理切掉。不设 flex-shrink（保持 0）：
-   桌面端徽标永远保持完整宽度；窄屏由 group-bar 的 flex-wrap 把它换行到
-   独立一行，超长文本才触发省略。 */
-.group-bar > .badge {
+/* 组头徽标：移入 group-head 后紧随标题行。margin-left:auto 在桌面把它
+   推到行尾（与原来 bar 行尾位置一致）；窄屏由 group-head 的 flex-wrap
+   自然落在标题行，不再独占一行。 */
+.group-head > .badge {
+  margin-left: auto;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -1093,8 +1106,22 @@ button.danger:disabled,
 
 @media (max-width: 760px) {
   .shell {
-    width: min(100% - 24px, 1200px);
+    width: min(100% - 32px, 1200px);
     padding-top: 14px;
+  }
+
+  /* 首访移动端 hero 716px 营销墙：h1 降级、统计保持 3 列横排，
+     表单与工作区回到首屏附近。 */
+  .hero {
+    padding: 28px 0 24px;
+  }
+
+  h1 {
+    font-size: 30px;
+  }
+
+  .lede {
+    font-size: 16px;
   }
 
   /* 触控目标：36px/34px 桌面密度在手指下不可靠，全部提到 44px。 */
@@ -1130,10 +1157,9 @@ button.danger:disabled,
     min-height: 44px;
   }
 
-  /* 26 个标签堆成 337px 的墙会把列表推出屏外：窄屏改横向滚动。 */
+  /* 26 个标签堆成 337px 的墙会把列表推出屏外：窄屏隐藏滚动条（渐隐遮罩提示）。
+     nowrap + 横向滚动已是 .tag-tabs 基础样式，桌面同样生效。 */
   .tag-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
     scrollbar-width: none;
   }
 
@@ -1217,12 +1243,16 @@ button.danger:disabled,
   }
 
   h1 {
-    font-size: 38px;
+    font-size: 30px;
   }
 
-  .surface-grid,
   .controls {
     grid-template-columns: 1fr;
+  }
+
+  /* 移动端单列时原件库（主工作流）排到只读的已启用面板之前。 */
+  .library-panel {
+    order: -1;
   }
 
   .panel-title {
@@ -1236,13 +1266,8 @@ button.danger:disabled,
 }
 
 @media (max-width: 520px) {
-  /* 组头操作区（项目 +/× + 全局 +/× + 图例）整行换到标题下方，
-     避免把组徽标挤出面板被裁切。 */
-  .group-bar {
-    flex-wrap: wrap;
-    row-gap: 10px;
-  }
-
+  /* 组头操作区（项目 +/× + 全局 +/× + 图例）整行换到标题与徽标下方，
+     徽标已随标题留在首行。 */
   .group-actions {
     flex: 1 1 100%;
     flex-wrap: wrap;

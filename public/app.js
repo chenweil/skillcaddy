@@ -74,6 +74,8 @@ elements.controlsForm.addEventListener('submit', (event) => {
   event.preventDefault();
   if (elements.loadProject.disabled) return;
   isPreviewSession = false;
+  // 用户开始读取自己的项目：hero 从此坍缩成状态带，不再占首屏。
+  elements.hero.classList.add('is-compact');
   loadState({ feedback: true });
 });
 elements.addProject.addEventListener('click', addCurrentProject);
@@ -113,7 +115,10 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (!isEditable && hasActiveFilter()) clearFilters();
+  // 第一下 Esc 清掉搜索词后焦点仍在搜索框：此时再按 Esc 必须继续清 tag/来源
+  // 过滤，否则键盘用户（Sam）会卡在残留过滤里。搜索框因此不算 isEditable。
+  const isSearchBox = event.target === elements.skillSearch;
+  if ((!isEditable || isSearchBox) && hasActiveFilter()) clearFilters();
 });
 
 initializeProjectPathFromUrl();
@@ -153,9 +158,9 @@ function renderAll() {
   elements.activeProject.textContent = isPreviewSession
     ? `默认预览：${state.projectPath || 'skillcaddy 仓库'}（在下方输入你的项目路径后点「读取项目」）`
     : state.projectPath || '等待读取项目路径';
-  renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable });
+  renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable, isPreview: isPreviewSession });
   renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
-  renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill });
+  renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill, isPreview: isPreviewSession });
   renderAdvice();
   renderProjectHistory();
   renderTagTabs();
@@ -259,7 +264,9 @@ function renderAdvice() {
   elements.adviceList.replaceChildren();
   if (!state.advice || state.advice.length === 0) return;
 
-  state.advice.slice(0, 6).forEach((advice, index) => {
+  // 服务端最多生成 8 条（skillStore 6 + collectionSetup 2），全部渲染；
+  // 此前 slice(0, 6) 会让第 7、8 条建议静默消失。
+  state.advice.forEach((advice, index) => {
     const item = document.createElement('article');
     item.className = `advice ${advice.severity || 'info'}`;
     item.innerHTML = `
@@ -323,6 +330,7 @@ function renderSkillList() {
               <span class="title"></span>
             </button>
           </h3>
+          <span class="badge"></span>
           <div class="group-actions">
             <div class="scope-action-group project-scope-actions">
               <span class="scope-label">项目</span>
@@ -338,7 +346,6 @@ function renderSkillList() {
           </div>
           <p></p>
         </div>
-        <span class="badge"></span>
       </div>
       <div class="group-items"></div>
     `;
@@ -448,7 +455,7 @@ function clearFilters() {
 
 // 分组默认折叠可以压住 30 个库的长度，但筛选结果同样折叠时，
 // 用户只看到一排组标题，会把「命中藏在折叠分组里」误读成「没搜到」。
-// 因此带搜索词时展开全部命中分组；其余筛选（tag、来源）与无筛选一样
+// 因此带任何筛选（搜索词、标签、来源）时展开全部命中分组；无筛选时
 // 默认折叠成列表，由用户按需展开自己要看的分组。
 function initializeCollapsedGroups(groups) {
   const signature = filterSignature();
@@ -461,7 +468,7 @@ function initializeCollapsedGroups(groups) {
   filterExpandedGroups.forEach((key) => state.collapsedGroups.add(key));
   filterExpandedGroups = new Set();
 
-  if (!state.searchQuery) {
+  if (!state.searchQuery && !state.activeTag && !elements.sourceFilter.value) {
     groups.forEach((group) => collapseNewGroup(group.key));
     return;
   }
@@ -503,16 +510,20 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
     item.querySelector('.name').textContent = skill.name;
     renderSkillTags(item.querySelector('.skill-tags'), skill.tags || []);
     renderBulkStatus(item.querySelector('.bulk-status'), skill);
-    item.querySelector('.note').textContent = skill.note || '未填写备注';
-    item.querySelector('.note').classList.toggle('is-empty', !skill.note);
+    const noteElement = item.querySelector('.note');
+    if (skill.note) {
+      noteElement.textContent = skill.note;
+    } else {
+      // 无备注时整行不渲染：171 行里 86 行是「未填写备注」空占位，没有信息量。
+      noteElement.remove();
+    }
     item.querySelector('.meta').textContent = skill.description || (skill.hasSkillFile ? '未填写 description' : '缺少 SKILL.md');
     item.querySelector('.path').textContent = skill.path;
     if (state.editingSkillId === skill.id) renderMetadataEditor(item.querySelector('.metadata-editor'), skill);
 
     const actions = item.querySelector('.actions');
     const projectActions = document.createElement('div');
-    projectActions.className = 'scope-action-group project-scope-actions';
-    const globalActions = document.createElement('div');
+    projectActions.className = 'scope-action-group project-scope-actions';    const globalActions = document.createElement('div');
     globalActions.className = 'scope-action-group global-scope-actions';
     const scopeDivider = document.createElement('span');
     scopeDivider.className = 'scope-divider';
@@ -596,7 +607,36 @@ function renderTagTabs() {
     });
     elements.tagTabs.append(button);
   });
+
+  // roving tabindex：26 个标签此前全部在 Tab 序里，键盘用户到第一个启用
+  // 按钮要按 100+ 次 Tab；改为单一停靠点 + 方向键在标签间移动。
+  elements.tagTabs.querySelectorAll('.category-tab').forEach((button) => {
+    button.tabIndex = button.classList.contains('is-active') ? 0 : -1;
+  });
 }
+
+// 方向键在标签间移动（roving tabindex），Home/End 跳首尾。
+// 绑定一次即可：按钮每次重建，容器与委托逻辑不变。
+elements.tagTabs.addEventListener('keydown', (event) => {
+  const current = event.target.closest('.category-tab');
+  if (!current) return;
+
+  const tabs = [...elements.tagTabs.querySelectorAll('.category-tab')];
+  const index = tabs.indexOf(current);
+  if (index === -1) return;
+
+  let nextIndex = -1;
+  if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+  else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+  else if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = tabs.length - 1;
+  else return;
+
+  event.preventDefault();
+  tabs.forEach((button) => { button.tabIndex = -1; });
+  tabs[nextIndex].tabIndex = 0;
+  tabs[nextIndex].focus();
+});
 
 function tagTabButton(text, isActive, focusKey) {
   const button = document.createElement('button');
@@ -931,6 +971,10 @@ function enableMessage(skillName, result, scope = 'project') {
 }
 
 async function disable(alias, scope = 'project') {
+  if (isPreviewSession && scope === 'project') {
+    setMessage('预览模式只读：先在下方读取你自己的项目再操作', true);
+    return;
+  }
   await api('/api/disable', {
     method: 'POST',
     body: {
@@ -948,6 +992,11 @@ async function disableAgents(scope = 'project') {
   const aliases = enabledItems.filter((skill) => skill.canDisable ?? skill.isSymlink).map((skill) => skill.alias);
   if (aliases.length === 0) {
     setMessage(`没有可清空的${scope === 'global' ? '全局' : ' agents'} skill`);
+    return;
+  }
+
+  if (isPreviewSession && scope === 'project') {
+    setMessage('预览模式只读：先在下方读取你自己的项目再操作', true);
     return;
   }
 
@@ -975,6 +1024,10 @@ async function disableAgents(scope = 'project') {
 }
 
 async function syncClaude() {
+  if (isPreviewSession) {
+    setMessage('预览模式只读：先在下方读取你自己的项目再操作', true);
+    return;
+  }
   await withButtonState(elements.syncClaude, '同步中', async () => {
     const result = await api('/api/sync-claude', {
       method: 'POST',
@@ -987,6 +1040,10 @@ async function syncClaude() {
 }
 
 async function unlinkClaude() {
+  if (isPreviewSession) {
+    setMessage('预览模式只读：先在下方读取你自己的项目再操作', true);
+    return;
+  }
   const count = state.claude?.skills?.length || 0;
   if (count === 0) {
     setMessage('Claude Code 当前未启用 skill 入口');
@@ -1009,6 +1066,10 @@ async function unlinkClaude() {
 }
 
 async function unlinkClaudeSkill(alias) {
+  if (isPreviewSession) {
+    setMessage('预览模式只读：先在下方读取你自己的项目再操作', true);
+    return;
+  }
   await api('/api/unlink-claude-skill', {
     method: 'POST',
     body: { projectPath: elements.projectPath.value, alias }
