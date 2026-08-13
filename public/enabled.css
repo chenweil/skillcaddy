@@ -58,6 +58,13 @@
   font-size: 16px;
 }
 
+/* 列头清空改文字按钮：破坏性操作的目标大小与可见范围（「清空」+ 上方计数）
+   都大于此前的 36px 圆形 ×。 */
+.column-title button {
+  padding: 0 14px;
+  font-size: 13px;
+}
+
 .enabled {
   display: flex;
   align-items: center;
@@ -67,12 +74,34 @@
   padding: 14px 16px;
 }
 
+.enabled-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.enabled-head .name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.enabled-source {
+  flex: 0 0 auto;
+}
+
 .enabled p {
   display: none;
   margin: 4px 0 0;
   color: var(--muted);
   font: 12px/1.45 var(--mono);
   overflow-wrap: anywhere;
+}
+
+/* 路径默认隐藏（行高优先）；悬停/键盘聚焦展开——同名 skill 靠它区分来源。 */
+.enabled:hover p,
+.enabled:focus-within p {
+  display: block;
 }
 
 /* 「同步」用文字按钮：此前的「+」字形与库分组的批量启用「+」语义冲突。 */
@@ -96,6 +125,22 @@
 @media (max-width: 760px) {
   .enabled-grid {
     grid-template-columns: 1fr;
+  }
+
+  .column-title button {
+    min-height: 44px;
+  }
+
+  .column-title .icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    flex-basis: 44px;
+  }
+
+  #syncClaude {
+    height: 44px;
+    min-height: 44px;
   }
 }
 

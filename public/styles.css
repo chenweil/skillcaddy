@@ -17,7 +17,8 @@
   --body: #3e485c;
   --body-strong: #12243d;
   --muted: #5f687a;
-  --muted-soft: #65748a;
+  /* 次要文字：三处底色（surface-soft/surface-card/canvas）都 ≥4.63:1（WCAG AA）。 */
+  --muted-soft: #5d6c83;
   --hairline: #d2deed;
   --hairline-soft: #e3edf9;
   --canvas: #f7fafe;
@@ -334,7 +335,13 @@ h3 {
 .advice-list {
   display: grid;
   gap: 8px;
-  margin: 0 0 16px;
+  margin: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.advice-list:empty {
+  display: none;
 }
 
 .library-search {
@@ -708,11 +715,13 @@ button.danger:disabled,
 }
 
 .skill-group {
+  min-width: 0;
   background: var(--canvas);
 }
 
 .group-bar {
   display: flex;
+  min-width: 0;
   align-items: center;
   border-bottom: 1px solid var(--hairline);
   background: var(--surface-card);
@@ -928,6 +937,17 @@ button.danger:disabled,
   white-space: nowrap;
 }
 
+/* 组头徽标窄屏下允许收缩省略：此前 flex-shrink:0 + nowrap 会把 group-bar
+   撑出面板被 overflow 裁切，计数被物理切掉。不设 flex-shrink（保持 0）：
+   桌面端徽标永远保持完整宽度；窄屏由 group-bar 的 flex-wrap 把它换行到
+   独立一行，超长文本才触发省略。 */
+.group-bar > .badge {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .skill-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1077,6 +1097,78 @@ button.danger:disabled,
     padding-top: 14px;
   }
 
+  /* 触控目标：36px/34px 桌面密度在手指下不可靠，全部提到 44px。 */
+  .icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .actions button,
+  .empty-action {
+    min-height: 44px;
+  }
+
+  .group-enable-all,
+  .group-enable-global {
+    height: 44px;
+  }
+
+  .group-disable-all {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .project-chip {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    min-height: 44px;
+  }
+
+  .project-chip-remove {
+    width: 44px;
+    min-height: 44px;
+  }
+
+  /* 26 个标签堆成 337px 的墙会把列表推出屏外：窄屏改横向滚动。 */
+  .tag-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tag-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-tab {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+
+  .group-toggle {
+    min-height: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  .project-chip-path,
+  .project-chip-remove {
+    min-height: 44px;
+  }
+
+  .controls button {
+    min-height: 44px;
+  }
+
+  .library-search input {
+    min-height: 44px;
+  }
+
   .message-region {
     right: 12px;
     bottom: 12px;
@@ -1140,5 +1232,20 @@ button.danger:disabled,
 
   .panel-title select {
     width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  /* 组头操作区（项目 +/× + 全局 +/× + 图例）整行换到标题下方，
+     避免把组徽标挤出面板被裁切。 */
+  .group-bar {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .group-actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }

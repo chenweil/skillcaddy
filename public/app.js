@@ -64,12 +64,16 @@ let filterExpandedGroups = new Set();
 let isRestoringFocus = false;
 let messageTimer = null;
 let searchDebounceTimer = null;
+// 首访（无历史、URL 无项目参数）时服务端展示的是仓库默认状态：
+// 标注为预览，避免用户把 skillcaddy 自带的 skill 当成「别人配好的项目」。
+let isPreviewSession = false;
 
 // 项目路径框在 form 里，Enter 走隐式提交；点「读取项目」也是同一条 submit 路径。
 // 读取进行中按钮处于忙碌态，此时的重复提交（如连按 Enter）直接忽略。
 elements.controlsForm.addEventListener('submit', (event) => {
   event.preventDefault();
   if (elements.loadProject.disabled) return;
+  isPreviewSession = false;
   loadState({ feedback: true });
 });
 elements.addProject.addEventListener('click', addCurrentProject);
@@ -146,7 +150,9 @@ function renderAll() {
   elements.heroTotalSkills.textContent = state.stats.total;
   elements.heroAgentsCount.textContent = state.enabled.length;
   elements.heroClaudeCount.textContent = state.claude?.skills?.length || 0;
-  elements.activeProject.textContent = state.projectPath || '等待读取项目路径';
+  elements.activeProject.textContent = isPreviewSession
+    ? `默认预览：${state.projectPath || 'skillcaddy 仓库'}（在下方输入你的项目路径后点「读取项目」）`
+    : state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable });
   renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
   renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill });
@@ -239,6 +245,7 @@ function initializeProjectPathFromUrl() {
 function initializeHeroState() {
   const hasProjectParam = new URLSearchParams(window.location.search).has('projectPath');
   const isReturningUser = state.projectHistory.length > 0 || hasProjectParam;
+  isPreviewSession = !isReturningUser;
   elements.hero.classList.toggle('is-compact', isReturningUser);
 }
 
@@ -518,6 +525,12 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
     editButton.addEventListener('click', () => {
       state.editingSkillId = state.editingSkillId === skill.id ? '' : skill.id;
       renderSkills();
+      // withPreservedFocus 会把焦点送回重渲染后的编辑按钮；
+      // 打开表单时必须再显式送进 textarea，否则键盘用户 Tab 会从编辑按钮
+      // 直接跳到下一行（WCAG 2.4.3 焦点顺序）。
+      if (state.editingSkillId === skill.id) {
+        document.querySelector(`[data-focus-key="skill-note:${skill.id}"]`)?.focus();
+      }
     });
     const button = document.createElement('button');
     button.type = 'button';

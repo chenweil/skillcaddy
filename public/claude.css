@@ -22,6 +22,11 @@
   overflow-wrap: anywhere;
 }
 
+.claude-skill:hover p,
+.claude-skill:focus-within p {
+  display: block;
+}
+
 .claude-skill strong {
   color: var(--body-strong);
   font-weight: 500;

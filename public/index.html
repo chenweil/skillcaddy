@@ -58,7 +58,7 @@
           <small class="field-hint">输入项目路径后点「添加项目」保存到下方历史，回车直接读取</small>
           <input id="projectPath" type="text" data-focus-key="project-path" spellcheck="false" placeholder="/Users/your-name/projects/my-app">
         </label>
-        <button id="addProject" class="secondary" type="button" title="仅把路径存入下方历史，不读取">添加项目</button>
+        <button id="addProject" class="secondary" type="button" data-focus-key="add-project" title="仅把路径存入下方历史，不读取">添加项目</button>
         <button id="loadProject" type="submit" data-focus-key="load-project" title="读取该项目的启用状态（回车同效）">读取项目</button>
         <div id="projectHistory" class="project-history" aria-label="历史项目"></div>
       </form>
@@ -75,7 +75,7 @@
             <section class="enabled-column">
               <div class="column-title">
                 <span>.agents/skills <span id="agentsCount" class="count">0</span></span>
-                <button id="disableAgents" class="icon-button danger" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills" aria-label="一键清空 .agents/skills">×</button>
+                <button id="disableAgents" class="danger" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills（数量见上方计数）" aria-label="一键清空 .agents/skills">清空</button>
               </div>
               <div id="enabledList" class="list compact"></div>
             </section>
@@ -84,7 +84,7 @@
                 <span>Claude Code <span id="claudeCount" class="count">0</span></span>
                 <div class="actions">
                   <button id="syncClaude" data-focus-key="claude-sync" title="把项目已启用的 skill 同步到 Claude Code">同步</button>
-                  <button id="unlinkClaude" class="icon-button danger" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code" aria-label="一键清空 Claude Code">×</button>
+                  <button id="unlinkClaude" class="danger" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code（数量见上方计数）" aria-label="一键清空 Claude Code">清空</button>
                 </div>
               </div>
               <section id="claudeSkillList" class="claude-list"></section>
@@ -93,7 +93,7 @@
           <section class="enabled-column global-enabled">
             <div class="column-title">
               <span>全局 .agents/skills <span id="globalCount" class="count">0</span></span>
-              <button id="disableGlobal" class="icon-button danger" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills" aria-label="一键清空全局 .agents/skills">×</button>
+              <button id="disableGlobal" class="danger" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">清空</button>
             </div>
             <div id="globalList" class="list compact"></div>
           </section>
@@ -113,10 +113,12 @@
               <option value="archived">archived</option>
             </select>
           </div>
-          <section id="adviceList" class="advice-list"></section>
           <div class="library-search">
-            <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索 skill 名称、描述或标签...（/ 聚焦，Esc 清除）" aria-label="搜索 skills" aria-keyshortcuts="/">
+            <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索名称、描述或标签…（/ 聚焦，Esc 清除）" aria-label="搜索 skills" aria-keyshortcuts="/">
           </div>
+          <!-- advice 是诊断信息，放在检索入口之后：此前插在搜索框上方，把主工作流
+               「过滤 → 找 → 启用」的入口往下推。 -->
+          <section id="adviceList" class="advice-list"></section>
           <nav id="tagTabs" class="tag-tabs" aria-label="Skill 标签过滤"></nav>
           <div id="skillList" class="list"></div>
         </section>

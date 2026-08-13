@@ -22,7 +22,10 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     item.dataset.focusScope = '';
     item.innerHTML = `
       <div>
-        <strong class="name"></strong>
+        <div class="enabled-head">
+          <strong class="name"></strong>
+          <span class="tag-pill enabled-source"></span>
+        </div>
         <p class="path"></p>
       </div>
       <div class="actions"></div>
@@ -31,6 +34,14 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     item.querySelector('.path').textContent = skill.targetPath || skill.linkPath;
 
     const sourceSkill = skills.find((s) => s.path === skill.targetPath);
+    const sourceChip = item.querySelector('.enabled-source');
+    if (sourceSkill) {
+      // 同名 skill 可能来自多个来源：alias 旁标注来源，否则两行同名条目无法区分。
+      sourceChip.textContent = sourceSkill.source;
+      sourceChip.title = `${sourceSkill.collection} 来源`;
+    } else {
+      sourceChip.hidden = true;
+    }
     if (sourceSkill) {
       const description = sourceSkill.note || sourceSkill.description;
       if (description) item.title = description;
@@ -45,7 +56,7 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     button.dataset.focusKey = `${isGlobal ? 'global' : 'agents'}-remove:${skill.alias}`;
     button.dataset.focusFallbackSelector = `${isGlobal ? '#globalList' : '#enabledList'} [data-focus-key^="${isGlobal ? 'global' : 'agents'}-remove:"]:not(:disabled)`;
     button.dataset.focusFallbackKey = 'skill-search';
-    button.setAttribute('aria-label', `从${isGlobal ? '全局' : '当前项目'} .agents/skills 移除 ${skill.alias}`);
+    button.setAttribute('aria-label', `从${isGlobal ? '全局' : '当前项目'} .agents/skills 移除 ${skill.alias}${sourceSkill ? `（${sourceSkill.source}）` : ''}`);
     button.disabled = !(skill.canDisable ?? skill.isSymlink);
     button.addEventListener('click', () => onDisable(skill.alias));
     item.querySelector('.actions').append(button);
