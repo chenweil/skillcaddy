@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.25.0] - 2026-08-13
+
+### Changed
+- Refined the Web manager around a compact returning-user status band, persistent error feedback, timed success toasts, clearer busy states, keyboard shortcuts, and visible focus treatment.
+- Replaced abbreviated global action symbols with explicit project/global scope labels while preserving independent controls: a globally enabled skill can still be added to the current project for project setup, Claude synchronization, and project-level precedence.
+- Global collection enable buttons now mirror project buttons by showing enabled progress and retaining the completed success state.
+- Search results now expand matching collections automatically, while source and tag filters keep collections collapsed for easier scanning.
+
+### Fixed
+- Bulk enable and cleanup feedback now reports progress and actionable failures instead of leaving long-running operations visually idle.
+- Archived-skill actions, enabled states, advice severity, and scope actions now expose clearer accessible names and explanations.
+
 ## [0.24.1] - 2026-08-12
 
 ### Added

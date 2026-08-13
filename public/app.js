@@ -368,7 +368,13 @@ function renderSkillList() {
     enableAllButton.addEventListener('click', () => enableGroup(group, 'project', enableAllButton));
     globalEnableButton.disabled = globalPendingSkills.length === 0;
     globalEnableButton.dataset.focusKey = `group-enable-global:${group.key}`;
-    globalEnableButton.setAttribute('aria-label', '批量启用该库全部 skill 到全局');
+    // 与项目 + 保持一致：有已全局启用时显示进度计数，否则显示 +。
+    globalEnableButton.textContent = globalEnabledSkills.length > 0 ? `${globalEnabledSkills.length}/${group.skills.length}` : '+';
+    const globalEnableLabel = globalEnabledSkills.length > 0
+      ? `已全局启用 ${globalEnabledSkills.length}/${group.skills.length}，批量启用该库其余 skill 到全局`
+      : '批量启用该库全部 skill 到全局';
+    globalEnableButton.title = globalEnableLabel;
+    globalEnableButton.setAttribute('aria-label', globalEnableLabel);
     if (globalEnabledSkills.length === group.skills.length) globalEnableButton.classList.add('is-complete');
     globalEnableButton.addEventListener('click', () => enableGroup(group, 'global', globalEnableButton));
     const disableAllButton = groupElement.querySelector('.group-disable-all');
@@ -435,7 +441,8 @@ function clearFilters() {
 
 // 分组默认折叠可以压住 30 个库的长度，但筛选结果同样折叠时，
 // 用户只看到一排组标题，会把「命中藏在折叠分组里」误读成「没搜到」。
-// 因此筛选条件一变就展开全部命中分组；条件不变时仍尊重用户的手动折叠。
+// 因此带搜索词时展开全部命中分组；其余筛选（tag、来源）与无筛选一样
+// 默认折叠成列表，由用户按需展开自己要看的分组。
 function initializeCollapsedGroups(groups) {
   const signature = filterSignature();
   if (signature === lastFilterSignature) {
@@ -447,7 +454,7 @@ function initializeCollapsedGroups(groups) {
   filterExpandedGroups.forEach((key) => state.collapsedGroups.add(key));
   filterExpandedGroups = new Set();
 
-  if (!hasActiveFilter()) {
+  if (!state.searchQuery) {
     groups.forEach((group) => collapseNewGroup(group.key));
     return;
   }

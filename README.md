@@ -39,6 +39,8 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
+The Web library keeps project and global enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing.
+
 ### Global CLI / TUI command
 
 Install the clone-backed command globally from this repository (uses local `npm link`; it does not download an npm package):
