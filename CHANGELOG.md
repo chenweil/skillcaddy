@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.25.1] - 2026-08-17
+
+### Added
+- Added an independent Hermes enablement scope across the API, CLI, TUI, Web manager, collection flow, and Manager workflow.
+- Added Hermes source-update and Git registry-repair protection for affected links.
+
+### Changed
+- Hermes now accepts `official`, `github`, and `personal` sources while keeping project/global enablement and Claude synchronization independent.
+- Added Hermes state, diagnostics, safe ownership checks, and direct links under `~/.hermes/skills/`.
+
+### Fixed
+- Web startup cleanup now tolerates a child process that exits before its termination signal is delivered.
+
 ## [0.25.0] - 2026-08-13
 
 ### Changed

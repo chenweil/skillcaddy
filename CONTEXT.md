@@ -97,19 +97,27 @@ The creation of a scope-specific link to a skill already present in the central 
 _Avoid_: Download, installation
 
 **Enablement scope**:
-The boundary that owns an enabled skill: one project or the user's shared Agent environment.
+The boundary that owns an enabled skill: one project, the user's shared Agent environment, or the user's Hermes environment.
 _Avoid_: Target path, install mode
 
 **Project enablement**:
-Enablement owned by one project and available through that project's Agent skill configuration. It can take precedence over a same-named global skill without changing the global enablement.
+Enablement owned by one project and available through that project's Agent skill configuration. It can take precedence over a same-named global skill without changing the global enablement; Claude Code synchronization remains a separate project action.
 _Avoid_: Local installation, repository skill
 
 **Global enablement**:
 Enablement owned by the user and available to projects through the shared Agent environment. It is explicit, independent of any one project, and does not establish project setup readiness.
 _Avoid_: System installation, global package
 
+**Hermes enablement**:
+Enablement owned by the user and available through Hermes's fixed user skill directory. It is explicit and independent of project enablement, global Agent enablement, and project Claude Code synchronization.
+_Avoid_: Hermes mirror, global mirror
+
+**Hermes-eligible source**:
+An acquired `official`, `github`, or `personal` source that may be explicitly enabled into Hermes. Bundled repository skills and `archived` sources are outside Hermes enablement.
+_Avoid_: Third-party mirror, every source
+
 **Collection enablement**:
-A scoped operation that applies enablement to every eligible skill in one collection and classifies each candidate as enabled, unchanged, skipped, or failed. Project setup readiness remains project-scoped, and Collection enablement never establishes it.
+A scoped operation that applies enablement to every eligible skill in one collection and classifies each candidate as enabled, unchanged, skipped, or failed. Project setup readiness remains project-scoped, and Collection enablement never establishes it; Hermes enablement still applies its source-eligibility boundary.
 _Avoid_: Bulk installation, collection setup
 
 **Skill**:

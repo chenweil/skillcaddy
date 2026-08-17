@@ -143,7 +143,7 @@
     },
     {
       "from": "lib/sourceUpgradePolicy.js",
-      "allow": ["lib/canonicalJson.js", "lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
+      "allow": ["lib/canonicalJson.js", "lib/hermesStore.js", "lib/sourceAcquisitionError.js", "lib/sourceTree.js", "lib/skillStore.js"],
       "importedBy": ["lib/sourceUpgrade.js", "lib/sourceGitRepair.js"],
       "reason": "Source upgrade and Git registry-repair policy — owns canonical comparison, skill changes, current-project link impact, and active-source verification"
     },
@@ -241,7 +241,7 @@
     },
     {
       "from": "lib/enablePlan.js",
-      "allow": ["lib/enablementScope.js"],
+      "allow": ["lib/enablementScope.js", "lib/hermesStore.js"],
       "reason": "Enable preflight — pure projection shared by API and TUI"
     },
     {
@@ -261,8 +261,18 @@
       "reason": "Store layer — can only depend on leaf modules"
     },
     {
+      "from": "lib/skillLinkStore.js",
+      "allow": [],
+      "reason": "Leaf link scanner — owns shared symlink inspection primitives"
+    },
+    {
+      "from": "lib/hermesStore.js",
+      "allow": ["lib/skillLinkStore.js"],
+      "reason": "Hermes target store — owns the fixed Hermes path and source eligibility"
+    },
+    {
       "from": "lib/skillStore.js",
-      "allow": ["lib/claudeStore.js", "lib/collectionSetup.js", "lib/enablementScope.js", "lib/projectPath.js", "lib/skillMetadata.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceSkillDiscovery.js"],
+      "allow": ["lib/claudeStore.js", "lib/collectionSetup.js", "lib/enablementScope.js", "lib/hermesStore.js", "lib/projectPath.js", "lib/skillLinkStore.js", "lib/skillMetadata.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceSkillDiscovery.js"],
       "reason": "Store aggregation — getState reads skill, Claude, collection-setup, and registered-source state"
     },
     {

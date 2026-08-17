@@ -5,14 +5,14 @@ description: Manage Skillcaddy source acquisition, source updates, migrations, p
 
 # Skillcaddy Manager
 
-Treat Skillcaddy as a central skill library with explicit project/global symlink activation. Keep one execution loop across every branch: **state -> route -> preflight -> act -> verify**.
+Treat Skillcaddy as a central skill library with explicit project/global/Hermes symlink activation. Keep one execution loop across every branch: **state -> route -> preflight -> act -> verify**.
 
 ## Core Loop
 
 1. Resolve the Skillcaddy repository and target project. Default the project to the current working directory only when the user did not provide one.
    - Complete when both absolute paths are known.
 2. For recommendations, audits, or mutations, read `GET /api/state?projectPath=<encoded-path>`. For source acquisition, updates, or migration, also inspect the source registry with `npm run source -- list` and `npm run source -- inspect <source-id>`. If the server is unavailable, inspect the equivalent paths listed under **Core Model**.
-   - Complete when repository, source registry, project, global, Claude, metadata, and `advice` state relevant to the request are known.
+   - Complete when repository, source registry, project, global, Hermes, Claude, metadata, and `advice` state relevant to the request are known.
 3. Route to the required branch and load only its reference; load multiple references only when the request combines branches:
    - Discovery, source acquisition/update/migration, enable/disable, audit, health, Git update, bootstrap, Web/TUI: [OPERATIONS.md](references/OPERATIONS.md)
    - Recommendations: [RECOMMENDATION_GUIDE.md](references/RECOMMENDATION_GUIDE.md)
@@ -34,6 +34,7 @@ Treat Skillcaddy as a central skill library with explicit project/global symlink
 | Project Claude | `<project>/.claude/skills/` | Claude compatibility symlinks |
 | Global Agents | `~/.agents/skills/` | Shared user-level links managed by Skillcaddy |
 | Global Claude | `~/.claude/skills/` | Read-only external Agent directory; Skillcaddy does not write it |
+| Hermes | `~/.hermes/skills/` | Explicit independent scope for eligible `official`/`github`/`personal` sources |
 | Collection setup | `collection-metadata/<source>/<collection>.json` | Tracked, read-only setup contract and readiness checks |
 
 Preserve these invariants:

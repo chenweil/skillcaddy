@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCollectionEnablePlan } from '../lib/enablePlan.js';
+import { buildCollectionEnablePlan, buildSkillEnablePlan } from '../lib/enablePlan.js';
 
 test('includes a required setup skill even when it opts out of bulk enable', () => {
   const setupSkill = skill('github/toolbox/setup', '/library/setup', false);
@@ -38,6 +38,26 @@ test('keeps optional bulk exclusions and already-enabled skills out of targets',
   assert.deepEqual(plan.unchangedSkillIds, [readySkill.id]);
 });
 
+test('Hermes plans include personal skills and exclude bundled skills', () => {
+  const state = {
+    skills: [
+      skill('official/tool', '/library/official/tool', true),
+      skill('personal/tool', '/library/personal/tool', true),
+      skill('local/tool', '/library/local/tool', true)
+    ],
+    hermes: [],
+    setups: []
+  };
+
+  const plan = buildCollectionEnablePlan(state, state.skills.map((item) => item.id), { scope: 'hermes' });
+  assert.deepEqual(plan.targetSkillIds, ['official/tool', 'personal/tool']);
+  assert.deepEqual(plan.skippedSkillIds, ['local/tool']);
+  assert.throws(
+    () => buildSkillEnablePlan(state, 'local/tool', undefined, 'hermes'),
+    /Hermes 不允许启用 local 来源/
+  );
+});
+
 function skill(id, skillPath, autoEnable) {
-  return { id, path: skillPath, source: 'github', autoEnable };
+  return { id, path: skillPath, source: id.split('/')[0], autoEnable };
 }

@@ -181,7 +181,7 @@ function sendJson(res, status, payload) {
 
 function requireApiScope(body) {
   if (!body || !Object.hasOwn(body, 'scope')) {
-    throw new Error('scope 必须显式指定为 project 或 global');
+    throw new Error('scope 必须显式指定为 project、global 或 hermes');
   }
   return normalizeEnablementScope(body.scope);
 }

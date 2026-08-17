@@ -96,6 +96,75 @@ test('global enable creates only the shared Agents link and is visible independe
   assert.equal(state.global[0].directory, globalDir);
 });
 
+test('Hermes enablement is an independent scope for eligible third-party sources', async () => {
+  const root = await makeTempDir('skills-hermes-root-');
+  const project = await makeTempDir('skills-hermes-project-');
+  const globalDir = await makeTempDir('skills-hermes-global-dir-');
+  const hermesDir = await makeTempDir('skills-hermes-dir-');
+  const skill = path.join(root, 'personal', 'hermes-tool');
+
+  await ensureSourceFolders(root);
+  await mkdir(skill, { recursive: true });
+  await writeFile(path.join(skill, 'SKILL.md'), '# Hermes tool\n');
+
+  const result = await enableSkill(root, {
+    scope: 'hermes',
+    hermesDir,
+    skillPath: skill,
+    alias: 'hermes-tool'
+  });
+
+  assert.equal(result.scope, 'hermes');
+  assert.equal(result.linkPath, path.join(hermesDir, 'hermes-tool'));
+  assert.equal((await lstat(result.linkPath)).isSymbolicLink(), true);
+
+  const state = await getState(root, project, { globalDir, hermesDir });
+  assert.equal(state.enabled.length, 0);
+  assert.equal(state.global.length, 0);
+  assert.equal(state.hermes.length, 1);
+  assert.equal(state.hermes[0].agent, 'Hermes');
+  assert.equal(state.hermes[0].canDisable, true);
+
+  await disableSkill({ scope: 'hermes', rootDir: root, hermesDir, alias: 'hermes-tool' });
+  assert.equal((await getState(root, project, { globalDir, hermesDir })).hermes.length, 0);
+});
+
+test('Hermes rejects bundled and archived sources and preserves foreign entries', async () => {
+  const root = await makeTempDir('skills-hermes-safety-root-');
+  const project = await makeTempDir('skills-hermes-safety-project-');
+  const globalDir = await makeTempDir('skills-hermes-safety-global-dir-');
+  const hermesDir = await makeTempDir('skills-hermes-safety-dir-');
+  const archivedSkill = path.join(root, 'archived', 'local-only');
+  const external = await makeTempDir('skills-hermes-external-');
+
+  await ensureSourceFolders(root);
+  await mkdir(archivedSkill, { recursive: true });
+  await writeFile(path.join(archivedSkill, 'SKILL.md'), '# Archived only\n');
+  await writeFile(path.join(external, 'SKILL.md'), '# External\n');
+  await symlink(external, path.join(hermesDir, 'local-only'), 'dir');
+
+  await assert.rejects(
+    () => enableSkill(root, {
+      scope: 'hermes',
+      hermesDir,
+      skillPath: archivedSkill,
+      alias: 'local-only'
+    }),
+    /Hermes 只允许启用 official、github 或 personal 来源/
+  );
+  await assert.rejects(
+    () => disableSkill({ scope: 'hermes', rootDir: root, hermesDir, alias: 'local-only' }),
+    /不属于当前 Skillcaddy 原件库的 hermes 软链接/
+  );
+  assert.equal((await lstat(path.join(hermesDir, 'local-only'))).isSymbolicLink(), true);
+
+  await symlink(path.join(root, 'github', 'missing'), path.join(hermesDir, 'missing'), 'dir');
+
+  const state = await getState(root, project, { globalDir, hermesDir });
+  assert.equal(state.hermes[0].canDisable, false);
+  assert.equal(state.advice.some((item) => item.type === 'hermes-broken-link'), true);
+});
+
 test('project and global scopes can share an alias without affecting each other', async () => {
   const root = await makeTempDir('skills-scope-coexist-root-');
   const project = await makeTempDir('skills-scope-coexist-project-');

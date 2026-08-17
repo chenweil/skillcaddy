@@ -11,7 +11,7 @@
   </head>
   <body>
     <main class="shell">
-      <nav class="topbar" aria-label="主导航">
+      <header class="topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
           <span>SkillCaddy</span>
@@ -20,7 +20,7 @@
           <span id="versionTag" class="version" aria-label="版本号"></span>
           <button id="refreshButton" class="icon-button" data-focus-key="refresh" title="刷新" aria-label="刷新">↻</button>
         </div>
-      </nav>
+      </header>
 
       <section class="hero">
         <div class="hero-copy">
@@ -96,6 +96,13 @@
               <button id="disableGlobal" class="danger" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">清空</button>
             </div>
             <div id="globalList" class="list compact"></div>
+          </section>
+          <section class="enabled-column hermes-enabled">
+            <div class="column-title">
+              <span>Hermes ~/.hermes/skills <span id="hermesCount" class="count">0</span></span>
+              <button id="disableHermes" class="danger" data-focus-key="hermes-clear" data-focus-fallback-key="skill-search" title="一键清空 Hermes ~/.hermes/skills（数量见上方计数）" aria-label="一键清空 Hermes ~/.hermes/skills">清空</button>
+            </div>
+            <div id="hermesList" class="list compact"></div>
           </section>
         </aside>
 

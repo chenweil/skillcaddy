@@ -12,6 +12,7 @@ const state = {
   skills: [],
   enabled: [],
   global: [],
+  hermes: [],
   setups: [],
   sources: [],
   advice: [],
@@ -34,6 +35,7 @@ const elements = {
   refreshButton: document.querySelector('#refreshButton'),
   disableAgents: document.querySelector('#disableAgents'),
   disableGlobal: document.querySelector('#disableGlobal'),
+  disableHermes: document.querySelector('#disableHermes'),
   unlinkClaude: document.querySelector('#unlinkClaude'),
   syncClaude: document.querySelector('#syncClaude'),
   claudeSkillList: document.querySelector('#claudeSkillList'),
@@ -42,8 +44,10 @@ const elements = {
   skillSearch: document.querySelector('#skillSearch'),
   enabledList: document.querySelector('#enabledList'),
   globalList: document.querySelector('#globalList'),
+  hermesList: document.querySelector('#hermesList'),
   agentsCount: document.querySelector('#agentsCount'),
   globalCount: document.querySelector('#globalCount'),
+  hermesCount: document.querySelector('#hermesCount'),
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   adviceList: document.querySelector('#adviceList'),
@@ -80,19 +84,20 @@ elements.controlsForm.addEventListener('submit', (event) => {
 });
 elements.addProject.addEventListener('click', addCurrentProject);
 elements.refreshButton.addEventListener('click', () => loadState({ button: elements.refreshButton, feedback: true, label: '刷新' }));
-elements.sourceFilter.addEventListener('change', render);
+elements.sourceFilter.addEventListener('change', renderSkills);
 // 每个按键全量重建列表 DOM 在几百个 skill 时会卡顿，防抖到停顿后再渲染。
 elements.skillSearch.addEventListener('input', (event) => {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     state.searchQuery = event.target.value.trim().toLowerCase();
-    render();
+    renderSkills();
   }, 120);
 });
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
 elements.disableGlobal.addEventListener('click', () => disableAgents('global'));
+elements.disableHermes.addEventListener('click', () => disableAgents('hermes'));
 
 // 只做两个高频快捷键：/ 聚焦搜索，Esc 逐级清除（先清搜索词，再清全部筛选）。
 // 输入控件内不劫持按键，避免与正常输入冲突。
@@ -111,7 +116,7 @@ document.addEventListener('keydown', (event) => {
     clearTimeout(searchDebounceTimer);
     elements.skillSearch.value = '';
     state.searchQuery = '';
-    render();
+    renderSkills();
     return;
   }
 
@@ -151,6 +156,7 @@ function renderAll() {
   elements.totalSkills.textContent = state.stats.total;
   elements.agentsCount.textContent = state.enabled.length;
   elements.globalCount.textContent = state.global.length;
+  elements.hermesCount.textContent = state.hermes.length;
   elements.claudeCount.textContent = state.claude?.skills?.length || 0;
   elements.heroTotalSkills.textContent = state.stats.total;
   elements.heroAgentsCount.textContent = state.enabled.length;
@@ -160,11 +166,12 @@ function renderAll() {
     : state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable, isPreview: isPreviewSession });
   renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
+  renderAgentsSkills({ enabled: state.hermes, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'hermes'), scope: 'hermes' });
   renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill, isPreview: isPreviewSession });
   renderAdvice();
   renderProjectHistory();
   renderTagTabs();
-  renderSkills();
+  renderSkillList();
 }
 
 function renderProjectHistory() {
@@ -302,11 +309,21 @@ function renderSkills() {
   withPreservedFocus(renderSkillList);
 }
 
+function renderLibrary() {
+  withPreservedFocus(() => {
+    renderTagTabs();
+    renderSkillList();
+  });
+}
+
 function renderSkillList() {
   const filter = elements.sourceFilter.value;
   const enabledByTarget = new Map(state.enabled.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
   const globalByTarget = new Map(state.global.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
+  const hermesByTarget = new Map(state.hermes.filter((item) => item.isSymlink && item.targetPath).map((item) => [item.targetPath, item]));
   const enabledTargets = new Set(enabledByTarget.keys());
+  const globalTargets = new Set(globalByTarget.keys());
+  const hermesTargets = new Set(hermesByTarget.keys());
   const sourceSkills = filter ? state.skills.filter((skill) => skill.source === filter) : state.skills;
   const searchedSkills = state.searchQuery ? sourceSkills.filter((skill) => matchesSearchQuery(skill, state.searchQuery)) : sourceSkills;
   const skills = state.activeTag ? searchedSkills.filter((skill) => (skill.tags || []).includes(state.activeTag)) : searchedSkills;
@@ -343,6 +360,12 @@ function renderSkillList() {
               <button class="icon-button group-enable-global" type="button" title="批量启用到全局">+</button>
               <button class="icon-button group-disable-global danger" type="button" title="清空该库的全局 skill" aria-label="清空该库的全局 skill">×</button>
             </div>
+            <span class="scope-divider" aria-hidden="true"></span>
+            <div class="scope-action-group hermes-scope-actions">
+              <span class="scope-label">Hermes</span>
+              <button class="icon-button group-enable-hermes" type="button" title="批量启用到 Hermes">+</button>
+              <button class="icon-button group-disable-hermes danger" type="button" title="清空该库的 Hermes skill" aria-label="清空该库的 Hermes skill">×</button>
+            </div>
           </div>
           <p></p>
         </div>
@@ -364,9 +387,13 @@ function renderSkillList() {
     const enableAllButton = groupElement.querySelector('.group-enable-all');
     const pendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, enabledTargets));
     const globalEnableButton = groupElement.querySelector('.group-enable-global');
-    const globalPendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, new Set(globalByTarget.keys())));
+    const globalPendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, globalTargets));
     const globalEnabledSkills = group.skills.filter((skill) => globalByTarget.has(skill.path));
     const removableGlobalSkills = group.skills.filter((skill) => (globalByTarget.get(skill.path)?.canDisable ?? false));
+    const hermesEnableButton = groupElement.querySelector('.group-enable-hermes');
+    const hermesPendingSkills = group.skills.filter((skill) => canBulkEnableSkill(skill, hermesTargets, 'hermes'));
+    const hermesEnabledSkills = group.skills.filter((skill) => hermesByTarget.has(skill.path));
+    const removableHermesSkills = group.skills.filter((skill) => (hermesByTarget.get(skill.path)?.canDisable ?? false));
     const enabledSkills = group.skills.filter((skill) => enabledByTarget.has(skill.path));
     const pendingSetupSkill = setup?.status !== 'ready' && setup?.status !== 'invalid' && !setup?.setupSkillEnabled;
     enableAllButton.disabled = pendingSkills.length === 0 && !pendingSetupSkill;
@@ -399,9 +426,25 @@ function renderSkillList() {
     globalDisableButton.disabled = removableGlobalSkills.length === 0;
     globalDisableButton.dataset.focusKey = `group-disable-global:${group.key}`;
     globalDisableButton.addEventListener('click', () => disableGroup(group, 'global', globalDisableButton));
+    hermesEnableButton.disabled = hermesPendingSkills.length === 0;
+    hermesEnableButton.dataset.focusKey = `group-enable-hermes:${group.key}`;
+    hermesEnableButton.textContent = hermesEnabledSkills.length > 0 ? `${hermesEnabledSkills.length}/${group.skills.length}` : '+';
+    const hermesEnableLabel = hermesEnabledSkills.length > 0
+      ? `已启用到 Hermes ${hermesEnabledSkills.length}/${group.skills.length}，批量启用该库其余 eligible skill 到 Hermes`
+      : '批量启用该库全部 eligible skill 到 Hermes';
+    hermesEnableButton.title = hermesEnableLabel;
+    hermesEnableButton.setAttribute('aria-label', hermesEnableLabel);
+    if (hermesEnabledSkills.length === group.skills.length) hermesEnableButton.classList.add('is-complete');
+    hermesEnableButton.addEventListener('click', () => enableGroup(group, 'hermes', hermesEnableButton));
+    const hermesDisableButton = groupElement.querySelector('.group-disable-hermes');
+    hermesDisableButton.disabled = removableHermesSkills.length === 0;
+    hermesDisableButton.dataset.focusKey = `group-disable-hermes:${group.key}`;
+    hermesDisableButton.addEventListener('click', () => disableGroup(group, 'hermes', hermesDisableButton));
 
-    const items = groupElement.querySelector('.group-items');
-    group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets, new Set(globalByTarget.keys()))));
+    if (!isCollapsed) {
+      const items = groupElement.querySelector('.group-items');
+    group.skills.forEach((skill) => items.append(renderSkill(skill, enabledTargets, globalTargets, hermesTargets)));
+    }
     elements.skillList.append(groupElement);
   });
 }
@@ -449,7 +492,7 @@ function clearFilters() {
   elements.skillSearch.value = '';
   state.searchQuery = '';
   state.activeTag = '';
-  render();
+  renderLibrary();
   elements.skillSearch.focus();
 }
 
@@ -487,9 +530,10 @@ function collapseNewGroup(key) {
   state.knownGroups.add(key); state.collapsedGroups.add(key);
 }
 
-function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
+function renderSkill(skill, enabledTargets, globalTargets = new Set(), hermesTargets = new Set()) {
     const isEnabled = enabledTargets.has(skill.path);
     const isGloballyEnabled = globalTargets.has(skill.path);
+    const isHermesEnabled = hermesTargets.has(skill.path);
     const item = document.createElement('article');
     item.className = 'skill';
     item.dataset.focusScope = '';
@@ -523,8 +567,11 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
 
     const actions = item.querySelector('.actions');
     const projectActions = document.createElement('div');
-    projectActions.className = 'scope-action-group project-scope-actions';    const globalActions = document.createElement('div');
+    projectActions.className = 'scope-action-group project-scope-actions';
+    const globalActions = document.createElement('div');
     globalActions.className = 'scope-action-group global-scope-actions';
+    const hermesActions = document.createElement('div');
+    hermesActions.className = 'scope-action-group hermes-scope-actions';
     const scopeDivider = document.createElement('span');
     scopeDivider.className = 'scope-divider';
     scopeDivider.setAttribute('aria-hidden', 'true');
@@ -582,7 +629,29 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set()) {
       enable(skill, 'global');
     });
     globalActions.append(globalButton);
-    actions.append(projectActions, scopeDivider, globalActions);
+    const hermesDivider = document.createElement('span');
+    hermesDivider.className = 'scope-divider';
+    hermesDivider.setAttribute('aria-hidden', 'true');
+    const hermesButton = document.createElement('button');
+    hermesButton.type = 'button';
+    hermesButton.dataset.focusKey = `skill-enable-hermes:${skill.id}`;
+    hermesButton.textContent = isHermesEnabled ? '已启用 Hermes' : '启用 Hermes';
+    const hermesEligible = ['official', 'github', 'personal'].includes(skill.source);
+    const hermesReason = 'Hermes 只接受 official、github 或 personal 来源的 skill';
+    if (isHermesEnabled) {
+      hermesButton.classList.add('is-enabled');
+      hermesButton.setAttribute('aria-disabled', 'true');
+    } else if (!hermesEligible) {
+      hermesButton.disabled = true;
+      hermesButton.title = hermesReason;
+      hermesButton.setAttribute('aria-label', `启用 Hermes（不可用）：${hermesReason}`);
+    }
+    hermesButton.addEventListener('click', () => {
+      if (hermesButton.getAttribute('aria-disabled') === 'true') return;
+      enable(skill, 'hermes');
+    });
+    hermesActions.append(hermesButton);
+    actions.append(projectActions, scopeDivider, globalActions, hermesDivider, hermesActions);
 
     return item;
 }
@@ -595,7 +664,7 @@ function renderTagTabs() {
   const allButton = tagTabButton('全部标签', state.activeTag === '', 'tag:');
   allButton.addEventListener('click', () => {
     state.activeTag = '';
-    render();
+    renderLibrary();
   });
   elements.tagTabs.append(allButton);
 
@@ -603,7 +672,7 @@ function renderTagTabs() {
     const button = tagTabButton(tag, state.activeTag === tag, `tag:${tag}`);
     button.addEventListener('click', () => {
       state.activeTag = tag;
-      render();
+      renderLibrary();
     });
     elements.tagTabs.append(button);
   });
@@ -860,7 +929,8 @@ function findSourceInfo(groupKey) {
   return state.sources.find((source) => source.installPath === groupKey);
 }
 
-function canBulkEnableSkill(skill, enabledTargets) {
+function canBulkEnableSkill(skill, enabledTargets, scope = 'project') {
+  if (scope === 'hermes' && !['official', 'github', 'personal'].includes(skill.source)) return false;
   return skill.source !== 'archived' && skill.autoEnable !== false && !enabledTargets.has(skill.path);
 }
 
@@ -879,14 +949,14 @@ async function mapWithConcurrency(items, limit, worker) {
 }
 
 async function disableGroup(group, scope = 'project', button = null) {
-  const enabledItems = scope === 'global' ? state.global : state.enabled;
+  const enabledItems = scope === 'global' ? state.global : scope === 'hermes' ? state.hermes : state.enabled;
   const enabledByTarget = new Map(enabledItems.filter((item) => (item.canDisable ?? item.isSymlink) && item.targetPath).map((item) => [item.targetPath, item]));
   const aliases = group.skills
     .map((skill) => enabledByTarget.get(skill.path)?.alias)
     .filter(Boolean);
 
   if (aliases.length === 0) {
-    setMessage(`${group.collection} 没有可清空的${scope === 'global' ? '全局' : ' agents'} skill`);
+    setMessage(`${group.collection} 没有可清空的${scopeLabel(scope)} skill`);
     return;
   }
 
@@ -926,8 +996,8 @@ async function disableGroup(group, scope = 'project', button = null) {
       }
     });
 
-    const parts = [`已清空${scope === 'global' ? '全局 ' : ' '}${group.collection}`];
-    if (removed) parts.push(`${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`);
+    const parts = [`已清空${scopeLabel(scope)} ${group.collection}`];
+    if (removed) parts.push(`${removed} 个${scopeLabel(scope)} skill`);
     if (claudeRemoved) parts.push(`${claudeRemoved} 个 Claude Code skill`);
     if (unchanged) parts.push(`已不存在 ${unchanged}`);
     // 只报失败个数的话，用户既不知道是哪些，也无从判断该重试还是手工处理。
@@ -967,7 +1037,11 @@ function enableMessage(skillName, result, scope = 'project') {
 
   return result.claudeSync
     ? `已启用 ${skillName}，并同步 Claude Code`
-    : `${scope === 'global' ? '已全局启用' : '已启用'} ${skillName}`;
+    : `${scope === 'global' ? '已全局启用' : scope === 'hermes' ? '已启用到 Hermes' : '已启用'} ${skillName}`;
+}
+
+function scopeLabel(scope) {
+  return { project: '当前项目', global: '全局', hermes: 'Hermes' }[scope] || scope;
 }
 
 async function disable(alias, scope = 'project') {
@@ -983,15 +1057,15 @@ async function disable(alias, scope = 'project') {
       alias
     }
   });
-  setMessage(`已从${scope === 'global' ? '全局' : '当前项目'} .agents/skills 移除 ${alias}`);
+  setMessage(`已从${scopeLabel(scope)} ${scope === 'hermes' ? '~/.hermes/skills' : '.agents/skills'} 移除 ${alias}`);
   await loadState({ button: null });
 }
 
 async function disableAgents(scope = 'project') {
-  const enabledItems = scope === 'global' ? state.global : state.enabled;
+  const enabledItems = scope === 'global' ? state.global : scope === 'hermes' ? state.hermes : state.enabled;
   const aliases = enabledItems.filter((skill) => skill.canDisable ?? skill.isSymlink).map((skill) => skill.alias);
   if (aliases.length === 0) {
-    setMessage(`没有可清空的${scope === 'global' ? '全局' : ' agents'} skill`);
+    setMessage(`没有可清空的${scopeLabel(scope)} skill`);
     return;
   }
 
@@ -1000,9 +1074,10 @@ async function disableAgents(scope = 'project') {
     return;
   }
 
-  if (!confirmBulkClear(`清空 .agents/skills 里全部 ${aliases.length} 个 skill？`, aliases.length)) return;
+  const directory = scope === 'hermes' ? '~/.hermes/skills' : '.agents/skills';
+  if (!confirmBulkClear(`清空 ${directory} 里全部 ${aliases.length} 个 skill？`, aliases.length)) return;
 
-  const clearButton = scope === 'global' ? elements.disableGlobal : elements.disableAgents;
+  const clearButton = scope === 'global' ? elements.disableGlobal : scope === 'hermes' ? elements.disableHermes : elements.disableAgents;
   await withButtonState(clearButton, '…', async () => {
     const results = await Promise.allSettled(aliases.map((alias) => api('/api/disable', {
       method: 'POST',
@@ -1016,11 +1091,11 @@ async function disableAgents(scope = 'project') {
       .map((result, index) => result.status === 'rejected' ? aliases[index] : null)
       .filter(Boolean);
     const removed = aliases.length - failed.length;
-    const message = [`已清空 ${removed} 个${scope === 'global' ? '全局' : 'agents'} skill`];
+    const message = [`已清空 ${removed} 个${scopeLabel(scope)} skill`];
     if (failed.length) message.push(`以下 ${failed.length} 个未能清空，可单独重试：${failed.join('、')}`);
     setMessage(message.join('，'), failed.length > 0);
     await loadState({ button: null });
-  }, () => (scope === 'global' ? state.global : state.enabled).filter((skill) => skill.canDisable ?? skill.isSymlink).length === 0);
+  }, () => (scope === 'global' ? state.global : scope === 'hermes' ? state.hermes : state.enabled).filter((skill) => skill.canDisable ?? skill.isSymlink).length === 0);
 }
 
 async function syncClaude() {

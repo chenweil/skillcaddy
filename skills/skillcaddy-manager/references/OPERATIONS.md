@@ -21,7 +21,7 @@ For each skill identity, retain:
 
 - `source`, `collection`, `name`, and absolute `path`;
 - `description`, human-facing `note`, `tags`, and `autoEnable`;
-- project alias, global presence, Claude compatibility, and advice.
+- project alias, global presence, Hermes presence, Claude compatibility, and advice.
 
 Match requests in this order:
 
@@ -111,7 +111,7 @@ Migration writes only `.skillcaddy/sources/`; it does not move source directorie
 
 ## Query Skills
 
-Scan bundled and central sources, project links, globals, Claude links, and advice. Group output by source/collection and mark available, enabled, global, and advised states.
+Scan bundled and central sources, project links, global links, Hermes links, Claude links, and advice. Group output by source/collection and mark available, enabled, global, Hermes, and advised states.
 
 Complete when every returned item can be identified without relying on a bare folder name and the active advice is represented.
 
@@ -123,6 +123,7 @@ Every enablement request has an explicit scope:
 |---|---|---|---|
 | `project` | `<project>/.agents/skills/<alias>` | Required | Best-effort to `<project>/.claude/skills/` |
 | `global` | `~/.agents/skills/<alias>` | Not required | Never writes `~/.claude/skills/` |
+| `hermes` | `~/.hermes/skills/<alias>` | Not required | Independent; only `official`/`github`/`personal` sources |
 
 ### Single skill
 
@@ -139,6 +140,7 @@ curl -sS -X POST http://127.0.0.1:4173/api/enable \
 
 skillcaddy enable <skill-id> --project /path/to/project [--alias <name>]
 skillcaddy enable <skill-id> --global [--alias <name>]
+skillcaddy enable <skill-id> --hermes [--alias <name>]
 ```
 
 For global enablement, omit `projectPath`; the only managed destination is `~/.agents/skills/<alias>`:
@@ -149,7 +151,15 @@ curl -sS -X POST http://127.0.0.1:4173/api/enable \
   -d '{"scope":"global","skillPath":"/path/to/skill","alias":"skill-name"}'
 ```
 
-Verify the selected `.agents/skills/<alias>` target. Project scope may report Claude sync; global scope must report no Claude write.
+For Hermes enablement, omit `projectPath`; `official`, `github`, and `personal` sources may target `~/.hermes/skills/<alias>`:
+
+```bash
+curl -sS -X POST http://127.0.0.1:4173/api/enable \
+  -H 'Content-Type: application/json' \
+  -d '{"scope":"hermes","skillPath":"/path/to/skill","alias":"skill-name"}'
+```
+
+Verify the selected scope target. Project scope may report Claude sync; global and Hermes scopes must report no Claude write.
 
 Complete when the rescan reports the expected alias and target, with remaining advice stated.
 
@@ -194,7 +204,7 @@ Setup contracts are declarative and may reference only a setup skill, affected s
 
 ## Disable
 
-Resolve enabled aliases from the selected scope. Remove only managed project symlinks and matching Claude compatibility links. For global scope, remove only a symlink whose target is provably inside the current Skillcaddy source folders; ordinary entries, foreign links, and ambiguous ownership are read-only. A non-symlink or external target goes back through the mutation gate.
+Resolve enabled aliases from the selected scope. Remove only managed project symlinks and matching Claude compatibility links. For global or Hermes scope, remove only a symlink whose target is provably inside the current Skillcaddy source folders; ordinary entries, foreign links, and ambiguous ownership are read-only. A non-symlink or external target goes back through the mutation gate.
 
 Prefer:
 

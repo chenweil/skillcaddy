@@ -40,6 +40,8 @@
   /* 深色 toast 上的错误文本：#c64545 压深底只有 ~2.5:1，需提亮到 8.7:1。 */
   --error-on-dark: #f2a6a6;
   --scroll-thumb: #a9bddb;
+  --selection: #ccddff;
+  --shadow-toast: 0 8px 24px rgba(8, 18, 44, 0.24);
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -47,6 +49,42 @@
   --display: Georgia, "Times New Roman", "Songti SC", serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --primary: #78a6ff;
+    --primary-strong: #4f86f7;
+    --primary-active: #6f9fff;
+    --primary-disabled: #24324a;
+    --ink: #f5f8ff;
+    --body: #c9d3e3;
+    --body-strong: #eef4ff;
+    --muted: #aebbd0;
+    --muted-soft: #a9b8ce;
+    --hairline: #33425a;
+    --hairline-soft: #26364e;
+    --canvas: #0b1322;
+    --surface-soft: #111d30;
+    --surface-card: #182843;
+    --surface-dark: #050a15;
+    --surface-dark-elevated: #182943;
+    --surface-dark-soft: #091426;
+    --on-primary: #08122c;
+    --on-dark: #f8fafd;
+    --on-dark-soft: #b9c9e3;
+    --accent-green: #77b99f;
+    --accent-amber: #f0a06a;
+    --success: #75d1aa;
+    --warning-surface: #3b291f;
+    --warning-ink: #ffc79d;
+    --error: #d95768;
+    --error-on-dark: #ffb4bd;
+    --scroll-thumb: #5d7190;
+    --selection: #284d88;
+    --shadow-toast: 0 12px 32px rgba(0, 0, 0, 0.42);
+  }
 }
 
 * { box-sizing: border-box; }
@@ -57,7 +95,7 @@ html {
 }
 
 ::selection {
-  background: #ccddff;
+  background: var(--selection);
   color: var(--ink);
 }
 
@@ -799,7 +837,8 @@ button.danger:disabled,
 }
 
 .group-enable-all,
-.group-enable-global {
+.group-enable-global,
+.group-enable-hermes {
   min-width: 44px;
   height: 36px;
   background: var(--primary-strong);
@@ -814,12 +853,15 @@ button.danger:disabled,
 .group-enable-all:active,
 .group-enable-all:hover,
 .group-enable-global:active,
-.group-enable-global:hover {
+.group-enable-global:hover,
+.group-enable-hermes:active,
+.group-enable-hermes:hover {
   background: var(--primary-active);
 }
 
 .group-enable-all:disabled,
-.group-enable-global:disabled {
+.group-enable-global:disabled,
+.group-enable-hermes:disabled {
   background: var(--primary-disabled);
   color: var(--muted);
 }
@@ -830,6 +872,11 @@ button.danger:disabled,
 }
 
 .group-enable-global.is-complete {
+  background: var(--success);
+  color: var(--on-primary);
+}
+
+.group-enable-hermes.is-complete {
   background: var(--success);
   color: var(--on-primary);
 }
@@ -1011,13 +1058,14 @@ button.danger:disabled,
 
 .toggle-field {
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
 }
 
 .toggle-field input {
-  width: 18px;
-  min-height: 18px;
+  width: 24px;
+  min-height: 24px;
   accent-color: var(--primary-strong);
 }
 
@@ -1063,7 +1111,7 @@ button.danger:disabled,
   color: var(--on-dark);
   padding: 12px 16px;
   font: 13px/1.5 var(--mono);
-  box-shadow: 0 8px 24px rgba(8, 18, 44, 0.24);
+  box-shadow: var(--shadow-toast);
   overflow-wrap: anywhere;
   pointer-events: auto;
   transition: opacity 160ms ease, transform 160ms ease;
@@ -1132,6 +1180,7 @@ button.danger:disabled,
   }
 
   .actions button,
+  .metadata-actions button,
   .empty-action {
     min-height: 44px;
   }

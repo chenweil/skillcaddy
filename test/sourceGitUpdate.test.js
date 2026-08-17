@@ -227,6 +227,49 @@ test('blocks Git registry repair when manual pull would remove a global link', a
   });
 });
 
+test('blocks Git registry repair when manual pull would remove a Hermes link', async () => {
+  const fixture = await createGitFixture('repair-hermes-breaking');
+  const root = await makeTempDir('source-git-repair-hermes-breaking-root-');
+  const project = await makeTempDir('source-git-repair-hermes-breaking-project-');
+  const hermesDir = await makeTempDir('source-git-repair-hermes-breaking-dir-');
+
+  await withGitUrlRewrite(fixture.remoteRoot, async () => {
+    await addFixtureSource(root, fixture);
+    const checkout = path.join(root, 'github', fixture.repository);
+    await enableSkill(root, {
+      scope: 'hermes',
+      hermesDir,
+      skillPath: path.join(checkout, 'skills', 'review'),
+      alias: 'hermes-review'
+    });
+    await removeSkillAndPush(fixture, 'review', 'replacement');
+    await execFile('git', ['-C', checkout, 'pull', '--ff-only']);
+
+    await assert.rejects(
+      () => planRepairSource(
+        { rootDir: root, projectPath: project, hermesDir },
+        { sourceId: fixture.sourceId }
+      ),
+      (error) => error.category === 'breaking-replacement' &&
+        error.affectedHermesLinks[0].alias === 'hermes-review'
+    );
+
+    const plan = await planBreakingRepairSource(
+      { rootDir: root, projectPath: project, hermesDir },
+      { sourceId: fixture.sourceId }
+    );
+    assert.deepEqual(plan.affectedProjectLinks, []);
+    assert.deepEqual(plan.affectedGlobalLinks || [], []);
+    assert.deepEqual(plan.affectedHermesLinks, [
+      { alias: 'hermes-review', skillPath: 'skills/review' }
+    ]);
+    assert.equal(
+      (await applyRepairSource({ rootDir: root, projectPath: project, hermesDir }, plan)).status,
+      'repaired'
+    );
+  });
+});
+
 test('reports a dirty registered Git source without changing or stashing it', async () => {
   const fixture = await createGitFixture('dirty');
   const root = await makeTempDir('source-git-dirty-root-');

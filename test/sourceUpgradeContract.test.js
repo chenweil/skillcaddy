@@ -1,8 +1,10 @@
 import {
+  mkdir,
   readFile,
   lstat,
   rename as fsRename,
-  rm as fsRm
+  rm as fsRm,
+  symlink
 } from 'node:fs/promises';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -353,6 +355,62 @@ test('Breaking source replacement also protects the shared global link', async (
   );
   assert.equal((await lstat(path.join(globalDir, 'global-removed'))).isSymbolicLink(), true);
   assert.equal((await getState(root, root, { globalDir })).global[0].exists, false);
+});
+
+test('Breaking source replacement also protects the Hermes link', async () => {
+  const root = await makeTempDir('source-upgrade-contract-hermes-root-');
+  const globalDir = await makeTempDir('source-upgrade-contract-hermes-global-dir-');
+  const hermesDir = await makeTempDir('source-upgrade-contract-hermes-dir-');
+  const original = await createLocalInput('source-upgrade-contract-hermes-v1-', {
+    'skills/kept': skillDocument('Kept skill', 'Kept'),
+    'skills/removed': skillDocument('Removed skill', 'Removed')
+  });
+  const replacement = await createLocalInput('source-upgrade-contract-hermes-v2-', {
+    'skills/kept': skillDocument('Updated kept skill', 'Kept')
+  });
+  const addPlan = await planAddSource(
+    { rootDir: root },
+    { input: original, name: 'contract-hermes-links' }
+  );
+  await applyAddSource({ rootDir: root }, addPlan);
+  const removedSkill = path.join(root, addPlan.installPath, 'skills/removed');
+  await mkdir(hermesDir, { recursive: true });
+  await symlink(removedSkill, path.join(hermesDir, 'hermes-removed'), 'dir');
+
+  const request = {
+    sourceId: 'personal/contract-hermes-links',
+    input: replacement
+  };
+  const project = await makeTempDir('source-upgrade-contract-hermes-project-');
+  await assert.rejects(
+    () => planUpdateSource({ rootDir: root, projectPath: project, globalDir, hermesDir }, request),
+    (error) => {
+      assert.equal(error.category, 'breaking-replacement');
+      assert.deepEqual(error.affectedProjectLinks, []);
+      assert.deepEqual(error.affectedGlobalLinks, []);
+      assert.deepEqual(error.affectedHermesLinks, [{
+        alias: 'hermes-removed',
+        skillPath: 'skills/removed'
+      }]);
+      assert.match(error.message, /Hermes links: hermes-removed/);
+      return true;
+    }
+  );
+
+  const plan = await planBreakingUpdateSource(
+    { rootDir: root, projectPath: project, globalDir, hermesDir },
+    request
+  );
+  assert.deepEqual(plan.affectedHermesLinks, [{
+    alias: 'hermes-removed',
+    skillPath: 'skills/removed'
+  }]);
+  await applyUpdateSource(
+    { rootDir: root, projectPath: project, globalDir, hermesDir },
+    plan
+  );
+  assert.equal((await lstat(path.join(hermesDir, 'hermes-removed'))).isSymbolicLink(), true);
+  assert.equal((await getState(root, root, { globalDir, hermesDir })).hermes[0].exists, false);
 });
 
 test('directory replacement preserves its publication failure contract', async (t) => {

@@ -16,11 +16,12 @@
 - 需要 Claude Code 专属入口，同时还要保留 agents 列表干净
 - archived 的 skill 不小心又被启用了——因为没人设门禁
 
-Skillcaddy 用一个 AISkills 目录作单一事实来源，用明确的项目/全局 symlink 作用域作投递机制，把这些问题一次性解决。
+Skillcaddy 用一个 AISkills 目录作单一事实来源，用明确的项目/全局/Hermes symlink 作用域作投递机制，把这些问题一次性解决。
 
 - **单一事实来源** — `~/AISkills/` 汇总 `official / github / personal / archived / skills`
 - **零项目污染** — 启用靠 symlink 落到 `.agents/skills/`，绝不复制
 - **项目或全局作用域** — 项目链接留在项目内；全局链接只写入 `~/.agents/skills/`
+- **独立 Hermes 作用域** — `official`/`github`/`personal` 来源都可以显式链接到 `~/.hermes/skills/`；不跟随 `HERMES_HOME`，也不会改变项目/全局作用域
 - **天生多 Agent 友好** — 一个 symlink 同时被 Claude Code / Codex / OpenCode / Pi 走各自标准路径识别
 - **独立管理启用 / 禁用** — agents 列与 Claude Code 列各自跟踪
 - **安全默认** — 禁用只删 symlink；`archived/` 必须显式点名才启用
@@ -39,7 +40,7 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
-Web 原件库中的项目启用和全局启用彼此独立。全局启用 skill 后，项目操作仍然可用：如果当前项目需要自己的 setup、Claude Code 同步或明确的项目级优先关系，仍可把同一个 skill 添加到当前项目。库级操作会分别显示项目/全局启用进度；关键词搜索自动展开命中的库，来源和标签筛选则保持折叠，方便紧凑浏览。
+Web 原件库中的项目、全局和 Hermes 启用彼此独立。全局启用 skill 后，项目操作仍然可用：如果当前项目需要自己的 setup、Claude Code 同步或明确的项目级优先关系，仍可把同一个 skill 添加到当前项目。库级操作会分别显示项目/全局/Hermes 启用进度；关键词搜索自动展开命中的库，来源和标签筛选则保持折叠，方便紧凑浏览。
 
 ### 全局 CLI / TUI 命令
 
@@ -64,8 +65,10 @@ skillcaddy -u [projectPath]        # 安全更新已登记的 Git skill 源
 skillcaddy -a [projectPath]        # 分析项目状态、诊断和推荐
 skillcaddy enable <skill-id> --project <dir> [--alias <name>]
 skillcaddy enable <skill-id> --global [--alias <name>]
+skillcaddy enable <skill-id> --hermes [--alias <name>]
 skillcaddy disable <alias> --project <dir>
 skillcaddy disable <alias> --global
+skillcaddy disable <alias> --hermes
 ```
 
 `-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 用于 source 和分析操作选择中央原件库，Web 生命周期使用提供 CLI 的 clone。未带参数的 `skillcaddy` 仍然进入 TUI。
@@ -108,6 +111,7 @@ TUI 提供完整的键盘驱动界面，无需浏览器：
 - **浏览/搜索 skill 库** — 关键词搜索、来源过滤、库级钻取
 - **启用 skill** — 创建 `.agents/skills/` 软链接并自动同步 Claude Code
 - **全局启用 skill** — 不依赖项目，在 `~/.agents/skills/` 创建共享链接
+- **独立 Hermes 启用** — 选项 14 只把 `official`/`github`/`personal` skill 显式链接到 `~/.hermes/skills/`
 - **清理已启用 skill** — 仅删除项目软链接，原件安全
 - **管理全局 skill** — 选项 13 查看、启用并安全清理当前原件库在 `~/.agents/skills/` 拥有的全局链接
 - **同步 Claude Code** — 一键同步 `.claude/skills/` 与 `.agents/skills/`
@@ -169,7 +173,7 @@ npm run migrate:metadata -- --yes
 
 部分 collection 在启用 skills 后，还需要针对每个项目执行一次 setup。Skillcaddy 把契约保存在第三方 clone 之外的 `collection-metadata/<source>/<collection>.json`，并通过 `/api/state` 把状态报告为 `missing`、`partial`、`ready` 或 `invalid`。全局启用不会运行或要求项目 setup。
 
-库级一键启用通过 `scope`（`project` 或 `global`）调用 `POST /api/enable-plan` 和 `POST /api/enable-collection`。项目作用域会纳入声明的 setup 指引；全局作用域只创建 `~/.agents/skills` 链接。统一生命周期会把每个候选 skill 分类为已启用、已存在、已跳过或失败。项目配置不完整时只显示为“待配置”，不会被宣称为“已就绪”；交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
+库级一键启用通过 `scope`（`project`、`global` 或 `hermes`）调用 `POST /api/enable-plan` 和 `POST /api/enable-collection`。项目作用域会纳入声明的 setup 指引；全局作用域只创建 `~/.agents/skills` 链接；Hermes 作用域接受 `official`、`github`、`personal` 来源并创建 `~/.hermes/skills/` 直接链接。统一生命周期会把每个候选 skill 分类为已启用、已存在、已跳过或失败。项目配置不完整时只显示为“待配置”，不会被宣称为“已就绪”；交互式 setup 不会静默运行，collection metadata 也不能携带可执行 shell 命令。
 
 ## 平台兼容性
 
@@ -339,7 +343,7 @@ npm run source -- update-git --project /path/to/project
 ```
 
 `--project` 是必填项，用于检查目标项目的 `.agents/skills/` 软链接；全局
-`~/.agents/skills/` 链接总会一并扫描。breaking 更新会分别报告项目和全局
+`~/.agents/skills/` 链接总会一并扫描，`~/.hermes/skills/` 也会纳入检查。breaking 更新会分别报告项目、全局和 Hermes
 链接；`--allow-breaking` 只授权替换原件，不会自动删除或重新绑定受影响链接，受影响链接可能因此断开。
 
 如果你手动执行了 `git pull`，导致已登记 Git clone 前进但 registry 没有同步，
@@ -368,13 +372,13 @@ repair 不会 pull、覆盖、stash 或 reset 当前 clone；只有干净、位�
 - 健康检查（断链、别名冲突、archvied 误启用）
 - 检测冲突并要求用户确认
 
-**安全规则**：只在明确选择的项目或全局 `.agents/skills` 作用域操作；不删中央原件；不接管普通目录或外部全局链接；不动 `archived/` 除非显式点名；任何状态变更前先给 dry-run 摘要。
+**安全规则**：只在明确选择的项目、全局 `.agents/skills` 或 Hermes `~/.hermes/skills` 作用域操作；不删中央原件；不接管普通目录或外部链接；Hermes 只接受 `official`/`github`/`personal`；不动 `archived/` 除非显式点名；任何状态变更前先给 dry-run 摘要。
 
 **触发方式**：`agents/openai.yaml` 设置了 `allow_implicit_invocation: true`，Agent 看到相关请求时会自动加载。
 
 ## 启用 / 禁用
 
-**启用**：在选定作用域创建软链接，指向中央库中的 skill 原件。项目作用域还会 best-effort 同步 Claude Code；全局作用域只写入 `~/.agents/skills/`。
+**启用**：在选定作用域创建软链接，指向中央库中的 skill 原件。项目作用域还会 best-effort 同步 Claude Code；全局作用域只写入 `~/.agents/skills/`；Hermes 作用域只处理 eligible 来源。
 
 ```text
 <project>/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>

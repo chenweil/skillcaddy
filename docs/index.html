@@ -731,15 +731,15 @@
                 <span class="i18n-zh">工作原理</span>
               </p>
               <h2 class="section-title">
-                <span class="i18n-en">One library. Explicit project or global links.</span>
-                <span class="i18n-zh">一个中央库。明确的项目或全局链接。</span>
+                <span class="i18n-en">One library. Explicit project, global, or Hermes links.</span>
+                <span class="i18n-zh">一个中央库。明确的项目、全局或 Hermes 链接。</span>
               </h2>
             </div>
             <p class="section-lead i18n-en">
-              Skillcaddy never copies skill files into projects. Enable creates an explicit project or shared Agents symlink; disable only removes that symlink. Sources stay safe.
+              Skillcaddy never copies skill files into projects. Enable creates an explicit project, shared Agents, or Hermes symlink; disable only removes that symlink. Sources stay safe.
             </p>
             <p class="section-lead i18n-zh">
-              Skillcaddy 从不把 skill 文件复制进项目。启用就是创建明确作用域的项目或全局 Agents 软链接；禁用只删链接，源文件始终安全。
+              Skillcaddy 从不把 skill 文件复制进项目。启用就是创建明确作用域的项目、全局 Agents 或 Hermes 软链接；禁用只删链接，源文件始终安全。
             </p>
           </div>
           <div class="flow">
@@ -759,20 +759,21 @@
               <div class="flow-index">02</div>
               <h3 class="i18n-en">Enable by symlink</h3>
               <h3 class="i18n-zh">软链接启用</h3>
-              <p class="i18n-en">Point `<project>/.agents/skills/<alias>` or `~/.agents/skills/<alias>` at the library skill.</p>
-              <p class="i18n-zh">把 `<project>/.agents/skills/<alias>` 或 `~/.agents/skills/<alias>` 指到库中 skill。</p>
+              <p class="i18n-en">Point `<project>/.agents/skills/<alias>`, `~/.agents/skills/<alias>`, or `~/.hermes/skills/<alias>` at the library skill.</p>
+              <p class="i18n-zh">把 `<project>/.agents/skills/<alias>`、`~/.agents/skills/<alias>` 或 `~/.hermes/skills/<alias>` 指到库中 skill。</p>
               <div class="flow-code">
                 .agents/skills/tdd<br>
                 <span class="dim">→ ~/AISkills/github/.../tdd</span>
-                <br>~/.agents/skills/tdd <span class="dim">(shared)</span>
+                <br>~/.agents/skills/tdd <span class="dim">(shared)</span><br>
+                ~/.hermes/skills/tdd <span class="dim">(explicit)</span>
               </div>
             </div>
             <div class="flow-step">
               <div class="flow-index">03</div>
               <h3 class="i18n-en">Sync Claude Code</h3>
               <h3 class="i18n-zh">同步 Claude Code</h3>
-              <p class="i18n-en">Project links can mirror into `.claude/skills/`; global enablement stays Agents-only.</p>
-              <p class="i18n-zh">项目链接可镜像到 `.claude/skills/`；全局启用明确只写 Agents。</p>
+              <p class="i18n-en">Project links can sync into `.claude/skills/`; global and Hermes enablement remain independent.</p>
+              <p class="i18n-zh">项目链接可同步到 `.claude/skills/`；全局和 Hermes 启用彼此独立。</p>
               <div class="flow-code">
                 .claude/skills/tdd<br>
                 <span class="dim">→ .agents/skills/tdd</span>
@@ -827,8 +828,8 @@
               </div>
               <h3 class="i18n-en">Web manager</h3>
               <h3 class="i18n-zh">Web 管理器</h3>
-              <p class="i18n-en">Browse, enable to project or global scope, edit notes/tags, and review diagnostics in the browser.</p>
-              <p class="i18n-zh">在浏览器中浏览、按项目或全局作用域启用、编辑备注/标签，并查看诊断建议。</p>
+              <p class="i18n-en">Browse, enable to project, global, or Hermes scope, edit notes/tags, and review diagnostics in the browser.</p>
+              <p class="i18n-zh">在浏览器中浏览、按项目、全局或 Hermes 作用域启用、编辑备注/标签，并查看诊断建议。</p>
             </article>
             <article class="feature">
               <div class="feature-icon" aria-hidden="true">

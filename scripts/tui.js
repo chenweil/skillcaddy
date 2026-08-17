@@ -74,6 +74,7 @@ async function mainLoop() {
       '11. 安装/检查全局 CLI + TUI 命令',
       '12. 按地址添加远程 Source 到原件库',
       '13. 管理全局 skill（~/.agents/skills）',
+      '14. 管理 Hermes skill（~/.hermes/skills）',
       'q. 退出'
     ].join('\n'));
 
@@ -97,6 +98,7 @@ async function mainLoop() {
       else if (choice === '11') await installGlobalCommandFlow();
       else if (choice === '12') await addRemoteSourceFlow();
       else if (choice === '13') await globalSkillsFlow();
+      else if (choice === '14') await hermesSkillsFlow();
       else console.log('未知操作');
     } catch (error) {
       const category = error?.category ? ` [${error.category}]` : '';
@@ -247,7 +249,7 @@ function printSummary() {
   console.log('\nSkillcaddy TUI');
   console.log(`原件库: ${rootDir}`);
   console.log(`项目: ${summary.projectPath}`);
-  console.log(`Skills: ${summary.totalSkills}  可用: ${summary.availableSkills}  项目 Agents: ${summary.enabledAgents}  全局 Agents: ${state.global.length}  Claude: ${summary.enabledClaude}  诊断: ${summary.advice}`);
+  console.log(`Skills: ${summary.totalSkills}  可用: ${summary.availableSkills}  项目 Agents: ${summary.enabledAgents}  全局 Agents: ${state.global.length}  Hermes: ${state.hermes.length}  Claude: ${summary.enabledClaude}  诊断: ${summary.advice}`);
   console.log('');
 }
 
@@ -298,6 +300,13 @@ function printEnabledSkills() {
     console.log('当前没有全局 Agents skill');
   } else {
     printSkillChoices(state.global.map(toEnabledSkillChoice));
+  }
+
+  console.log('\n已启用 skill / Hermes');
+  if (state.hermes.length === 0) {
+    console.log('当前没有 Hermes skill');
+  } else {
+    printSkillChoices(state.hermes.map(toEnabledSkillChoice));
   }
 }
 
@@ -396,13 +405,13 @@ async function libraryFlow(library) {
       continue;
     }
     if (selected === 'a') {
-      const scopeChoice = await ask('1. 启用到当前项目  2. 启用到全局  b. 取消');
+      const scopeChoice = await ask('1. 启用到当前项目  2. 启用到全局  3. 启用到 Hermes  b. 取消');
       if (isBack(scopeChoice)) continue;
-      if (!['1', '2'].includes(scopeChoice)) {
-        console.log('请输入 1、2 或 b');
+      if (!['1', '2', '3'].includes(scopeChoice)) {
+        console.log('请输入 1、2、3 或 b');
         continue;
       }
-      await enableLibraryFlow(currentLibrary, skills, scopeChoice === '2' ? 'global' : 'project');
+      await enableLibraryFlow(currentLibrary, skills, scopeChoice === '2' ? 'global' : scopeChoice === '3' ? 'hermes' : 'project');
       continue;
     }
 
@@ -541,6 +550,50 @@ async function globalSkillsFlow() {
   }
 }
 
+async function hermesSkillsFlow() {
+  while (true) {
+    console.log('\nHermes skill');
+    const hermesAliases = listEnabledAliases(state, 'hermes');
+    if (hermesAliases.length === 0) console.log('当前没有 Hermes skill');
+    else hermesAliases.forEach((item) => console.log(`${item.index}. ${item.label}${item.canDisable ? '' : ' (只读)'}`));
+    console.log('a. 启用 skill 到 Hermes\nd. 清理 Hermes skill\nb. 返回');
+    const choice = await ask('选择');
+    if (isBack(choice)) return;
+    if (choice === 'a') {
+      const value = await chooseSkill('要启用到 Hermes 的 skill 关键词或 id', { scope: 'hermes' });
+      if (!value) continue;
+      const skill = findSkillById(value);
+      if (!skill) {
+        console.log(`找不到 skill：${value}`);
+        continue;
+      }
+      const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
+      const alias = await ask(`Hermes skill 名称 [${suggestedAlias}]`) || suggestedAlias;
+      const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'hermes', alias });
+      state = await loadTuiState(rootDir, state.projectPath);
+      console.log(result.unchanged ? `Hermes 已存在：${result.alias}` : `Hermes 已启用：${result.alias}`);
+      continue;
+    }
+    if (choice === 'd') {
+      if (hermesAliases.length === 0) continue;
+      const selected = await ask('输入序号或 skill 名称');
+      const alias = resolveIndexedValue(hermesAliases, selected, 'alias');
+      const item = hermesAliases.find((candidate) => candidate.alias === alias);
+      if (!item?.canDisable) {
+        console.log('这个 Hermes 链接不属于当前原件库，只能查看，不能由当前库清理');
+        continue;
+      }
+      const confirm = await ask(`清理 Hermes skill ${alias}? y/N`);
+      if (!['y', 'yes'].includes(confirm.toLowerCase())) continue;
+      const result = await disableAlias(state, alias, { scope: 'hermes', rootDir });
+      state = await loadTuiState(rootDir, state.projectPath);
+      console.log(result.removed ? `已清理 Hermes：${alias}` : `未找到：${alias}`);
+      continue;
+    }
+    console.log('未知操作');
+  }
+}
+
 async function disableAliasFlow() {
   const aliases = listEnabledAliases(state);
   if (aliases.length === 0) {
@@ -580,11 +633,12 @@ async function skillDetailFlow(skillId) {
       '1. 启用到当前项目 Agents，并同步 Claude Code',
       '2. 使用其他名称启用到当前项目',
       '3. 启用到全局 Agents',
-      '4. 清理当前项目 skill',
-      '5. 编辑备注',
-      '6. 编辑 tags',
-      `7. ${skill.autoEnable === false ? '开启' : '关闭'}参与一键加入`,
-      '8. 编辑全部 metadata',
+      '4. 启用到 Hermes',
+      '5. 清理当前项目 skill',
+      '6. 编辑备注',
+      '7. 编辑 tags',
+      `8. ${skill.autoEnable === false ? '开启' : '关闭'}参与一键加入`,
+      '9. 编辑全部 metadata',
       'b. 返回列表'
     ].join('\n'));
 
@@ -594,11 +648,12 @@ async function skillDetailFlow(skillId) {
     if (choice === '1') await enableSkillById(skill.id);
     else if (choice === '2') await enableSkillWithAlias(skill);
     else if (choice === '3') await enableGlobalSkillById(skill.id);
-    else if (choice === '4') await disableSkillAlias(skill);
-    else if (choice === '5') await editNote(skill);
-    else if (choice === '6') await editTags(skill);
-    else if (choice === '7') await toggleAutoEnable(skill);
-    else if (choice === '8') await editAllMetadata(skill.id);
+    else if (choice === '4') await enableHermesSkillById(skill.id);
+    else if (choice === '5') await disableSkillAlias(skill);
+    else if (choice === '6') await editNote(skill);
+    else if (choice === '7') await editTags(skill);
+    else if (choice === '8') await toggleAutoEnable(skill);
+    else if (choice === '9') await editAllMetadata(skill.id);
     else console.log('未知操作');
   }
 }
@@ -606,6 +661,7 @@ async function skillDetailFlow(skillId) {
 function printSkillDetail(skill) {
   const enabled = findEnabledSkill(skill);
   const globalEnabled = findGlobalSkill(skill);
+  const hermesEnabled = findHermesSkill(skill);
   console.log('\nSkill 详情');
   console.log(`名称: ${skill.name}`);
   console.log(`ID: ${skill.id}`);
@@ -613,6 +669,7 @@ function printSkillDetail(skill) {
   const statuses = [];
   if (enabled) statuses.push(`项目=${enabled.alias}`);
   if (globalEnabled) statuses.push(`全局=${globalEnabled.alias}`);
+  if (hermesEnabled) statuses.push(`Hermes=${hermesEnabled.alias}`);
   console.log(`状态: ${statuses.length > 0 ? statuses.join('，') : '未启用'}`);
   console.log(`一键加入: ${skill.autoEnable === false ? '否' : '是'}`);
   console.log(`Tags: ${(skill.tags || []).join(', ') || '-'}`);
@@ -642,9 +699,22 @@ async function enableGlobalSkillById(skillId) {
   await reportEnableResult(result);
 }
 
+async function enableHermesSkillById(skillId) {
+  const skill = state.skills.find((item) => item.id === skillId);
+  if (!skill) return;
+  if (!['official', 'github', 'personal'].includes(skill.source)) {
+    console.log('Hermes 只接受 official、github 或 personal 来源的 skill');
+    return;
+  }
+  const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
+  const alias = await ask(`Hermes skill 名称 [${suggestedAlias}]`) || suggestedAlias;
+  const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'hermes', alias });
+  await reportEnableResult(result);
+}
+
 async function reportEnableResult(result) {
   state = await loadTuiState(rootDir, state.projectPath);
-  const prefix = result.scope === 'global' ? '全局' : '项目';
+  const prefix = result.scope === 'global' ? '全局' : result.scope === 'hermes' ? 'Hermes' : '项目';
   console.log(result.unchanged ? `${prefix}已存在：${result.alias}` : `${prefix}已启用：${result.alias}`);
   if (result.claudeSync?.ok === false) {
     console.log(`Claude Code 同步失败：${result.claudeSync.error}`);
@@ -732,7 +802,13 @@ function printAdvice() {
 
 async function chooseSkill(prompt, options = {}) {
   const query = await ask(prompt);
-  const choices = listSkillChoices(state, { query, limit: 20, scope: options.scope });
+  const choices = listSkillChoices(state, {
+    query,
+    limit: options.scope === 'hermes' ? state.skills.length : 20,
+    scope: options.scope
+  })
+    .filter((choice) => options.scope !== 'hermes' || ['official', 'github', 'personal'].includes(choice.skill.source))
+    .slice(0, 20);
   if (choices.length === 0) {
     console.log(`没有匹配的 skill。当前原件库是 ${rootDir}；如果你在 worktree 里开发，请用 --root 指向真实原件库。`);
     return '';
@@ -769,6 +845,10 @@ function findEnabledSkill(skill) {
 
 function findGlobalSkill(skill) {
   return state.global.find((enabled) => enabled.targetPath === skill.path);
+}
+
+function findHermesSkill(skill) {
+  return state.hermes.find((enabled) => enabled.targetPath === skill.path);
 }
 
 function groupSkillChoices(choices) {

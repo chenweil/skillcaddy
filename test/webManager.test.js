@@ -105,6 +105,32 @@ test('startWeb removes a stale PID record before starting', async () => {
   assert.notEqual(result.pid, 99999);
 });
 
+test('startWeb reports readiness failure when its child exits before cleanup', async () => {
+  const root = await makeTempDir('web-manager-exit-root-');
+  const runtimeDir = await makeTempDir('web-manager-exit-runtime-');
+  const fake = makeFakeProcess({
+    probe: async () => false,
+    terminate: () => {
+      const error = new Error('kill ESRCH');
+      error.code = 'ESRCH';
+      throw error;
+    },
+    wait: async () => {}
+  });
+
+  await assert.rejects(
+    () => startWeb({
+      rootDir: root,
+      port: 45177,
+      runtimeDir,
+      open: false,
+      startTimeoutMs: 0,
+      dependencies: fake.dependencies
+    }),
+    /Web process .* did not become ready on port 45177/
+  );
+});
+
 test('stopWeb refuses to kill an external process on the port', async () => {
   const root = await makeTempDir('web-manager-external-root-');
   const runtimeDir = await makeTempDir('web-manager-external-runtime-');

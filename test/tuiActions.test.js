@@ -106,6 +106,22 @@ test('TUI actions can explicitly enable, list, and disable a global skill', asyn
   assert.equal(disabled.removed, true);
 });
 
+test('TUI actions can explicitly enable, list, and disable a Hermes skill', async () => {
+  const root = await makeTempDir('tui-hermes-root-');
+  const project = await makeTempDir('tui-hermes-project-');
+  const hermesDir = await makeTempDir('tui-hermes-dir-');
+  await createSkill(root, 'github/toolbox/skills', 'shared', 'Shared Hermes skill');
+
+  let state = await loadTuiState(root, project, { hermesDir });
+  const enabled = await enableSkillChoice(root, state, 'github/toolbox/skills/shared', { scope: 'hermes', hermesDir });
+  assert.equal(enabled.scope, 'hermes');
+
+  state = await loadTuiState(root, project, { hermesDir });
+  assert.deepEqual(listEnabledAliases(state, 'hermes').map((item) => item.alias), ['shared']);
+  const disabled = await disableAlias(state, 'shared', { scope: 'hermes', rootDir: root, hermesDir });
+  assert.equal(disabled.removed, true);
+});
+
 test('saves metadata through sidecar storage', async () => {
   const root = await makeTempDir('tui-root-');
   const project = await makeTempDir('tui-project-');

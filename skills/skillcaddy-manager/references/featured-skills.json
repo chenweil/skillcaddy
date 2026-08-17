@@ -1,8 +1,17 @@
 {
-  "version": "0.24.1",
-  "lastUpdated": "2026-08-12",
+  "version": "0.25.1",
+  "lastUpdated": "2026-08-17",
   "description": "Skillcaddy 推荐策略和配置指南 (版本与 Skillcaddy 主项目保持一致)",
   "changelog": [
+    {
+      "version": "0.25.1",
+      "date": "2026-08-17",
+      "changes": [
+        "同步至 Skillcaddy v0.25.1",
+        "新增独立 Hermes 启用作用域，贯通 API、CLI、TUI、Web 与 Manager",
+        "Hermes 支持 official、github、personal 来源，并增加来源更新与 Git registry repair 保护"
+      ]
+    },
     {
       "version": "0.24.1",
       "date": "2026-08-12",

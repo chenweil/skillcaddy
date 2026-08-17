@@ -102,6 +102,7 @@ export function parseCliArgs(argv = []) {
       result.projectPath = argv[index + 1] || '';
       if (!result.projectPath) result.error = '--project 需要一个目录路径';
       if (result.scope === 'global') result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
+      if (result.scope === 'hermes') result.error = `${result.command} 的 --hermes 不能与 --project 同时使用`;
       if (result.command === 'enable' || result.command === 'disable') result.scope = 'project';
       index += 1;
       continue;
@@ -110,6 +111,7 @@ export function parseCliArgs(argv = []) {
       result.projectPath = arg.slice('--project='.length);
       if (!result.projectPath) result.error = '--project 需要一个目录路径';
       if (result.scope === 'global') result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
+      if (result.scope === 'hermes') result.error = `${result.command} 的 --hermes 不能与 --project 同时使用`;
       if (result.command === 'enable' || result.command === 'disable') result.scope = 'project';
       continue;
     }
@@ -118,7 +120,18 @@ export function parseCliArgs(argv = []) {
         result.error = '--global 只适用于 enable 或 disable';
         return result;
       }
+      if (result.scope === 'hermes') result.error = `${result.command} 的 --global 不能与 --hermes 同时使用`;
       result.scope = 'global';
+      continue;
+    }
+    if (arg === '--hermes') {
+      if (result.command !== 'enable' && result.command !== 'disable') {
+        result.error = '--hermes 只适用于 enable 或 disable';
+        return result;
+      }
+      if (result.scope === 'global') result.error = `${result.command} 的 --hermes 不能与 --global 同时使用`;
+      if (result.scope === 'project') result.error = `${result.command} 的 --hermes 不能与 --project 同时使用`;
+      result.scope = 'hermes';
       continue;
     }
     if (arg === '--alias') {
@@ -181,9 +194,12 @@ export function parseCliArgs(argv = []) {
   if (result.command === 'enable' || result.command === 'disable') {
     const value = result.command === 'enable' ? result.skillRef : result.alias;
     if (!value) result.error = `${result.command} 需要一个 skill 或 alias`;
-    if (!result.scope && !result.error) result.error = `${result.command} 需要 --project 或 --global`;
+    if (!result.scope && !result.error) result.error = `${result.command} 需要 --project、--global 或 --hermes`;
     if (result.scope === 'global' && result.projectPath && !result.error) {
       result.error = `${result.command} 的 --global 不能与 --project 同时使用`;
+    }
+    if (result.scope === 'hermes' && result.projectPath && !result.error) {
+      result.error = `${result.command} 的 --hermes 不能与 --project 同时使用`;
     }
   }
 
@@ -207,8 +223,10 @@ export function buildHelpText() {
   skillcaddy -a [projectPath]        分析项目 skill 状态并给出推荐
   skillcaddy enable <skill-id> --project <dir> [--alias <name>]
   skillcaddy enable <skill-id> --global [--alias <name>]
+  skillcaddy enable <skill-id> --hermes [--alias <name>]
   skillcaddy disable <alias> --project <dir>
   skillcaddy disable <alias> --global
+  skillcaddy disable <alias> --hermes
 
 选项：
   --root <dir>                       指定 Skillcaddy 原件库根目录
@@ -216,6 +234,7 @@ export function buildHelpText() {
   --no-open                          启动 Web 后不自动打开浏览器
   --project <dir>                    显式指定项目目录（enable/disable 必须明确选择 scope）
   --global                            enable/disable 到用户共享的 ~/.agents/skills
+  --hermes                            enable/disable 到固定的 ~/.hermes/skills
   --alias <name>                     enable 时指定链接 alias
   --verbose                          更新时显示新增、编辑、删除的 Skill 路径
 
@@ -245,7 +264,8 @@ function stateTokens(state) {
   return [
     ...(state.skills || []),
     ...(state.enabled || []),
-    ...(state.global || [])
+    ...(state.global || []),
+    ...(state.hermes || [])
   ].flatMap((skill) => [skill.id, skill.name, skill.alias, skill.collection, ...(skill.tags || [])])
     .map(normalizeToken)
     .filter(Boolean);
@@ -303,7 +323,7 @@ export function buildRecommendations(state, catalog = {}, context = {}) {
   const maxRecommendations = catalog.recommendationStrategy?.maxRecommendations || 3;
   const tokens = stateTokens(state);
   const signals = projectSignals(context);
-  const hasEnabledSkills = (state.enabled || []).length > 0 || (state.global || []).length > 0;
+  const hasEnabledSkills = (state.enabled || []).length > 0 || (state.global || []).length > 0 || (state.hermes || []).length > 0;
   const mode = hasEnabledSkills || (state.skills || []).length > 0 && !context.isCodeRepo
     ? 'gap-based'
     : signals.length > 0
@@ -382,6 +402,7 @@ export function buildAnalysisReport(state, catalog = {}, context = {}) {
     `  项目 Agents 已启用：${state.enabled?.length || 0}`,
     `  项目 Claude Code 已启用：${state.claude?.skills?.length || 0}`,
     `  全局 skill：${state.global?.length || 0}`,
+    `  Hermes skill：${state.hermes?.length || 0}`,
     `  Collection setup：${state.setups?.length || 0}`,
     `  诊断项：${advice.length}`,
     `  项目线索：${technologies}`,
@@ -592,7 +613,7 @@ async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
     };
     const result = await actions.enableProjectSkill(rootDir, input);
     const status = result.unchanged ? '已存在' : '已启用';
-    stdout.write(`${parsed.scope === 'global' ? '全局' : '项目'}${status}：${result.alias}\n`);
+    stdout.write(`${scopeLabel(parsed.scope)}${status}：${result.alias}\n`);
     return 0;
   }
 
@@ -602,8 +623,12 @@ async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
     ...(parsed.scope === 'project' ? { projectPath: path.resolve(parsed.projectPath) } : {}),
     alias: parsed.alias
   });
-  stdout.write(`${parsed.scope === 'global' ? '全局' : '项目'}${result.removed ? '已清理' : '未找到'}：${result.alias}\n`);
+  stdout.write(`${scopeLabel(parsed.scope)}${result.removed ? '已清理' : '未找到'}：${result.alias}\n`);
   return 0;
+}
+
+function scopeLabel(scope) {
+  return { project: '项目', global: '全局', hermes: 'Hermes' }[scope] || scope;
 }
 
 function resolveSkill(skills, value) {

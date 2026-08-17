@@ -121,6 +121,35 @@ test('enables a collection globally without project setup or Claude synchronizat
   assert.equal((await getState(root, project, { globalDir })).enabled.length, 0);
 });
 
+test('enables an eligible collection into Hermes without project or global links', async () => {
+  const root = await makeTempDir('collection-hermes-root-');
+  const project = await makeTempDir('collection-hermes-project-');
+  const globalDir = await makeTempDir('collection-hermes-global-dir-');
+  const hermesDir = await makeTempDir('collection-hermes-dir-');
+  const skill = await createSkill(root, 'hermes-tool');
+  const state = await getState(root, project, { globalDir, hermesDir });
+
+  const result = await executeCollectionEnablement(root, {
+    scope: 'hermes',
+    globalDir,
+    hermesDir,
+    skillIds: [state.skills.find((item) => item.name === 'hermes-tool').id]
+  });
+
+  assert.equal(result.scope, 'hermes');
+  assert.deepEqual(result.counts, {
+    enabled: 1,
+    unchanged: 0,
+    skipped: 0,
+    failed: 0
+  });
+  assert.deepEqual(result.setups, []);
+  const nextState = await getState(root, project, { globalDir, hermesDir });
+  assert.equal(nextState.hermes[0].alias, 'hermes-tool');
+  assert.equal(nextState.enabled.length, 0);
+  assert.equal(nextState.global.length, 0);
+});
+
 async function createSkill(root, name) {
   await ensureSourceFolders(root);
   const skill = path.join(root, 'github', 'toolbox', 'skills', name);

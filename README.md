@@ -16,11 +16,12 @@ If you use Claude Code, Codex, OpenCode, or Pi across multiple projects, you eve
 - A Claude-Code-only entry needs to coexist with the agents-side list
 - An archived skill slips back in because no one gated it
 
-Skillcaddy fixes this with one AISkills directory as the source of truth and explicit project/global symlink scopes as the delivery mechanism.
+Skillcaddy fixes this with one AISkills directory as the source of truth and explicit project/global/Hermes symlink scopes as the delivery mechanism.
 
 - **One source of truth** — `~/AISkills/` aggregates `official / github / personal / archived / skills`
 - **Zero project pollution** — enable by symlink into `.agents/skills/`; never copy
 - **Project or global scope** — project links stay local; global links go only to `~/.agents/skills/`
+- **Independent Hermes scope** — `official`/`github`/`personal` skills explicitly link to `~/.hermes/skills/`; it ignores `HERMES_HOME` and never changes project/global scopes
 - **Multi-Agent by default** — one symlink reaches Claude Code, Codex, OpenCode, Pi via their standard paths
 - **Independent enable / disable** — agents-side and Claude-Code-side are tracked separately
 - **Safe by default** — disable only removes the symlink; `archived/` requires explicit naming
@@ -39,7 +40,7 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
-The Web library keeps project and global enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing.
+The Web library keeps project, global, and Hermes enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global/Hermes progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing.
 
 ### Global CLI / TUI command
 
@@ -64,8 +65,10 @@ skillcaddy -u [projectPath]        # safely update registered Git skill sources
 skillcaddy -a [projectPath]        # report project state, advice, and recommendations
 skillcaddy enable <skill-id> --project <dir> [--alias <name>]
 skillcaddy enable <skill-id> --global [--alias <name>]
+skillcaddy enable <skill-id> --hermes [--alias <name>]
 skillcaddy disable <alias> --project <dir>
 skillcaddy disable <alias> --global
+skillcaddy disable <alias> --hermes
 ```
 
 `-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the central library for source and analysis operations; Web lifecycle commands use the clone that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
@@ -110,6 +113,7 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 - **Enable globally** — Adds an explicit shared link under `~/.agents/skills/` without requiring a project
 - **Clear enabled skill** — Removes project symlink only; source stays safe
 - **Manage global skills** — Option 13 inspects, enables, and safely removes links owned by this central library under `~/.agents/skills/`
+- **Manage Hermes skills** — Option 14 explicitly inspects, enables, and safely removes eligible links under `~/.hermes/skills/`
 - **Sync Claude Code** — One-click sync `.claude/skills/` with `.agents/skills/`
 - **Edit metadata** — Inline note, tags, auto-enable toggle per skill
 - **View diagnostics** — Advice on duplicates, broken links, source drift
@@ -169,7 +173,7 @@ The apply command writes equivalent sidecar metadata and retains the legacy file
 
 Some collections require a one-time, per-project setup after their skills are enabled. Skillcaddy keeps these contracts outside third-party clones under `collection-metadata/<source>/<collection>.json`. `/api/state` reports each configured collection as `missing`, `partial`, `ready`, or `invalid`. Global enablement never runs or requests project setup.
 
-Library-level enablement uses an explicit `scope` (`project` or `global`) with `POST /api/enable-plan` and `POST /api/enable-collection` to apply the shared plan. Project scope includes declared setup guidance; global scope only creates `~/.agents/skills` links. One lifecycle classifies every candidate as enabled, unchanged, skipped, or failed. Enabling links remains allowed, but an incomplete project collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
+Library-level enablement uses an explicit `scope` (`project`, `global`, or `hermes`) with `POST /api/enable-plan` and `POST /api/enable-collection` to apply the shared plan. Project scope includes declared setup guidance; global scope only creates `~/.agents/skills` links; Hermes scope accepts `official`, `github`, and `personal` skills and creates direct links under `~/.hermes/skills/`. One lifecycle classifies every candidate as enabled, unchanged, skipped, or failed. Enabling links remains allowed, but an incomplete project collection is shown as pending rather than ready. Interactive setup is never run silently, and collection metadata cannot provide executable shell commands.
 
 ## Platform compatibility
 
@@ -341,7 +345,7 @@ npm run source -- update-git --project /path/to/project
 ```
 
 `--project` is required so project links are checked; global `~/.agents/skills/`
-links are always scanned as well. A breaking update reports project and global
+links are always scanned as well. A breaking update reports project, global, and Hermes
 links separately. `--allow-breaking` authorizes the source replacement but
 leaves affected links in place, where they may become broken.
 
@@ -384,13 +388,13 @@ Lets an Agent (especially Codex) know how to use Skillcaddy itself correctly:
 - Health check (broken links, alias conflicts, archived mis-enabled)
 - Detect conflicts and require user confirmation
 
-**Safety rules**: operate only on explicit project or global `.agents/skills` scopes; never delete central source files; never take over ordinary or foreign global entries; never touch `archived/` unless explicitly named; always produce a dry-run summary before any state change.
+**Safety rules**: operate only on explicit project, global `.agents/skills`, or Hermes `~/.hermes/skills` scopes; never delete central source files; never take over ordinary or foreign entries; Hermes accepts only `official`/`github`/`personal` sources; never touch `archived/` unless explicitly named; always produce a dry-run summary before any state change.
 
 **Invocation**: `agents/openai.yaml` sets `allow_implicit_invocation: true`, so the Agent auto-loads it when seeing a relevant request.
 
 ## Enable / Disable
 
-**Enable**: creates a symlink in the selected scope pointing back into the central library. Project scope also best-effort syncs Claude Code; global scope writes only `~/.agents/skills/`.
+**Enable**: creates a symlink in the selected scope pointing back into the central library. Project scope also best-effort syncs Claude Code; global scope writes only `~/.agents/`; Hermes scope writes only `~/.hermes/` for eligible sources.
 
 ```text
 <project>/.agents/skills/<alias> -> <skillcaddy>/<source>/<skill>

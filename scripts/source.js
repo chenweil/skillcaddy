@@ -24,6 +24,7 @@ export async function runSourceCli({
   rootDir = process.cwd(),
   projectPath = process.cwd(),
   globalDir,
+  hermesDir,
   stdin = process.stdin,
   stdout = process.stdout,
   stderr = process.stderr,
@@ -65,7 +66,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const context = { rootDir, projectPath: effectiveProjectPath, globalDir };
+      const context = { rootDir, projectPath: effectiveProjectPath, globalDir, hermesDir };
       const planUpdate = parsed.allowBreaking
         ? planBreakingUpdateSource
         : planUpdateSource;
@@ -93,7 +94,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath, globalDir });
+      const result = await updateGitSources({ rootDir, projectPath: effectiveProjectPath, globalDir, hermesDir });
       printGitUpdateBatch(result, stdout, parsed);
       return result.sources.some(
         (source) => source.status === 'failed' ||
@@ -107,7 +108,7 @@ export async function runSourceCli({
         printUsage(stderr);
         return 2;
       }
-      const context = { rootDir, projectPath: effectiveProjectPath, globalDir };
+      const context = { rootDir, projectPath: effectiveProjectPath, globalDir, hermesDir };
       const planRepair = parsed.allowBreaking
         ? planBreakingRepairSource
         : planRepairSource;
@@ -280,6 +281,9 @@ function printUpdatePlan(plan, stdout) {
   if (plan.affectedGlobalLinks?.length) {
     printAffectedGlobalLinks(plan.affectedGlobalLinks, stdout);
   }
+  if (plan.affectedHermesLinks?.length) {
+    printAffectedHermesLinks(plan.affectedHermesLinks, stdout);
+  }
 }
 
 function printAffectedProjectLinks(links, stdout) {
@@ -295,6 +299,13 @@ function printAffectedProjectLinks(links, stdout) {
 
 function printAffectedGlobalLinks(links, stdout) {
   stdout.write('would break global links:\n');
+  for (const link of links) {
+    stdout.write(`  - ${link.alias} -> ${link.skillPath}\n`);
+  }
+}
+
+function printAffectedHermesLinks(links, stdout) {
+  stdout.write('would break Hermes links:\n');
   for (const link of links) {
     stdout.write(`  - ${link.alias} -> ${link.skillPath}\n`);
   }
@@ -323,6 +334,10 @@ function printGitUpdateBatch(result, stdout, { verbose = false } = {}) {
     if (source.status === 'breaking' && source.affectedGlobalLinks?.length) {
       const aliases = source.affectedGlobalLinks.map((link) => link.alias).join(', ');
       stdout.write(`  would break global: ${aliases}\n`);
+    }
+    if (source.status === 'breaking' && source.affectedHermesLinks?.length) {
+      const aliases = source.affectedHermesLinks.map((link) => link.alias).join(', ');
+      stdout.write(`  would break Hermes: ${aliases}\n`);
     }
     if (source.updateSummary) {
       printGitUpdateSummary(source.updateSummary, stdout, { verbose });
@@ -443,6 +458,9 @@ function printRepairPlan(plan, stdout) {
   }
   if (plan.affectedGlobalLinks?.length) {
     printAffectedGlobalLinks(plan.affectedGlobalLinks, stdout);
+  }
+  if (plan.affectedHermesLinks?.length) {
+    printAffectedHermesLinks(plan.affectedHermesLinks, stdout);
   }
   if (plan.status === 'dirty') {
     stdout.write('reminder: local Git changes found; registry was not changed\n');

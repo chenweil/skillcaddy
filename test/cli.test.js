@@ -116,6 +116,38 @@ test('CLI enables a selected skill explicitly in the global scope', async () => 
   assert.match(output.stdout(), /全局已启用：team-review/);
 });
 
+test('CLI enables a selected skill explicitly in the Hermes scope', async () => {
+  const output = captureOutput();
+  const calls = [];
+  const result = await runCli({
+    argv: ['enable', 'github/toolbox/skills/review', '--hermes', '--alias', 'hermes-review'],
+    rootDir: '/tmp/library',
+    ...output.streams,
+    handlers: {
+      scanSkills: async () => [{
+        id: 'github/toolbox/skills/review',
+        name: 'review',
+        path: '/tmp/library/github/toolbox/skills/review'
+      }],
+      enableProjectSkill: async (rootDir, input) => {
+        calls.push({ rootDir, input });
+        return { ok: true, scope: 'hermes', alias: input.alias, unchanged: false };
+      }
+    }
+  });
+
+  assert.equal(result, 0);
+  assert.deepEqual(calls, [{
+    rootDir: '/tmp/library',
+    input: {
+      scope: 'hermes',
+      skillPath: '/tmp/library/github/toolbox/skills/review',
+      alias: 'hermes-review'
+    }
+  }]);
+  assert.match(output.stdout(), /Hermes已启用：hermes-review/);
+});
+
 test('CLI requires an explicit scope for enablement commands', async () => {
   const output = captureOutput();
   assert.equal(
@@ -126,7 +158,7 @@ test('CLI requires an explicit scope for enablement commands', async () => {
     }),
     2
   );
-  assert.match(output.stderr(), /enable 需要 --project 或 --global/);
+  assert.match(output.stderr(), /enable 需要 --project、--global 或 --hermes/);
 });
 
 test('CLI help and version are deterministic', async () => {

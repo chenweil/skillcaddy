@@ -1,8 +1,8 @@
 {
   "name": "skillcaddy",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "private": true,
-  "description": "Local skill source library with project and global symlink scopes.",
+  "description": "Local skill source library with project, global, and Hermes symlink scopes.",
   "type": "module",
   "bin": {
     "skillcaddy": "scripts/tui.js"
