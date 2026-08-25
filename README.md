@@ -127,7 +127,7 @@ The TUI provides a full keyboard-driven interface without needing a browser:
 
 Library browsing now shows skills in a compact paginated table (`n`/`p` to page through, `a` to bulk-enable). The skill introduction prefers the metadata `note` over the raw English `description` when both exist.
 
-Menu navigation uses number keys (1-13) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
+Menu navigation uses number keys (1-14) for actions, `/keyword` for search, `b` to go back, `q` to quit. Ideal for quick terminal workflows or headless environments.
 
 To make the bundled `skillcaddy-manager` skill available to AI agents from any project, install its global entry once:
 
