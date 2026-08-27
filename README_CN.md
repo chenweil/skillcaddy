@@ -459,8 +459,8 @@ npm test
 ```
 
 ## 链接
+灵感来源于公众号作者：[思想原型](https://mp.weixin.qq.com/s/HOj99MT5F4ecSAFkvJfVvQ)
+
 [Linux Do](https://linux.do/)
 [浅谈 AI 编程](https://mp.weixin.qq.com/s/f-NIkyxIuA8vjAUDp1bh5w)
 [深度思考：架构腐朽 & Loop Engineering](https://mp.weixin.qq.com/s/wINKSDQCroWBvf29h567zA)
-灵感来源于公众号作者：
-[思想原型](https://mp.weixin.qq.com/s/HOj99MT5F4ecSAFkvJfVvQ)
