@@ -89,6 +89,11 @@
       "reason": "Local ZIP extraction — owns archive parsing, safety limits, and bounded extraction"
     },
     {
+      "from": "lib/libraryImage.js",
+      "allow": ["lib/sourceAcquisitionError.js"],
+      "reason": "Library image extraction — owns tar invocation policy, hard-closed flag allowlist, and atomic staging; flag list populated by Issue #33 research"
+    },
+    {
       "from": "lib/sourceValidation.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceSkillDiscovery.js"],
       "reason": "Staged source validation — owns scanner-compatible skill discovery and quality warnings"
