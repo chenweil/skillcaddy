@@ -90,7 +90,7 @@
     },
     {
       "from": "lib/libraryImage.js",
-      "allow": ["lib/sourceAcquisitionError.js"],
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourcePath.js"],
       "reason": "Library image extraction — owns tar invocation policy, hard-closed flag allowlist, and atomic staging; flag list populated by Issue #33 research"
     },
     {
