@@ -5,12 +5,17 @@ import {
   DEFAULT_LIBRARY_IMAGE_LIMITS,
   LIBRARY_IMAGE_DENIED_ENTRY_TYPES,
   LIBRARY_IMAGE_ENTRY_TYPES,
+  LIBRARY_IMAGE_FLAG_POLICY,
+  LIBRARY_IMAGE_REQUIRED_TAR_FLAGS,
+  composeExtractArgs,
   extractLibraryImage,
-  inspectLibraryImage
+  inspectLibraryImage,
+  resolveTarInvocation
 } from '../lib/libraryImage.js';
 import { SourceAcquisitionError } from '../lib/sourceAcquisitionError.js';
 import { makeTempDir } from './testHelpers.js';
 import { buildTar } from './tarFixtures.js';
+import { buildFakeTar } from './fakeTar.js';
 
 test('exposes a frozen default limit shape that mirrors the local archive seam', () => {
   assert.ok(Object.isFrozen(DEFAULT_LIBRARY_IMAGE_LIMITS), 'limits must be frozen');
@@ -283,4 +288,234 @@ test('inspectLibraryImage surfaces type info that pre-flight uses to reject deni
   const types = new Set(result.entries.map((entry) => entry.type));
   assert.ok(types.has('file'), 'expected a file entry');
   assert.ok(types.has('symlink'), 'expected a symlink entry to be reported as such');
+});
+
+test('flag policy exposes common, bsdtar, and gnutar subsets and is fully frozen', () => {
+  assert.ok(Object.isFrozen(LIBRARY_IMAGE_FLAG_POLICY));
+  assert.ok(Object.isFrozen(LIBRARY_IMAGE_FLAG_POLICY.common));
+  assert.ok(Object.isFrozen(LIBRARY_IMAGE_FLAG_POLICY.bsdtar));
+  assert.ok(Object.isFrozen(LIBRARY_IMAGE_FLAG_POLICY.gnutar));
+  assert.ok(Array.isArray(LIBRARY_IMAGE_FLAG_POLICY.common));
+  assert.ok(LIBRARY_IMAGE_FLAG_POLICY.common.length > 0, 'common must carry at least one portable flag');
+  assert.ok(Array.isArray(LIBRARY_IMAGE_FLAG_POLICY.bsdtar));
+  assert.ok(LIBRARY_IMAGE_FLAG_POLICY.bsdtar.length > 0, 'bsdtar subset must list at least one macOS-only flag');
+  assert.ok(Array.isArray(LIBRARY_IMAGE_FLAG_POLICY.gnutar));
+  // gnutar starts empty: GNU tar is verified against the empty policy on the
+  // host runtime until #33's research identifies a GNU-specific safety flag.
+  assert.ok(LIBRARY_IMAGE_FLAG_POLICY.gnutar.length === 0,
+    'gnutar subset starts empty; populate only when research validates GNU-tar-specific flags');
+  assert.ok(LIBRARY_IMAGE_FLAG_POLICY.bsdtar.includes('--no-mac-metadata'),
+    '--no-mac-metadata is bsdtar-only; it must live under bsdtar so GNU tar never receives it');
+  assert.ok(!LIBRARY_IMAGE_FLAG_POLICY.common.includes('--no-mac-metadata'),
+    'bsdtar-only flag must never appear in common');
+});
+
+test('LIBRARY_IMAGE_REQUIRED_TAR_FLAGS aliases the portable common subset', () => {
+  assert.equal(
+    LIBRARY_IMAGE_REQUIRED_TAR_FLAGS,
+    LIBRARY_IMAGE_FLAG_POLICY.common,
+    'the alias keeps the constant stable for first-time readers and avoids platform drift'
+  );
+  assert.ok(
+    LIBRARY_IMAGE_REQUIRED_TAR_FLAGS.length > 0,
+    'release-gate contract: tar flag allowlist is no longer empty'
+  );
+  // Common flags must be cross-platform neutral so the literal can be trusted on either BSD or GNU.
+  for (const flag of LIBRARY_IMAGE_REQUIRED_TAR_FLAGS) {
+    assert.ok(flag.startsWith('--'), `flag must be long-form: ${flag}`);
+  }
+});
+
+test('composeExtractArgs surfaces flags before the mode flag and the operands', () => {
+  const invocation = {
+    binary: '/usr/bin/tar',
+    flags: ['--no-acls', '--no-xattrs', '--no-same-permissions'],
+    implementation: 'bsdtar',
+    version: 'bsdtar 3.5.3'
+  };
+  const args = composeExtractArgs({
+    invocation,
+    filePath: '/tmp/image.tar',
+    stagingRoot: '/tmp/staging'
+  });
+  assert.deepEqual(args, [
+    '--no-acls',
+    '--no-xattrs',
+    '--no-same-permissions',
+    '-xf',
+    '/tmp/image.tar',
+    '-C',
+    '/tmp/staging'
+  ]);
+});
+
+test('resolveTarInvocation detects bsdtar and returns the combined common + bsdtar flag set', async () => {
+  const workingDir = await makeTempDir('library-image-resolve-bsdtar-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  const fakeTar = await buildFakeTar({
+    argvLogPath,
+    versionOutput: 'bsdtar 3.5.3 - libarchive 3.7.4\n'
+  });
+  process.env.FAKE_TAR_ARGV_LOG = argvLogPath;
+  process.env.FAKE_TAR_VERSION = 'bsdtar 3.5.3 - libarchive 3.7.4\n';
+  try {
+    const invocation = await resolveTarInvocation(fakeTar);
+    assert.equal(invocation.implementation, 'bsdtar');
+    assert.match(invocation.version, /bsdtar/);
+    assert.ok(invocation.flags.includes('--no-acls'));
+    assert.ok(invocation.flags.includes('--no-mac-metadata'),
+      'bsdtar-only macOS skip flags must be wired through resolveTarInvocation');
+  } finally {
+    delete process.env.FAKE_TAR_ARGV_LOG;
+    delete process.env.FAKE_TAR_VERSION;
+  }
+});
+
+test('resolveTarInvocation detects GNU tar and refuses to leak bsdtar-only flags', async () => {
+  const workingDir = await makeTempDir('library-image-resolve-gnutard-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  const fakeTar = await buildFakeTar({
+    argvLogPath,
+    versionOutput: 'tar (GNU tar) 1.35\n'
+  });
+  process.env.FAKE_TAR_ARGV_LOG = argvLogPath;
+  process.env.FAKE_TAR_VERSION = 'tar (GNU tar) 1.35\n';
+  try {
+    const invocation = await resolveTarInvocation(fakeTar);
+    assert.equal(invocation.implementation, 'gnutard');
+    assert.match(invocation.version, /GNU tar/);
+    assert.ok(invocation.flags.includes('--no-acls'));
+    assert.ok(
+      !invocation.flags.includes('--no-mac-metadata'),
+      'macOS-only flag must never reach GNU tar — it would error out'
+    );
+    assert.ok(
+      !invocation.flags.includes('--no-fflags'),
+      'BSD-only flag must never reach GNU tar — it would error out'
+    );
+  } finally {
+    delete process.env.FAKE_TAR_ARGV_LOG;
+    delete process.env.FAKE_TAR_VERSION;
+  }
+});
+
+test('resolveTarInvocation fails closed on an unrecognized tar implementation', async () => {
+  const workingDir = await makeTempDir('library-image-resolve-unknown-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  const fakeTar = await buildFakeTar({
+    argvLogPath,
+    versionOutput: 'libfake-1.0 (third party)\n'
+  });
+  process.env.FAKE_TAR_ARGV_LOG = argvLogPath;
+  process.env.FAKE_TAR_VERSION = 'libfake-1.0 (third party)\n';
+  try {
+    await assert.rejects(
+      () => resolveTarInvocation(fakeTar),
+      (error) => {
+        assert.ok(error instanceof SourceAcquisitionError);
+        assert.equal(error.category, 'source-safety');
+        assert.match(error.message, /unknown tar implementation/i);
+        return true;
+      }
+    );
+  } finally {
+    delete process.env.FAKE_TAR_ARGV_LOG;
+    delete process.env.FAKE_TAR_VERSION;
+  }
+});
+
+test('extractLibraryImage spawn propagates non-zero tar exit into source-safety', async () => {
+  const workingDir = await makeTempDir('library-image-extract-exit-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  // The fake tar advertises bsdtar so resolveTarInvocation succeeds, then exits 2.
+  const fakeTar = await buildFakeTar({
+    argvLogPath,
+    versionOutput: 'bsdtar 3.5.3 - libarchive 3.7.4\n',
+    stderr: 'simulated extract failure\n',
+    exitCode: 2
+  });
+  const imageDir = await makeTempDir('library-image-extract-exit-image-');
+  const imagePath = path.join(imageDir, 'image.tar');
+  const { writeFile, readdir, readFile } = await import('node:fs/promises');
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'README.md', content: '# Root\n' }
+    ])
+  );
+  const stagingRoot = await makeTempDir('library-image-extract-exit-staging-');
+
+  process.env.FAKE_TAR_ARGV_LOG = argvLogPath;
+  process.env.FAKE_TAR_VERSION = 'bsdtar 3.5.3 - libarchive 3.7.4\n';
+  process.env.FAKE_TAR_VERSION_EXIT = '0';
+  process.env.FAKE_TAR_STDERR = 'simulated extract failure\n';
+  process.env.FAKE_TAR_EXIT = '2';
+  try {
+    await assert.rejects(
+      () => extractLibraryImage(imagePath, stagingRoot, { tarPath: fakeTar }),
+      (error) => {
+        assert.ok(error instanceof SourceAcquisitionError);
+        assert.equal(error.category, 'source-safety');
+        assert.match(error.message, /simulated extract failure/);
+        return true;
+      }
+    );
+
+    // Atomic cleanup is on the source-safety path: stagingRoot is removed
+    // entirely (verified by the ENOENT caught here).
+    await assert.rejects(
+      () => readdir(stagingRoot),
+      (error) => error.code === 'ENOENT',
+      'staging must be removed after a tar exit-code failure'
+    );
+    const argvLines = (await readFile(argvLogPath, 'utf8')).trim().split('\n');
+    // Last invocation is the extract call (after the version probe).
+    const lastArgv = JSON.parse(argvLines[argvLines.length - 1]);
+    assert.ok(lastArgv.includes('--no-acls'),
+      `argv must carry the portable flag set, got: ${JSON.stringify(lastArgv)}`);
+    assert.ok(lastArgv.includes('-xf'));
+  } finally {
+    delete process.env.FAKE_TAR_ARGV_LOG;
+    delete process.env.FAKE_TAR_VERSION;
+    delete process.env.FAKE_TAR_VERSION_EXIT;
+    delete process.env.FAKE_TAR_STDERR;
+    delete process.env.FAKE_TAR_EXIT;
+  }
+});
+
+test('extractLibraryImage treats a hanging tar as a source-safety timeout', async () => {
+  const workingDir = await makeTempDir('library-image-extract-timeout-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  const fakeTar = await buildFakeTar();
+  const imageDir = await makeTempDir('library-image-extract-timeout-image-');
+  const imagePath = path.join(imageDir, 'image.tar');
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'README.md', content: '# Root\n' }
+    ])
+  );
+  const stagingRoot = await makeTempDir('library-image-extract-timeout-staging-');
+
+  process.env.FAKE_TAR_ARGV_LOG = argvLogPath;
+  process.env.FAKE_TAR_VERSION = 'bsdtar 3.5.3 - libarchive 3.7.4\n';
+  process.env.FAKE_TAR_VERSION_EXIT = '0';
+  process.env.FAKE_TAR_HANG = '1';
+  try {
+    await assert.rejects(
+      () => extractLibraryImage(imagePath, stagingRoot, { tarPath: fakeTar, timeoutMs: 250 }),
+      (error) => {
+        assert.ok(error instanceof SourceAcquisitionError);
+        assert.equal(error.category, 'source-safety');
+        assert.match(error.message, /timed out/i);
+        return true;
+      }
+    );
+  } finally {
+    delete process.env.FAKE_TAR_ARGV_LOG;
+    delete process.env.FAKE_TAR_VERSION;
+    delete process.env.FAKE_TAR_VERSION_EXIT;
+    delete process.env.FAKE_TAR_HANG;
+  }
 });
