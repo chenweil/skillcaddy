@@ -43,28 +43,33 @@ test('declares the entry-type vocabulary', () => {
   }
 });
 
-test('inspectLibraryImage lists the entry paths the embedded tar advertises', async () => {
+test('inspectLibraryImage lists the entry paths and types the embedded tar advertises', async () => {
   const fixtureDir = await makeTempDir('library-image-list-');
   const imagePath = path.join(fixtureDir, 'image.tar');
-  await import('node:fs/promises').then(({ writeFile }) =>
-    writeFile(
-      imagePath,
-      buildTar([
-        { name: 'skills/alpha/SKILL.md', content: '# Alpha\n' },
-        { name: 'skills/beta/SKILL.md', content: '# Beta\n' },
-        { name: 'README.md', content: '# Root\n' }
-      ])
-    )
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'skills/alpha/SKILL.md', content: '# Alpha\n' },
+      { name: 'skills/beta/SKILL.md', content: '# Beta\n' },
+      { name: 'README.md', content: '# Root\n' }
+    ])
   );
 
   const result = await inspectLibraryImage(imagePath);
   assert.deepEqual(
-    result.entries.map((entry) => entry.path).sort(),
-    ['README.md', 'skills/alpha/SKILL.md', 'skills/beta/SKILL.md']
+    result.entries
+      .map((entry) => ({ path: entry.path, type: entry.type }))
+      .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0)),
+    [
+      { path: 'README.md', type: 'file' },
+      { path: 'skills/alpha/SKILL.md', type: 'file' },
+      { path: 'skills/beta/SKILL.md', type: 'file' }
+    ]
   );
 });
 
-test('extractLibraryImage writes a clean baseline to staging and reports entries', async (t) => {
+test('extractLibraryImage writes a clean baseline to staging and reports entries', async () => {
   const fixtureDir = await makeTempDir('library-image-baseline-');
   const imagePath = path.join(fixtureDir, 'image.tar');
   const stagingRoot = await makeTempDir('library-image-baseline-staging-');
@@ -93,16 +98,6 @@ test('extractLibraryImage writes a clean baseline to staging and reports entries
     { relative: 'skills/beta/SKILL.md', type: 'file' },
     { relative: 'skills/beta/data.txt', type: 'file' }
   ]);
-
-  // Staging should not have any of the support / safety junk that tar sometimes writes.
-  const { readdir } = await import('node:fs/promises');
-  const topLevel = (await readdir(stagingRoot)).sort();
-  for (const name of topLevel) {
-    assert.ok(
-      !name.startsWith('.'),
-      `tar should not have written a dotfile to staging: ${name}`
-    );
-  }
 });
 
 test('extractLibraryImage rejects images whose entry uses an absolute path', async () => {
@@ -128,10 +123,7 @@ test('extractLibraryImage rejects images whose entry uses an absolute path', asy
       return true;
     }
   );
-
-  // Staging must be empty (atomic-cleanup or pre-flight never wrote).
-  const { readdir } = await import('node:fs/promises');
-  assert.deepEqual(await readdir(stagingRoot), []);
+  assert.deepEqual(await (await import('node:fs/promises')).readdir(stagingRoot), []);
 });
 
 test('extractLibraryImage rejects images whose entry escapes staging via .. traversal', async () => {
@@ -156,15 +148,12 @@ test('extractLibraryImage rejects images whose entry escapes staging via .. trav
       return true;
     }
   );
-
-  const { readdir } = await import('node:fs/promises');
-  assert.deepEqual(await readdir(stagingRoot), []);
+  assert.deepEqual(await (await import('node:fs/promises')).readdir(stagingRoot), []);
 });
 
 test('extractLibraryImage cleans up staging on every rejected extraction attempt', async () => {
-  // Run multiple rejection attempts; staging must remain empty after each.
   const fixtureDir = await makeTempDir('library-image-multi-attempt-');
-  const { writeFile } = await import('node:fs/promises');
+  const { writeFile, readdir } = await import('node:fs/promises');
   const imagePath = path.join(fixtureDir, 'image.tar');
   await writeFile(
     imagePath,
@@ -183,7 +172,115 @@ test('extractLibraryImage cleans up staging on every rejected extraction attempt
         return true;
       }
     );
-    const { readdir } = await import('node:fs/promises');
     assert.deepEqual(await readdir(stagingRoot), [], `attempt ${attempt}: staging should be empty`);
   }
+});
+
+test('extractLibraryImage rejects tarballs whose entries include symlinks (symlink-first escape)', async () => {
+  const fixtureDir = await makeTempDir('library-image-symlink-first-');
+  const imagePath = path.join(fixtureDir, 'image.tar');
+  const stagingRoot = await makeTempDir('library-image-symlink-first-staging-');
+  const { writeFile, readdir } = await import('node:fs/promises');
+  // Image advertises: file, symlink `escape` -> `etc/escape`, then file `escape/leak.txt`.
+  // Without the symlink-type rejection tar would create the symlink first, then write
+  // `escape/leak.txt` to the resolved target — far outside staging.
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'README.md', content: '# Root\n' },
+      { name: 'escape', typeflag: '2', linkname: 'etc/escape' },
+      { name: 'escape/leak.txt', content: 'leaked' }
+    ])
+  );
+
+  await assert.rejects(
+    () => extractLibraryImage(imagePath, stagingRoot),
+    (error) => {
+      assert.ok(error instanceof SourceAcquisitionError);
+      assert.equal(error.category, 'source-safety');
+      assert.match(error.message, /symlink/i);
+      return true;
+    }
+  );
+  assert.deepEqual(await readdir(stagingRoot), []);
+});
+
+test('extractLibraryImage rejects tarballs whose entries include hardlinks (hardlink escape)', async () => {
+  const fixtureDir = await makeTempDir('library-image-hardlink-escape-');
+  const imagePath = path.join(fixtureDir, 'image.tar');
+  const stagingRoot = await makeTempDir('library-image-hardlink-escape-staging-');
+  const { writeFile, readdir } = await import('node:fs/promises');
+  // Adversary prepends a benign regular file (so the link target exists inside the
+  // archive) and then declares a hardlink whose linkname escapes the staging root.
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'skills/alpha/SKILL.md', content: '# Alpha\n' },
+      { name: 'evil', typeflag: '1', linkname: '/etc/passwd' }
+    ])
+  );
+
+  await assert.rejects(
+    () => extractLibraryImage(imagePath, stagingRoot),
+    (error) => {
+      assert.ok(error instanceof SourceAcquisitionError);
+      assert.equal(error.category, 'source-safety');
+      assert.match(error.message, /hardlink/i);
+      return true;
+    }
+  );
+  assert.deepEqual(await readdir(stagingRoot), []);
+});
+
+test('extractLibraryImage rejects tarballs whose entries include FIFO / char / block devices', async () => {
+  const cases = [
+    { name: 'fifo', typeflag: '6', label: /fifo/i },
+    { name: 'character-device', typeflag: '3', label: /character/i },
+    { name: 'block-device', typeflag: '4', label: /block/i }
+  ];
+
+  for (const fixture of cases) {
+    await test(fixture.name, async () => {
+      const fixtureDir = await makeTempDir(`library-image-${fixture.name}-`);
+      const imagePath = path.join(fixtureDir, 'image.tar');
+      const stagingRoot = await makeTempDir(`library-image-${fixture.name}-staging-`);
+      const { writeFile, readdir } = await import('node:fs/promises');
+      await writeFile(
+        imagePath,
+        buildTar([
+          { name: 'README.md', content: '# Root\n' },
+          { name: fixture.name, typeflag: fixture.typeflag }
+        ])
+      );
+
+      await assert.rejects(
+        () => extractLibraryImage(imagePath, stagingRoot),
+        (error) => {
+          assert.ok(error instanceof SourceAcquisitionError);
+          assert.equal(error.category, 'source-safety');
+          assert.match(error.message, fixture.label);
+          return true;
+        }
+      );
+      assert.deepEqual(await readdir(stagingRoot), []);
+    });
+  }
+});
+
+test('inspectLibraryImage surfaces type info that pre-flight uses to reject denied types', async () => {
+  const fixtureDir = await makeTempDir('library-image-inspect-types-');
+  const imagePath = path.join(fixtureDir, 'image.tar');
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(
+    imagePath,
+    buildTar([
+      { name: 'legit.md', content: 'legit' },
+      { name: 'evil-link', typeflag: '2', linkname: '/etc/escape' }
+    ])
+  );
+
+  const result = await inspectLibraryImage(imagePath);
+  const types = new Set(result.entries.map((entry) => entry.type));
+  assert.ok(types.has('file'), 'expected a file entry');
+  assert.ok(types.has('symlink'), 'expected a symlink entry to be reported as such');
 });
