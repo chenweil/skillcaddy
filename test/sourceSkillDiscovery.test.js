@@ -29,11 +29,32 @@ test('discovers repositories using a singular skill container', async () => {
 test('keeps the standard skills container authoritative when it has skills', async () => {
   const source = await makeTempDir('source-discovery-standard-container-');
   await writeSkill(source, 'skills/standard');
+  await writeSkill(source, 'plugin/skills/ignored');
   await writeSkill(source, 'example');
 
   assert.deepEqual(
     relativePaths(source, await discoverSourceSkillDirectories(source)),
     ['skills/standard']
+  );
+});
+
+test('discovers skills in multiple plugin skills containers', async () => {
+  const source = await makeTempDir('source-discovery-plugin-containers-');
+  await writeSkill(source, 'teaching/skills/create-learning-path');
+  await writeSkill(source, 'teaching/skills/run-learning-retrospective');
+  await writeSkill(source, 'create-plugin/skills/review-plugin-submission');
+  await writeSkill(source, 'create-plugin/skills/docs');
+  await writeSkill(source, 'create-plugin/skills/group/references');
+  await writeSkill(source, 'create-plugin/skills/tests/fixture');
+  await writeSkill(source, 'nested/plugin/skills/not-a-plugin-skill');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    [
+      'create-plugin/skills/review-plugin-submission',
+      'teaching/skills/create-learning-path',
+      'teaching/skills/run-learning-retrospective'
+    ]
   );
 });
 

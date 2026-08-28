@@ -28,6 +28,14 @@ _Avoid_: File type, install status
 Skillcaddy-owned sidecar records that preserve source identity, sanitized provenance, integrity information, and discovered skill paths without modifying acquired source content.
 _Avoid_: Source manifest, package metadata
 
+**Source integrity baseline**:
+The registered SHA-256 of the accepted installed content of a non-Git skill source. It detects unadopted local drift but does not change the source's identity or provenance.
+_Avoid_: Current version, upstream checksum
+
+**Source registry repair**:
+An explicit adoption of a registered skill source's current validated state into its sidecar record without modifying the source content or its enablement links. Git repair adopts an externally advanced commit; non-Git repair adopts the current integrity baseline and discovered skill paths.
+_Avoid_: Source update, migration, content repair
+
 **Git source**:
 A skill source acquired as a complete Git repository from a hosted Git URL. A URL pointing into a repository may identify a source focus, but does not change the repository-sized acquisition unit.
 _Avoid_: GitHub skill, cloned skill
@@ -65,7 +73,7 @@ Safety and discoverability checks applied before acquisition changes the central
 _Avoid_: Runtime preflight, setup check
 
 **Recognized skill layout**:
-A source-relative Skill location at the source root, within four directory levels under `skills/` or `skill/`, or in a direct child `<name>/`. Directory segments named `docs`, `references`, or `tests` are support content and are excluded. A populated `skills/` layout is authoritative, and unrelated deeper `SKILL.md` files outside the recognized collection roots are not discovered.
+A source-relative Skill location at the source root, within four directory levels under `skills/` or `skill/`, in a direct child `<name>/`, or within four directory levels under an immediate child collection's `<collection>/skills/`. Directory segments named `docs`, `references`, or `tests` are support content and are excluded. A populated root `skills/` layout is authoritative; otherwise, populated immediate child collections are authoritative, and unrelated deeper `SKILL.md` files outside the recognized collection roots are not discovered.
 _Avoid_: Recursive skill search, any SKILL.md
 
 **Source upgrade**:
