@@ -91,7 +91,7 @@
     {
       "from": "lib/libraryImage.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourcePath.js"],
-      "reason": "Library image extraction — owns tar invocation policy, hard-closed flag allowlist, and atomic staging; flag list populated by Issue #33 research"
+      "reason": "Library image extraction — owns tar header parsing, inode-type allowlist, platform-aware flag policy, and staging that only reclaims what it created; GNU-tar-specific flags pending Issue #33 research"
     },
     {
       "from": "lib/sourceValidation.js",
