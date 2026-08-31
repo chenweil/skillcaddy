@@ -16,6 +16,40 @@ test('discovers repositories with skills in direct root children', async () => {
   );
 });
 
+test('discovers skills in the .agents/skills agent standard container', async () => {
+  const source = await makeTempDir('source-discovery-agents-container-');
+  await writeSkill(source, '.agents/skills/alpha');
+  await writeSkill(source, '.agents/skills/beta');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    ['.agents/skills/alpha', '.agents/skills/beta']
+  );
+});
+
+test('prefers the skills container over .agents/skills when both exist', async () => {
+  const source = await makeTempDir('source-discovery-agents-vs-skills-');
+  await writeSkill(source, 'skills/primary');
+  await writeSkill(source, '.agents/skills/mirror');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    ['skills/primary']
+  );
+});
+
+test('excludes support directories inside the .agents/skills container', async () => {
+  const source = await makeTempDir('source-discovery-agents-support-');
+  await writeSkill(source, '.agents/skills/valid');
+  await writeSkill(source, '.agents/skills/references');
+  await writeSkill(source, '.agents/skills/docs');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    ['.agents/skills/valid']
+  );
+});
+
 test('discovers repositories using a singular skill container', async () => {
   const source = await makeTempDir('source-discovery-singular-container-');
   await writeSkill(source, 'skill/opentui');
