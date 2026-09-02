@@ -34,8 +34,10 @@ macOS 上原地回环解包一次（用于把「tar 自身的问题」与「跨�
 
 只在 `/tmp/libimg34-*` 下操作，不触碰活跃原件库。
 
-结束时会打印产物目录，包含 `library-image.tar`、`library-image.tar.gz` 和两份
-`facts-macos-*.json`。
+结束时会打印产物目录，包含主镜像 `library-image.tar`、`library-image.tar.gz`，
+以及用于单独验证 xattr 的 `library-image-xattrs.tar`。事实文件包括
+`facts-macos-source.json`、`facts-macos-roundtrip.json` 和
+`facts-macos-roundtrip-xattrs.json`。
 
 ### 第 2 步：把产物目录送到 Linux，在那里解包
 
@@ -47,10 +49,13 @@ cd /tmp/skillcaddy/docs/research/0034-fidelity
 ./verify-linux.sh /tmp/libimg34-in /tmp/skillcaddy
 ```
 
-解两次：不加 flag 的基线，以及 #33 建议的硬化 flag 集合。需要 Node 20+；缺
-`getfattr` 时 xattr 一列记为 `unavailable`，不影响主结论。
+主镜像解两次：不加 flag 的基线，以及 #33 建议的硬化 flag 集合；如果存在
+`library-image-xattrs.tar`，脚本还会用 GNU tar 的 `--xattrs` 显式恢复它，单独
+验证 xattr 的落地行为。需要 Node 20+；缺 `getfattr` 时 xattr 一列记为
+`unavailable`，不影响主结论。
 
-**如果目标服务器会以普通用户导入，请用普通用户再跑一次**，把两份报告都贴上。
+**如果目标服务器会以普通用户导入，请用普通用户再跑一次**，把主镜像两份报告
+和 xattr 变体报告一起贴上。
 
 ### 第 3 步：出报告
 

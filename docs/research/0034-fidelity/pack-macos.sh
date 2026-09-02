@@ -83,6 +83,8 @@ mkdir -p "${SRC}/.skillcaddy/sources/github"
 printf '{"schemaVersion":1}\n' > "${SRC}/.skillcaddy/sources/github/demo-source.json"
 
 # xattr：macOS 特有，看它是否跨平台存活
+# xattr：macOS 特有，看它是否跟平台存活。值故意取成可识别字串，
+# 以便在解包侧区分「名在值丢」与「名值都在」。
 if command -v xattr >/dev/null 2>&1; then
   xattr -w com.skillcaddy.test "libimg34" "${SRC}/github/demo-source/skills/alpha/SKILL.md" 2>/dev/null || true
 fi
@@ -105,18 +107,33 @@ node "${REPO}/docs/research/0034-fidelity/facts.mjs" \
 # 但当前 lib/libraryImage.js 的 pre-flight 只解析裸 tar，见到 gzip 签名会直接拒收
 # （assertUncompressed）。两者都打，让 #35 能拿着实测数据决定用哪种。
 #
-# 打包侧固定加 --no-mac-metadata --no-xattrs：
+# 打包主镜像固定加 --no-mac-metadata --no-xattrs：
 # macOS 给每个文件挂 com.apple.provenance，bsdtar 默认把它编成
 # LIBARCHIVE.xattr.* PAX 记录，GNU tar 解包时对每个文件报一行
 # "Ignoring unknown extended header keyword"。内容无损，但噪音会淹掉真正的错误，
 # 且这些 xattr 对 skill 源没有意义。实测两个 flag 都被 bsdtar 接受。
+#
+# 但 --no-xattrs 会把 xattr 在进归档前就剔掉，用它去验证 #34 点名的
+# 「xattr 落地行为」是同义反复。所以额外打一份保留 xattr 的镜像，
+# 专门回答这一项。
 # ---------------------------------------------------------------------------
 echo
 echo "== 打包 =="
 PACK_FLAGS=(--no-mac-metadata --no-xattrs)
 tar "${PACK_FLAGS[@]}" -cf  "${OUT}/library-image.tar"    -C "${SRC}" .
 tar "${PACK_FLAGS[@]}" -czf "${OUT}/library-image.tar.gz" -C "${SRC}" .
-ls -la "${OUT}"/library-image.tar*
+# 保留 xattr 的变体（仍去 macOS AppleDouble 元数据，只留 xattr 本体）
+tar --no-mac-metadata -cf "${OUT}/library-image-xattrs.tar" -C "${SRC}" .
+ls -la "${OUT}"/library-image*.tar*
+
+# 归档内是否真的带了 xattr 记录。这是分离「打包侧没存」与
+# 「解包侧没恢复」的必要一步。
+echo
+echo "== 归档内 xattr PAX 记录 =="
+for archive in library-image.tar library-image-xattrs.tar; do
+  count="$(strings "${OUT}/${archive}" | grep -c 'xattr.com.skillcaddy.test' || true)"
+  echo "  ${archive}: com.skillcaddy.test 记录 ${count} 条"
+done
 
 # 归档内真实存储的文件名字节。这是判定 unicode 规范化归属的唯一权威：
 # 若归档存 NFC 而某侧解出 NFD，责任在那一侧的 tar，不在归档。
@@ -137,6 +154,19 @@ node "${REPO}/docs/research/0034-fidelity/facts.mjs" \
   --repo "${REPO}" \
   --label "macos-roundtrip"
 
+# xattr 镜像另解一次。bsdtar 只在 -p 下恢复 xattr，默认不恢复，
+# 这两侧合起来才能把「打包丢」、「解包不恢复」、「真的不存活」分开。
+echo
+echo "== macOS 原地回环解包（xattr 镜像，-p 恢复）=="
+ROUND_X="${WORK}/roundtrip-xattrs"
+mkdir -p "${ROUND_X}"
+tar -xpf "${OUT}/library-image-xattrs.tar" -C "${ROUND_X}"
+node "${REPO}/docs/research/0034-fidelity/facts.mjs" \
+  --root "${ROUND_X}" \
+  --out "${OUT}/facts-macos-roundtrip-xattrs.json" \
+  --repo "${REPO}" \
+  --label "macos-roundtrip-xattrs"
+
 echo
 echo "=========================================================="
 echo "第 1 步完成。"
@@ -144,8 +174,10 @@ echo
 echo "产物目录：${OUT}"
 echo "  library-image.tar"
 echo "  library-image.tar.gz"
+echo "  library-image-xattrs.tar"
 echo "  facts-macos-source.json"
 echo "  facts-macos-roundtrip.json"
+echo "  facts-macos-roundtrip-xattrs.json"
 echo
 echo "下一步：把整个 ${OUT} 送到 Linux 机器，在那里运行"
 echo "  ./verify-linux.sh <产物目录> <skillcaddy 仓库路径>"

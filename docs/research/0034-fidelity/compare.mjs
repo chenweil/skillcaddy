@@ -59,6 +59,13 @@ function pairUnicodeRenames(missing, added) {
 const CHECKSUM_BEARING = ['type', 'sha256', 'target'];
 // 平台常量差异，checksumDirectory 不计。
 const DIAGNOSTIC_ONLY = ['mode', 'uid', 'gid', 'nlink', 'mtime', 'xattrs', 'size'];
+// #34 点名要验的项。它们不进哈希，但 issue 要求「逐项结果」，
+// 所以不能只给聚合计数，必须逐条列出。
+const SPEC_ITEMIZED_FIELDS = ['mode', 'uid', 'gid', 'xattrs'];
+
+function execBits(mode) {
+  return Number.parseInt(mode, 8) & 0o111;
+}
 
 function compare(baseline, candidate) {
   const left = indexByPath(baseline);
@@ -68,6 +75,7 @@ function compare(baseline, candidate) {
   const added = [];
   const failures = [];
   const diagnostics = [];
+  const execBitLosses = [];
 
   for (const [entryPath, entry] of left) {
     if (!right.has(entryPath)) {
@@ -88,6 +96,12 @@ function compare(baseline, candidate) {
         diagnostics.push({ path: entryPath, field, from: entry[field], to: other[field] });
       }
     }
+
+    // 可执行 mode 是 #34 单独点名的一项。丢执行位会让 skill 里的脚本直接不能跑，
+    // 后果远重于一般 mode 偏移，不能埋在聚合表里。
+    if (entry.type === 'file' && execBits(entry.mode) !== 0 && execBits(other.mode) === 0) {
+      execBitLosses.push({ path: entryPath, from: entry.mode, to: other.mode });
+    }
   }
 
   for (const entryPath of right.keys()) {
@@ -101,14 +115,16 @@ function compare(baseline, candidate) {
     added: paired.added,
     unicodeRenames: paired.renames,
     failures,
-    diagnostics
+    diagnostics,
+    execBitLosses
   };
 }
 
 function envRow(facts) {
   if (!facts) return '| — | 未采集 | | | | |';
   const e = facts.environment;
-  return `| ${facts.label} | ${e.platform} ${e.release} ${e.arch} | ${e.tar} | ${e.nodeVersion} | uid=${e.uid} umask=${e.umask} | ${facts.entryCount} |`;
+  const osLabel = e.osVersion ? `${e.osVersion}（${e.platform} ${e.release}）` : `${e.platform} ${e.release}`;
+  return `| ${facts.label} | ${osLabel} ${e.arch} | ${e.tar} | ${e.nodeVersion} | uid=${e.uid} umask=${e.umask} | ${facts.entryCount} |`;
 }
 
 function renderDelta(title, delta, baselineLabel, candidateLabel) {
@@ -167,22 +183,56 @@ function renderDelta(title, delta, baselineLabel, candidateLabel) {
     lines.push('');
   }
 
+  if (delta.execBitLosses.length > 0) {
+    lines.push(`**可执行位丢失 ${delta.execBitLosses.length} 项**。不进 \`checksumDirectory\`，`);
+    lines.push('但 #34 单独点名了可执行 mode，且它直接决定 skill 里的脚本能不能跑。');
+    lines.push('');
+    lines.push('| 路径 | 基线 mode | 对照 mode |');
+    lines.push('| --- | --- | --- |');
+    for (const item of delta.execBitLosses.slice(0, 40)) {
+      lines.push(`| \`${item.path}\` | ${item.from} | ${item.to} |`);
+    }
+    if (delta.execBitLosses.length > 40) {
+      lines.push(`| … | 另有 ${delta.execBitLosses.length - 40} 项 | |`);
+    }
+    lines.push('');
+  }
+
   if (delta.diagnostics.length > 0) {
-    // 按字段聚合：同一类平台差异通常横扫整棵树，逐条列出没有信息量。
-    const byField = new Map();
-    for (const item of delta.diagnostics) {
-      if (!byField.has(item.field)) byField.set(item.field, []);
-      byField.get(item.field).push(item);
+    // #34 点名的项（mode / owner / group / xattr）逐条列；issue 要求「逐项结果」。
+    const itemized = delta.diagnostics.filter((item) => SPEC_ITEMIZED_FIELDS.includes(item.field));
+    const aggregated = delta.diagnostics.filter((item) => !SPEC_ITEMIZED_FIELDS.includes(item.field));
+
+    if (itemized.length > 0) {
+      lines.push(`#34 点名项的逐条差异（mode / owner / group / xattr，共 ${itemized.length} 条）。`);
+      lines.push('这些不进 `checksumDirectory`，不阻断导入，但属于验收口径待定项。');
+      lines.push('');
+      lines.push('| 路径 | 字段 | 基线 | 对照 |');
+      lines.push('| --- | --- | --- | --- |');
+      for (const item of itemized.slice(0, 60)) {
+        lines.push(`| \`${item.path}\` | ${item.field} | \`${JSON.stringify(item.from)}\` | \`${JSON.stringify(item.to)}\` |`);
+      }
+      if (itemized.length > 60) lines.push(`| … | 另有 ${itemized.length - 60} 条 | | |`);
+      lines.push('');
     }
-    lines.push(`诊断性差异（不计入 \`checksumDirectory\`，不阻断导入）：`);
-    lines.push('');
-    lines.push('| 字段 | 条目数 | 示例 |');
-    lines.push('| --- | ---: | --- |');
-    for (const [field, items] of byField) {
-      const sample = items[0];
-      lines.push(`| ${field} | ${items.length} | \`${sample.path}\`: \`${JSON.stringify(sample.from)}\` → \`${JSON.stringify(sample.to)}\` |`);
+
+    if (aggregated.length > 0) {
+      // 按字段聚合：mtime / size / nlink 这类差异通常横扫整棵树，逐条列出没有信息量。
+      const byField = new Map();
+      for (const item of aggregated) {
+        if (!byField.has(item.field)) byField.set(item.field, []);
+        byField.get(item.field).push(item);
+      }
+      lines.push('其余诊断性差异（按字段聚合）：');
+      lines.push('');
+      lines.push('| 字段 | 条目数 | 示例 |');
+      lines.push('| --- | ---: | --- |');
+      for (const [field, items] of byField) {
+        const sample = items[0];
+        lines.push(`| ${field} | ${items.length} | \`${sample.path}\`: \`${JSON.stringify(sample.from)}\` → \`${JSON.stringify(sample.to)}\` |`);
+      }
+      lines.push('');
     }
-    lines.push('');
   }
 
   if (verdict === 'PASS' && delta.diagnostics.length === 0) {
@@ -195,8 +245,14 @@ function renderDelta(title, delta, baselineLabel, candidateLabel) {
 
 const source = await load('facts-macos-source.json');
 const roundtrip = await load('facts-macos-roundtrip.json');
+const roundtripXattrs = await load('facts-macos-roundtrip-xattrs.json');
 const linuxPlain = await load('facts-linux-plain.json');
 const linuxHardened = await load('facts-linux-hardened.json');
+const linuxXattrs = await load('facts-linux-xattrs.json');
+
+// xattr 镜像是单独一条链（打包时不加 --no-xattrs），不与主镜像同表比校验和。
+const MAIN_CHAIN = [source, roundtrip, linuxPlain, linuxHardened];
+const XATTR_CHAIN = [roundtripXattrs, linuxXattrs];
 
 if (!source) {
   process.stderr.write(`未找到 ${dir}/facts-macos-source.json。先在 macOS 上运行 pack-macos.sh。\n`);
@@ -213,10 +269,9 @@ out.push('## 环境');
 out.push('');
 out.push('| 采集点 | OS | tar | Node | 身份 | 条目数 |');
 out.push('| --- | --- | --- | --- | --- | ---: |');
-out.push(envRow(source));
-out.push(envRow(roundtrip));
-out.push(envRow(linuxPlain));
-out.push(envRow(linuxHardened));
+for (const facts of [...MAIN_CHAIN, ...XATTR_CHAIN]) {
+  if (facts) out.push(envRow(facts));
+}
 out.push('');
 
 out.push('## 整树校验和');
@@ -227,18 +282,20 @@ out.push('文件内容与软链 target。');
 out.push('');
 out.push('| 采集点 | checksumDirectory |');
 out.push('| --- | --- |');
-for (const facts of [source, roundtrip, linuxPlain, linuxHardened]) {
+for (const facts of MAIN_CHAIN) {
   if (facts) out.push(`| ${facts.label} | \`${facts.treeChecksum}\` |`);
 }
 out.push('');
 
-const checksums = [source, roundtrip, linuxPlain, linuxHardened]
-  .filter(Boolean)
-  .map((f) => f.treeChecksum);
+const checksums = MAIN_CHAIN.filter(Boolean).map((f) => f.treeChecksum);
 const allEqual = checksums.every((value) => value === checksums[0]);
 out.push(allEqual
-  ? '四侧校验和一致。逐源 sha256 严格校验的方案在跨平台下成立。'
-  : '**校验和不一致。** 这直接威胁地图「逐源 sha256 严格校验，任一不匹配则整体失败」的前提，必须在 #35 处理。');
+  ? `已采集的 ${checksums.length} 侧校验和一致。逐源 sha256 严格校验的方案在这些侧之间成立。`
+  : `**已采集的 ${checksums.length} 侧校验和不一致。** 这直接威胁地图「逐源 sha256 严格校验，任一不匹配则整体失败」的前提，必须在 #35 处理。`);
+if (checksums.length < MAIN_CHAIN.length) {
+  out.push('');
+  out.push(`注意：主链共 ${MAIN_CHAIN.length} 侧，只采到 ${checksums.length} 侧，结论仅覆盖已采集部分。`);
+}
 out.push('');
 
 out.push('## 逐项比对');
@@ -255,6 +312,27 @@ if (linuxHardened) {
 }
 if (linuxPlain && linuxHardened) {
   out.push(renderDelta('硬化 flag 的代价（plain → hardened）', compare(linuxPlain, linuxHardened), linuxPlain.label, linuxHardened.label));
+}
+
+// xattr 链单独一节。#34 点名要验 xattr 落地，而主镜像带 --no-xattrs，
+// 只能用保留 xattr 的变体镜像回答。
+out.push('## xattr 落地');
+out.push('');
+if (roundtripXattrs || linuxXattrs) {
+  out.push('主镜像打包时加了 `--no-xattrs`，xattr 在进归档前就被剔掉，');
+  out.push('拿它下「xattr 不跟 tar 存活」的结论是同义反复。这一节用');
+  out.push('`library-image-xattrs.tar`（只去 AppleDouble、保留 xattr）重测。');
+  out.push('');
+  if (roundtripXattrs) {
+    out.push(renderDelta('macOS 回环（xattr 镜像，-p 恢复）', compare(source, roundtripXattrs), source.label, roundtripXattrs.label));
+  }
+  if (linuxXattrs) {
+    out.push(renderDelta('macOS → Linux GNU tar（xattr 镜像，--xattrs 恢复）', compare(source, linuxXattrs), source.label, linuxXattrs.label));
+  }
+} else {
+  out.push('未采到 xattr 变体镜像的事实（`facts-*-xattrs.json` 缺失）。');
+  out.push('#34 点名的 xattr 落地行为属于**未验证**，不要当作已结论。');
+  out.push('');
 }
 
 out.push('## 待 #35 决策');

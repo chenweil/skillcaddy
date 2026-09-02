@@ -76,6 +76,25 @@ for variant in plain hardened; do
     --label "linux-${variant}"
 done
 
+# xattr 镜像单独解一次，用 GNU tar 的 --xattrs 显式请求恢复。
+# #34 点名要验 xattr 的落地行为，而主镜像打包时加了 --no-xattrs，
+# 归档里根本没有 xattr 记录 —— 拿主镜像下结论是同义反复。
+if [[ -f "${ARTIFACTS}/library-image-xattrs.tar" ]]; then
+  target="${WORK}/xattrs"
+  mkdir -p "${target}"
+  echo "== 解包（xattrs 镜像，--xattrs 显式恢复）=="
+  tar --xattrs --xattrs-include='*' -xf "${ARTIFACTS}/library-image-xattrs.tar" -C "${target}"
+  node "${REPO}/docs/research/0034-fidelity/facts.mjs" \
+    --root "${target}" \
+    --out "${ARTIFACTS}/facts-linux-xattrs.json" \
+    --repo "${REPO}" \
+    --label "linux-xattrs"
+else
+  echo "提醒：未找到 library-image-xattrs.tar，跳过 xattr 落地验证。"
+  echo "      请用更新后的 pack-macos.sh 重新打包。"
+  echo
+fi
+
 # root 与非 root 的 mode 行为不同（GNU tar 的 --no-same-permissions
 # 文档写明是 "default for ordinary users"），所以身份必须记录在案。
 echo
@@ -91,6 +110,9 @@ echo "=========================================================="
 echo "第 2 步完成。产物："
 echo "  ${ARTIFACTS}/facts-linux-plain.json"
 echo "  ${ARTIFACTS}/facts-linux-hardened.json"
+if [[ -f "${ARTIFACTS}/facts-linux-xattrs.json" ]]; then
+  echo "  ${ARTIFACTS}/facts-linux-xattrs.json"
+fi
 echo
 echo "下一步（任一平台均可）："
 echo "  node compare.mjs ${ARTIFACTS} > report.md"
