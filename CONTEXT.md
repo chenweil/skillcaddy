@@ -131,3 +131,11 @@ _Avoid_: Bulk installation, collection setup
 **Skill**:
 An Agent-facing capability rooted at a directory containing `SKILL.md`, discovered within a skill source and enabled independently by enablement scope.
 _Avoid_: Library, repository
+
+**Library image**:
+A self-contained, relocatable snapshot of the central library that carries the library state needed to reconstruct an equivalent library on another machine: every source's installed bytes (including nested `.git`), the registry records, and the user-level enablement triples. It is the input to library image import and the output of library image export.
+_Avoid_: Archive, bundle, backup, snapshot, image
+
+**Upstream-less source**:
+A registered skill source whose provenance cannot be re-fetched: its bytes exist only on the machine that produced the library image, and any future update must keep the source's current type, origin, and bytes rather than adopt a new upstream. The library image preserves them as-is; it does not upgrade them.
+_Avoid_: Orphan source, broken source, untracked source
