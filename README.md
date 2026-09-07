@@ -281,6 +281,11 @@ The first release is exposed through repository-local npm commands:
 ```bash
 # Read-only inventory and inspection
 npm run source -- list
+
+# Move the central library, including offline sources and user enablements
+npm run source -- image export /path/to/library.tar.gz
+npm run source -- image import /path/to/library.tar.gz --dry-run
+npm run source -- image import /path/to/library.tar.gz --yes
 npm run source -- inspect github/example/toolbox
 
 # Preview, then acquire a Git repo, public HTTP(S) ZIP, direct SKILL.md,
@@ -318,6 +323,8 @@ Migration preserves physical source paths and project links. Preview it first:
 npm run source -- migrate
 npm run source -- migrate --yes
 ```
+
+Library image export requires a clean, pushed repository, registered bucket contents, and intact non-Git integrity baselines. Library images contain complete nested Git repositories and user enablements; project enablements and `skillcaddy-manager` are excluded. Import never replaces differing source bytes or existing aliases. A partial source submission reports committed, uncommitted, and unattempted sources; rerun the same library image to resume. See [the implementation contract](docs/LIBRARY_IMAGE_SPEC.md) and [verification notes](docs/LIBRARY_IMAGE_IMPLEMENTATION.md).
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 

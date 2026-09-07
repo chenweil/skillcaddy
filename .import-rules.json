@@ -54,7 +54,7 @@
     {
       "from": "lib/sourceAcquisitionAdapter.js",
       "allow": [],
-      "importedBy": ["lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js"],
+      "importedBy": ["lib/sourceGitAcquisitionAdapter.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js", "lib/sourceAcquisition.js"],
       "reason": "Internal Source acquisition adapter contract — validates and freezes the lifecycle preparation seam"
     },
     {
@@ -90,8 +90,9 @@
     },
     {
       "from": "lib/libraryImage.js",
-      "allow": ["lib/sourceAcquisitionError.js", "lib/sourcePath.js"],
-      "reason": "Library image extraction — owns tar header parsing, inode-type allowlist, platform-aware flag policy, and staging that only reclaims what it created; GNU-tar-specific flags pending Issue #33 research"
+      "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGit.js", "lib/sourcePath.js", "lib/sourceAcquisition.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourcePolicy.js", "lib/sourceWorkspace.js", "lib/skillStore.js", "lib/hermesStore.js", "lib/skillLinkStore.js", "lib/skillMetadata.js"],
+      "reason": "Library image transaction — owns export, bounded tar inspection, safe extraction, acquisition submission and user enablement restoration",
+      "importedBy": ["lib/sourceManager.js"]
     },
     {
       "from": "lib/sourceValidation.js",
@@ -200,8 +201,8 @@
     },
     {
       "from": "lib/sourceAcquisition.js",
-      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js", "lib/sourceTree.js", "lib/sourceWorkspace.js"],
-      "importedBy": ["lib/sourceManager.js"],
+      "allow": ["lib/sourceAcquisitionAdapter.js", "lib/sourceAcquisitionError.js", "lib/sourceAcquisitionPolicy.js", "lib/sourceGitAcquisitionAdapter.js", "lib/sourceGit.js", "lib/sourceGitUrl.js", "lib/sourceHttp.js", "lib/sourceLocalAcquisitionAdapter.js", "lib/sourcePolicy.js", "lib/sourceRegistry.js", "lib/sourceRemoteArchiveAcquisitionAdapter.js", "lib/sourceRemoteFileAcquisitionAdapter.js", "lib/sourceTree.js", "lib/sourceValidation.js", "lib/sourceWorkspace.js", "lib/sourceRecord.js"],
+      "importedBy": ["lib/sourceManager.js", "lib/libraryImage.js"],
       "reason": "Deep Source acquisition lifecycle — owns selection, planning, re-planning, execution, and result projection"
     },
     {
@@ -236,7 +237,7 @@
     },
     {
       "from": "lib/sourceManager.js",
-      "allow": ["lib/sourceAcquisition.js", "lib/sourceGitBatchUpdate.js", "lib/sourceGitRepair.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpgrade.js"],
+      "allow": ["lib/sourceAcquisition.js", "lib/sourceGitBatchUpdate.js", "lib/sourceGitRepair.js", "lib/sourceRegistry.js", "lib/sourceMigration.js", "lib/sourcePolicy.js", "lib/sourceTree.js", "lib/sourceUpgrade.js", "lib/libraryImage.js"],
       "reason": "Public source-management boundary — coordinates registry reads, source acquisition, and central-library inventory"
     },
     {

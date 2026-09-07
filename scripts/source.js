@@ -8,6 +8,8 @@ import {
   applyRepairSource,
   applySourceMigration,
   applyUpdateSource,
+  exportLibraryImage,
+  importLibraryImage,
   inspectSource,
   listSources,
   planAddSource,
@@ -25,6 +27,8 @@ export async function runSourceCli({
   projectPath = process.cwd(),
   globalDir,
   hermesDir,
+  tarPath,
+  imageLimits,
   stdin = process.stdin,
   stdout = process.stdout,
   stderr = process.stderr,
@@ -54,6 +58,35 @@ export async function runSourceCli({
 
     const commandArgs = projectOption.args;
     const effectiveProjectPath = path.resolve(projectOption.projectPath || projectPath);
+
+    if (command === 'image') {
+      const [operation, filePath, ...flags] = commandArgs;
+      if (!['export', 'import'].includes(operation) || !filePath?.endsWith('.tar.gz') ||
+          new Set(flags).size !== flags.length || flags.some(flag => !['--dry-run', '--yes'].includes(flag)) ||
+          (operation === 'export' && flags.length)) {
+        printUsage(stderr);
+        return 2;
+      }
+      const context = {
+        rootDir,
+        globalDir,
+        hermesDir,
+        tarPath,
+        imageLimits,
+        report: message => stderr.write(`${message}\n`)
+      };
+      if (operation === 'export') {
+        const result = await exportLibraryImage(context, filePath);
+        stdout.write(`${result.path}\n`);
+      } else {
+        const result = await importLibraryImage(context, filePath, {
+          dryRun: flags.includes('--dry-run'), yes: flags.includes('--yes'),
+          confirm: plan => requestConfirmation({ confirm, stdin, stdout: stderr }, plan, 'Apply this image import plan? [y/N] ')
+        });
+        stderr.write(`Outcome: ${result.cancelled ? 'cancelled' : flags.includes('--dry-run') ? 'dry-run (NO CHANGES)' : 'imported'}\n`);
+      }
+      return 0;
+    }
 
     if (command === 'list' && commandArgs.length === 0) {
       printList(await listSources({ rootDir }), stdout);
@@ -580,6 +613,8 @@ export function formatOrigin(origin) {
 }
 
 function printUsage(stderr) {
+  stderr.write('Usage: npm run source -- image export <image.tar.gz>\n');
+  stderr.write('Usage: npm run source -- image import <image.tar.gz> [--dry-run] [--yes]\n');
   stderr.write('Usage: npm run source -- list\n');
   stderr.write('Usage: npm run source -- inspect <source-id>\n');
   stderr.write('Usage: npm run source -- add <input> [--name <name>] [--namespace <namespace>] [--yes]\n');

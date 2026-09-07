@@ -1,7 +1,10 @@
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readlink, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { gzipSync } from 'node:zlib';
+import { promisify } from 'node:util';
 import {
   DEFAULT_LIBRARY_IMAGE_LIMITS,
   LIBRARY_IMAGE_DENIED_ENTRY_TYPES,
@@ -17,6 +20,15 @@ import { SourceAcquisitionError } from '../lib/sourceAcquisitionError.js';
 import { makeTempDir } from './testHelpers.js';
 import { buildTar, gnuLongNameBlocks, paxRecordBlocks, rawHeaderBlock } from './tarFixtures.js';
 import { buildFakeTar } from './fakeTar.js';
+import * as imageWorkflow from '../lib/libraryImage.js';
+import { readSourceRecords, writeSourceRecord } from '../lib/sourceRegistry.js';
+import { checksumDirectory, checksumDirectoryNormalized } from '../lib/sourceTree.js';
+import { updateSkillMetadata, readSkillMetadata } from '../lib/skillMetadata.js';
+import { runSourceCli } from '../scripts/source.js';
+import { addImageSource, git, libraryFixture } from './libraryImageFixtures.js';
+import { imageAttacks } from './fixtures/library-image/attacks.js';
+
+const execImageCommand = promisify(execFile);
 
 async function writeImage(prefix, entries, options) {
   const dir = await makeTempDir(prefix);
@@ -561,7 +573,7 @@ test('extractLibraryImage empties but preserves a staging root the caller suppli
 });
 
 test('extractLibraryImage rejects staged paths that pre-flight never advertised', async () => {
-  // The fake tar exits 0 without writing anything the image declared, and drops
+  // The fake tar exits 0 without writing anything the library image declared, and drops
   // an extra file instead. Both post-flight properties must fire.
   const fixtureDir = await makeTempDir('library-image-postflight-');
   const imagePath = path.join(fixtureDir, 'image.tar');
@@ -578,7 +590,7 @@ test('extractLibraryImage rejects staged paths that pre-flight never advertised'
   );
 });
 
-test('extractLibraryImage rejects an image whose directory permissions would blind post-flight', async () => {
+test('extractLibraryImage rejects a library image whose directory permissions would blind post-flight', async () => {
   // A mode 0000 directory extracts fine but cannot be traversed, leaving part of
   // staging unverified. Silently skipping it would be a hole in the walk.
   const fixtureDir = await makeTempDir('library-image-locked-dir-');
@@ -621,9 +633,9 @@ test('flag policy exposes common, bsdtar, and gnutar subsets and is fully frozen
     !LIBRARY_IMAGE_FLAG_POLICY.common.includes('--no-mac-metadata'),
     'bsdtar-only flag must never appear in common'
   );
-  // gnutar is empty until #33 verifies GNU-only flags on a Linux runtime; an
-  // unverified flag name would break extraction on every Linux host.
-  assert.deepEqual(LIBRARY_IMAGE_FLAG_POLICY.gnutar, []);
+  assert.deepEqual(LIBRARY_IMAGE_FLAG_POLICY.gnutar, [
+    '--no-selinux', '--no-overwrite-dir', '--delay-directory-restore'
+  ]);
 });
 
 test('LIBRARY_IMAGE_REQUIRED_TAR_FLAGS covers the portable common subset', () => {
@@ -790,4 +802,509 @@ test('resolveTarInvocation applies the caller timeout to the version probe', asy
     /timed out after 250ms/
   );
   assert.ok(Date.now() - startedAt < 10_000, 'probe must honour the caller timeout');
+});
+
+for (const mode of [0o4755, 0o2755, 0o1777]) {
+  test(`rejects privileged mode ${mode.toString(8)} before extraction`, async () => {
+    const imagePath = await writeImage('library-image-mode-', [{ name: 'file', content: 'x', mode }]);
+    await rejectsSafety(() => extractLibraryImage(imagePath, `${imagePath}-out`));
+  });
+}
+
+
+test('exports a private gzip library image with manifest first and complete source records', async () => {
+  const fixture = await libraryFixture();
+  const result = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  assert.equal(result.path, fixture.imagePath);
+  assert.equal((await stat(result.path)).mode & 0o777, 0o600);
+  const { stdout } = await execImageCommand(process.env.LIBRARY_IMAGE_TAR_PATH || 'tar', ['-tzf', result.path]);
+  assert.equal(stdout.split('\n')[0], 'library-image.json');
+  assert.ok(stdout.includes('personal/alpha/SKILL.md'));
+  const manifest = JSON.parse((await execImageCommand('tar', ['-xOzf', result.path, 'library-image.json'])).stdout);
+  assert.equal(manifest.schemaVersion, 1);
+  assert.deepEqual(manifest.sources, [{ sourceId: fixture.record.sourceId, installPath: fixture.record.installPath }]);
+  assert.deepEqual(manifest.producer, { commit: await git(fixture.rootDir, 'rev-parse', 'HEAD'), branch: 'refs/heads/main', dirty: false, pushed: true });
+  assert.equal(manifest.gitSourceMode.noIntegrityBaseline, true);
+  assert.equal(await existsImagePath(path.join(fixture.rootDir, '.skillcaddy/staging')), false);
+});
+async function existsImagePath(target) {
+  try { await stat(target); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+}
+
+
+test('imports offline sources through acquisition and reruns without replacing receiver sidecars', async () => {
+  const fixture = await libraryFixture();
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  const context = { ...fixture, rootDir: receiver };
+  const result = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  assert.deepEqual(result.sources.map(item => item.status), ['added']);
+  assert.deepEqual(await readSourceRecords(receiver), [fixture.record]);
+  assert.equal(await checksumDirectory(path.join(receiver, fixture.record.installPath)), fixture.record.integrity.value);
+  const again = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  assert.deepEqual(again.sources.map(item => item.status), ['already-installed']);
+  assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+  assert.equal(JSON.parse(await readFile(path.join(receiver, '.skillcaddy/library-image-import.json'))).commit, await git(fixture.rootDir, 'rev-parse', 'HEAD'));
+});
+
+test('restores a missing source directory while preserving its receiver registry record', async () => {
+  const fixture = await libraryFixture();
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'missing-source-receiver');
+  await mkdir(receiver);
+  await mkdir(path.join(receiver, '.skillcaddy/sources/personal'), { recursive: true });
+  await writeFile(
+    path.join(receiver, '.skillcaddy/sources/personal/alpha.json'),
+    `${JSON.stringify(fixture.record, null, 2)}\n`
+  );
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.equal(result.sources[0].status, 'added');
+  assert.equal(await checksumDirectory(path.join(receiver, fixture.record.installPath)), fixture.record.integrity.value);
+  assert.deepEqual(await readSourceRecords(receiver), [fixture.record]);
+});
+
+test('logs a conflicting receiver sidecar when restoring its missing source directory', async () => {
+  const fixture = await libraryFixture();
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'sidecar-receiver');
+  await mkdir(path.join(receiver, '.skillcaddy/sources/personal'), { recursive: true });
+  const receiverRecord = { ...fixture.record, skills: ['other'] };
+  await writeFile(
+    path.join(receiver, '.skillcaddy/sources/personal/alpha.json'),
+    `${JSON.stringify(receiverRecord, null, 2)}\n`
+  );
+  const report = [];
+  const result = await imageWorkflow.importLibraryImage(
+    { ...fixture, rootDir: receiver, report: (message) => report.push(message) },
+    fixture.imagePath,
+    { yes: true }
+  );
+  assert.equal(result.sources[0].status, 'added');
+  assert.ok(report.some((message) => message.includes('receiver source sidecar wins: personal/alpha')));
+  assert.deepEqual(await readSourceRecords(receiver), [receiverRecord]);
+});
+
+
+test('roundtrips library-relative live and dead symlinks without dereferencing them', async () => {
+  const fixture = await libraryFixture();
+  const source = path.join(fixture.rootDir, fixture.record.installPath);
+  await symlink('SKILL.md', path.join(source, 'live'));
+  await symlink('missing.md', path.join(source, 'dead'));
+  fixture.record.integrity.value = await checksumDirectory(source);
+  await writeSourceRecord(fixture.rootDir, fixture.record);
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.equal(await readlink(path.join(receiver, fixture.record.installPath, 'dead')), 'missing.md');
+  assert.equal(await checksumDirectory(path.join(receiver, fixture.record.installPath)), fixture.record.integrity.value);
+});
+
+
+test('plans and fills user enablements, preserving aliases and receiver metadata', async (t) => {
+  const fixture = await libraryFixture();
+  const oldHome = process.env.HOME; process.env.HOME = fixture.home;
+  t.after(() => { process.env.HOME = oldHome; });
+  await mkdir(fixture.globalDir, { recursive: true });
+  const source = path.join(fixture.rootDir, fixture.record.installPath);
+  await symlink(source, path.join(fixture.globalDir, 'alpha'));
+  await symlink(source, path.join(fixture.globalDir, 'skillcaddy-manager'));
+  await updateSkillMetadata(fixture.rootDir, { skillPath: source, note: 'producer' });
+  const { manifest } = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  assert.deepEqual(manifest.enablement, [{ scope: 'global', libraryPath: fixture.record.installPath, alias: 'alpha' }]);
+  await rm(path.join(fixture.globalDir, 'alpha'));
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  const context = { ...fixture, rootDir: receiver };
+  const dry = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { dryRun: true });
+  assert.equal(dry.enablement[0].disposition, 'create');
+  assert.equal(await existsImagePath(path.join(receiver, 'personal/alpha')), false);
+  const result = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  assert.equal(result.enablement[0].disposition, 'create');
+  assert.equal(await readlink(path.join(fixture.globalDir, 'alpha')), path.join(receiver, fixture.record.installPath));
+  assert.equal((await readSkillMetadata(receiver, path.join(receiver, fixture.record.installPath))).note, 'producer');
+  await updateSkillMetadata(receiver, { skillPath: path.join(receiver, fixture.record.installPath), note: 'receiver' });
+  await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  assert.equal((await readSkillMetadata(receiver, path.join(receiver, fixture.record.installPath))).note, 'receiver');
+});
+
+
+test('repo-local library image CLI exports, dry-runs and confirms import with strict arguments', async () => {
+  const fixture = await libraryFixture();
+  let stdout = ''; let stderr = '';
+  const io = { stdout: { write: text => { stdout += text; } }, stderr: { write: text => { stderr += text; } } };
+  assert.equal(await runSourceCli({ ...fixture, ...io, argv: ['image', 'export', fixture.imagePath] }), 0);
+  assert.equal(stdout, `${fixture.imagePath}\n`);
+  assert.match(stderr, /\[pass\]/);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath, '--dry-run'] }), 0);
+  assert.equal((await readSourceRecords(receiver)).length, 0);
+  assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath], confirm: () => false }), 0);
+  assert.equal((await readSourceRecords(receiver)).length, 0);
+  assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath, '--yes'] }), 0);
+  for (const args of [['export', fixture.imagePath, '--yes'], ['import', fixture.imagePath, '--json'], ['import', 'image.tgz'], ['export']]) {
+    assert.equal(await runSourceCli({ ...fixture, ...io, argv: ['image', ...args] }), 2);
+  }
+  assert.equal(await runSourceCli({ ...fixture, ...io, argv: ['image', 'export', fixture.imagePath] }), 1);
+  assert.equal(await runSourceCli({ ...fixture, ...io, argv: ['image', 'import', path.join(fixture.base, 'absent.tar.gz'), '--yes'] }), 3);
+});
+
+for (const [name, change] of [
+  ['installing marker', async (fixture) => writeFile(path.join(fixture.rootDir, fixture.record.installPath, '.skillcaddy-installing'), 'pending')],
+  ['staging residue', async (fixture) => mkdir(path.join(fixture.rootDir, '.skillcaddy/staging/interrupted'), { recursive: true })],
+  ['unregistered source', async (fixture) => mkdir(path.join(fixture.rootDir, 'personal/unregistered'))],
+  ['missing source', async (fixture) => rm(path.join(fixture.rootDir, fixture.record.installPath), { recursive: true })],
+  ['integrity drift', async (fixture) => writeFile(path.join(fixture.rootDir, fixture.record.installPath, 'SKILL.md'), 'drift')],
+  ['dirty repository', async (fixture) => writeFile(path.join(fixture.rootDir, 'untracked'), 'dirty')],
+  ['unpushed commit', async (fixture) => git(fixture.rootDir, 'commit', '--allow-empty', '-m', 'unpushed')]
+]) {
+  test(`export rejects ${name} without producing an archive`, async () => {
+    const fixture = await libraryFixture(); await change(fixture);
+    await assert.rejects(() => imageWorkflow.exportLibraryImage(fixture, fixture.imagePath), { category: 'export-blocked' });
+    assert.equal(await existsImagePath(fixture.imagePath), false);
+  });
+}
+
+test('partial source submit reports three lists and rerunning preserves committed bytes', async () => {
+  const fixture = await libraryFixture();
+  const beta = await addImageSource(fixture.rootDir, 'beta');
+  await addImageSource(fixture.rootDir, 'gamma');
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await addImageSource(receiver, 'beta');
+  await writeFile(path.join(receiver, beta.installPath, 'SKILL.md'), 'receiver drift');
+  await assert.rejects(() => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true }), error => {
+    assert.equal(error.category, 'image-source-mismatch');
+    assert.match(error.message, /committed: personal\/alpha\nuncommitted: personal\/beta\nunattempted: personal\/gamma/);
+    return true;
+  });
+  assert.equal((await readSourceRecords(receiver)).length, 2);
+  assert.equal(await readFile(path.join(receiver, beta.installPath, 'SKILL.md'), 'utf8'), 'receiver drift');
+  assert.equal((await readdir(path.join(receiver, '.skillcaddy/staging'))).length, 1);
+  await writeFile(path.join(receiver, beta.installPath, 'SKILL.md'), await readFile(path.join(fixture.rootDir, beta.installPath, 'SKILL.md')));
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.deepEqual(result.sources.map(item => item.status), ['already-installed', 'already-installed', 'added']);
+  assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+});
+
+test('cleans a preserved transaction when its resumed phase-one staging is corrupt', async () => {
+  const fixture = await libraryFixture();
+  const beta = await addImageSource(fixture.rootDir, 'beta');
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await addImageSource(receiver, 'beta');
+  await writeFile(path.join(receiver, beta.installPath, 'SKILL.md'), 'receiver drift');
+  let error;
+  await assert.rejects(
+    () => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true }),
+    (candidate) => { error = candidate; return true; }
+  );
+  const match = error.message.match(/Staging preserved: (.+)\. Re-run/);
+  assert.ok(match);
+  await writeFile(path.join(match[1], 'image.tar'), 'corrupt');
+  await assert.rejects(
+    () => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true }),
+    { category: 'image-staging-verify-failed' }
+  );
+  assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+});
+
+async function baselineImageEntries(fixture) {
+  const { manifest } = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  return [
+    { name: 'library-image.json', content: JSON.stringify(manifest) },
+    { name: '.skillcaddy/sources/personal/alpha.json', content: JSON.stringify(fixture.record) },
+    { name: 'personal/alpha/SKILL.md', content: await readFile(path.join(fixture.rootDir, 'personal/alpha/SKILL.md')) }
+  ];
+}
+for (const [name, attack] of imageAttacks) {
+  test(`import preflight rejects ${name} with a valid manifest and leaves no staging`, async () => {
+    const fixture = await libraryFixture();
+    const baseline = await baselineImageEntries(fixture);
+    const image = path.join(fixture.base, 'attack.tar.gz');
+    await writeFile(image, gzipSync(buildTar([...baseline, ...attack])));
+    const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+    await assert.rejects(() => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }), { category: 'image-preflight-failed' });
+    assert.deepEqual(await readSourceRecords(receiver), []);
+    assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+  });
+}
+
+test('a byte-built baseline imports and non-Git tampering fails the checksum gate', async () => {
+  const fixture = await libraryFixture(); const baseline = await baselineImageEntries(fixture);
+  const image = path.join(fixture.base, 'baseline.tar.gz');
+  await writeFile(image, gzipSync(buildTar(baseline)));
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true });
+  baseline[2].content = 'tampered';
+  await writeFile(image, gzipSync(buildTar(baseline)));
+  await assert.rejects(() => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }), { category: 'source-validation' });
+  assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+});
+
+test('Git sources carry full repositories, verify HEAD, and have no integrity baseline', async () => {
+  const fixture = await libraryFixture();
+  const source = path.join(fixture.rootDir, 'github/example/repo'); await mkdir(source, { recursive: true });
+  await git(source, 'init', '-b', 'main');
+  await writeFile(path.join(source, 'SKILL.md'), '# Git source\n');
+  await git(source, 'add', 'SKILL.md'); await git(source, 'commit', '-m', 'source');
+  const head = await git(source, 'rev-parse', 'HEAD');
+  const record = { schemaVersion: 1, sourceId: 'github/example/repo', installPath: 'github/example/repo', bucket: 'github', type: 'git', origin: { kind: 'git', remote: 'https://github.com/example/repo.git', commit: head }, skills: ['.'] };
+  await writeSourceRecord(fixture.rootDir, record);
+  await writeFile(path.join(source, 'local-note'), 'carry dirty nested Git bytes too');
+  const { manifest } = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  assert.deepEqual(manifest.declarations.gitSourceMode.headRecords, [{ sourceId: record.sourceId, head }]);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.equal(await git(path.join(receiver, record.installPath), 'rev-parse', 'HEAD'), head);
+  assert.equal((await readSourceRecords(receiver))[0].integrity, undefined);
+  assert.equal(await readFile(path.join(receiver, record.installPath, 'local-note'), 'utf8'), 'carry dirty nested Git bytes too');
+});
+
+test('an existing Git source with the same HEAD keeps receiver working-tree changes', async () => {
+  const fixture = await libraryFixture();
+  const source = path.join(fixture.rootDir, 'github/example/repo'); await mkdir(source, { recursive: true });
+  await git(source, 'init', '-b', 'main');
+  await writeFile(path.join(source, 'SKILL.md'), '# Git source\n');
+  await git(source, 'add', 'SKILL.md'); await git(source, 'commit', '-m', 'source');
+  const head = await git(source, 'rev-parse', 'HEAD');
+  const record = { schemaVersion: 1, sourceId: 'github/example/repo', installPath: 'github/example/repo', bucket: 'github', type: 'git', origin: { kind: 'git', remote: 'https://github.com/example/repo.git' }, skills: ['.'] };
+  await writeSourceRecord(fixture.rootDir, record);
+  const { imagePath } = fixture;
+  await imageWorkflow.exportLibraryImage(fixture, imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, imagePath, { yes: true });
+  await writeFile(path.join(receiver, record.installPath, 'receiver-only.txt'), 'keep me');
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, imagePath, { yes: true });
+  assert.equal(result.sources.find((item) => item.sourceId === record.sourceId).status, 'already-installed');
+  assert.equal(await git(path.join(receiver, record.installPath), 'rev-parse', 'HEAD'), head);
+  assert.equal(await readFile(path.join(receiver, record.installPath, 'receiver-only.txt'), 'utf8'), 'keep me');
+});
+
+test('confirmation rechecks scope identity and refuses a changed directory before submission', async (t) => {
+  const fixture = await libraryFixture(); const oldHome = process.env.HOME; process.env.HOME = fixture.home;
+  t.after(() => { process.env.HOME = oldHome; });
+  await mkdir(fixture.globalDir, { recursive: true });
+  await symlink(path.join(fixture.rootDir, fixture.record.installPath), path.join(fixture.globalDir, 'alpha'));
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await assert.rejects(() => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { confirm: async () => {
+    await rm(fixture.globalDir, { recursive: true }); await mkdir(fixture.globalDir); return true;
+  } }), { category: 'stale-plan' });
+  assert.deepEqual(await readSourceRecords(receiver), []);
+});
+
+test('HOME changes reject stale explicit targets per triple and retain imported sources', async (t) => {
+  const fixture = await libraryFixture(); const oldHome = process.env.HOME; process.env.HOME = fixture.home;
+  t.after(() => { process.env.HOME = oldHome; });
+  await mkdir(fixture.globalDir, { recursive: true });
+  await symlink(path.join(fixture.rootDir, fixture.record.installPath), path.join(fixture.globalDir, 'alpha'));
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  const nextHome = path.join(fixture.base, 'new-home'); await mkdir(nextHome);
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { confirm: () => {
+    process.env.HOME = nextHome; return true;
+  } });
+  assert.equal(result.enablement[0].disposition, 'unsatisfiable');
+  assert.equal((await readSourceRecords(receiver)).length, 1);
+});
+
+test('post-pack drift removes its temporary archive and never publishes a destination', async () => {
+  const fixture = await libraryFixture();
+  const wrapper = path.join(fixture.base, 'tar-wrapper.mjs');
+  await writeFile(wrapper, `#!/usr/bin/env node\nimport { spawnSync } from 'node:child_process';\nimport { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';\nconst args = process.argv.slice(2);\nconst result = spawnSync('tar', args, { stdio: 'inherit' });\nif (args.includes('-czf')) {\n  appendFileSync(${JSON.stringify(path.join(fixture.rootDir, 'personal/alpha/SKILL.md'))}, 'drift');\n  mkdirSync(${JSON.stringify(path.join(fixture.rootDir, 'personal/new'))}, { recursive: true });\n  writeFileSync(${JSON.stringify(path.join(fixture.rootDir, 'personal/new/SKILL.md'))}, 'new source');\n}\nprocess.exit(result.status);\n`, { mode: 0o755 });
+  await assert.rejects(() => imageWorkflow.exportLibraryImage({ ...fixture, tarPath: wrapper }, fixture.imagePath), { category: 'export-blocked' });
+  assert.equal(await existsImagePath(fixture.imagePath), false);
+  assert.equal(await existsImagePath(path.join(fixture.rootDir, '.skillcaddy/staging')), false);
+  assert.deepEqual((await readdir(fixture.base)).filter(name => name.endsWith('.tmp')), []);
+});
+
+test('ambient TAR_OPTIONS cannot add absolute-names or execute a checkpoint action', async (t) => {
+  const fixture = await libraryFixture();
+  const old = process.env.TAR_OPTIONS;
+  process.env.TAR_OPTIONS = '--absolute-names --checkpoint=1 --checkpoint-action=exec=false';
+  t.after(() => { if (old === undefined) delete process.env.TAR_OPTIONS; else process.env.TAR_OPTIONS = old; });
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.equal((await readSourceRecords(receiver)).length, 1);
+});
+
+test('enablement collisions never rename and Hermes ineligibility stays closed', async (t) => {
+  const fixture = await libraryFixture(); const oldHome = process.env.HOME; process.env.HOME = fixture.home;
+  t.after(() => { process.env.HOME = oldHome; });
+  await mkdir(fixture.globalDir, { recursive: true }); await mkdir(fixture.hermesDir, { recursive: true });
+  const baseline = await baselineImageEntries(fixture);
+  const manifest = JSON.parse(baseline[0].content);
+  manifest.enablement = [
+    { scope: 'global', alias: 'occupied-link', libraryPath: 'personal/alpha' },
+    { scope: 'global', alias: 'occupied-file', libraryPath: 'personal/alpha' },
+    { scope: 'global', alias: 'missing', libraryPath: 'personal/missing' },
+    { scope: 'hermes', alias: 'retired', libraryPath: 'archived/retired' },
+    { scope: 'global', alias: 'skillcaddy-manager', libraryPath: 'personal/alpha' }
+  ];
+  const retired = { ...fixture.record, sourceId: 'archived/retired', installPath: 'archived/retired', bucket: 'archived' };
+  manifest.sources.unshift({ sourceId: retired.sourceId, installPath: retired.installPath });
+  baseline[0].content = JSON.stringify(manifest);
+  baseline.push({ name: '.skillcaddy/sources/archived/retired.json', content: JSON.stringify(retired) }, { name: 'archived/retired/SKILL.md', content: baseline[2].content });
+  const image = path.join(fixture.base, 'conflicts.tar.gz'); await writeFile(image, gzipSync(buildTar(baseline)));
+  await symlink(fixture.rootDir, path.join(fixture.globalDir, 'occupied-link'));
+  await writeFile(path.join(fixture.globalDir, 'occupied-file'), 'keep');
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true });
+  assert.deepEqual(result.enablement.map(item => item.disposition), ['conflict:other-target', 'conflict:not-a-symlink', 'unsatisfiable', 'ineligible']);
+  assert.deepEqual((await readdir(fixture.globalDir)).sort(), ['occupied-file', 'occupied-link']);
+  assert.equal(await readFile(path.join(fixture.globalDir, 'occupied-file'), 'utf8'), 'keep');
+});
+
+test('PAX size controls payload consumption rather than exposing a header inside file bytes', async () => {
+  const fakeHeaderPayload = rawHeaderBlock('../not-an-entry', 0);
+  const imagePath = await writeImage('image-pax-size-', [
+    ...paxRecordBlocks({ size: '512' }),
+    { name: 'data.bin', sizeOverride: 0, content: fakeHeaderPayload },
+    { name: 'next', content: 'safe' }
+  ]);
+  const inspection = await inspectLibraryImage(imagePath);
+  assert.deepEqual(inspection.entries.map(item => item.path), ['data.bin', 'next']);
+  const staging = `${imagePath}-out`;
+  await extractLibraryImage(imagePath, staging);
+  assert.deepEqual(await readFile(path.join(staging, 'data.bin')), fakeHeaderPayload);
+});
+
+test('a staged Git HEAD mismatch rejects the library image before any source submission', async () => {
+  const fixture = await libraryFixture(); const baseline = await baselineImageEntries(fixture);
+  const record = { schemaVersion: 1, sourceId: 'github/example/repo', installPath: 'github/example/repo', bucket: 'github', type: 'git', origin: { kind: 'git', remote: 'https://github.com/example/repo.git' }, skills: ['.'] };
+  const manifest = JSON.parse(baseline[0].content);
+  manifest.sources.unshift({ sourceId: record.sourceId, installPath: record.installPath });
+  manifest.declarations.gitSourceMode.headRecords = [{ sourceId: record.sourceId, head: '1'.repeat(40) }];
+  baseline[0].content = JSON.stringify(manifest);
+  baseline.push({ name: '.skillcaddy/sources/github/example/repo.json', content: JSON.stringify(record) },
+    { name: 'github/example/repo/SKILL.md', content: '# source' },
+    { name: 'github/example/repo/.git/HEAD', content: `${'2'.repeat(40)}\n` },
+    { name: 'github/example/repo/.git/objects', typeflag: '5' },
+    { name: 'github/example/repo/.git/refs', typeflag: '5' });
+  const image = path.join(fixture.base, 'git-mismatch.tar.gz'); await writeFile(image, gzipSync(buildTar(baseline)));
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await assert.rejects(() => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }), { category: 'source-validation' });
+  assert.deepEqual(await readSourceRecords(receiver), []);
+  assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
+});
+
+test('library image extraction accepts in-library hardlinks and rejects a planted staging symlink', async () => {
+  const fixture = await libraryFixture(); const baseline = await baselineImageEntries(fixture);
+  baseline.push({ name: 'personal/alpha/copy', typeflag: '1', linkname: 'personal/alpha/SKILL.md' });
+  const source = path.join(fixture.rootDir, 'personal/alpha'); await writeFile(path.join(source, 'copy'), baseline[2].content);
+  fixture.record.integrity.value = await checksumDirectory(source);
+  baseline[1].content = JSON.stringify(fixture.record);
+  const image = path.join(fixture.base, 'hardlink.tar.gz'); await writeFile(image, gzipSync(buildTar(baseline)));
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true });
+  assert.equal(await checksumDirectory(path.join(receiver, 'personal/alpha')), fixture.record.integrity.value);
+  const staging = path.join(fixture.base, 'planted'); await mkdir(staging);
+  await symlink(receiver, path.join(staging, 'personal'));
+  const rawTarPath = path.join(fixture.base, 'raw.tar'); await writeFile(rawTarPath, buildTar(baseline));
+  await assert.rejects(() => extractLibraryImage(rawTarPath, staging, { libraryLayout: true }), { category: 'source-safety' });
+  assert.equal(await readlink(path.join(staging, 'personal')), receiver);
+});
+
+test('normalizes decomposed archive path segments to NFC before checksum validation', async () => {
+  const fixture = await libraryFixture();
+  const nfcName = 'café.md';
+  const nfdName = nfcName.normalize('NFD');
+  const source = path.join(fixture.rootDir, fixture.record.installPath);
+  await writeFile(path.join(source, nfcName), 'accent\n');
+  fixture.record.integrity.value = await checksumDirectory(source);
+  await writeSourceRecord(fixture.rootDir, fixture.record);
+  const { manifest } = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const entries = [
+    { name: 'library-image.json', content: JSON.stringify(manifest) },
+    { name: 'personal/alpha/SKILL.md', content: await readFile(path.join(source, 'SKILL.md')) },
+    { name: '.skillcaddy/sources/personal/alpha.json', content: JSON.stringify(fixture.record) }
+  ];
+  entries.push({ name: `personal/alpha/${nfdName}`, content: 'accent\n' });
+  const image = path.join(fixture.base, 'nfd.tar.gz');
+  await writeFile(image, gzipSync(buildTar(entries)));
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true });
+  assert.equal(await existsImagePath(path.join(receiver, 'personal/alpha', nfcName)), true);
+  assert.equal(await checksumDirectoryNormalized(path.join(receiver, 'personal/alpha')), fixture.record.integrity.value);
+});
+
+test('normalizes decomposed registry skill paths at the acquisition seam', async () => {
+  const fixture = await libraryFixture();
+  const source = path.join(fixture.rootDir, fixture.record.installPath);
+  const skillName = 'café';
+  const skillPath = path.join(source, skillName);
+  await rm(path.join(source, 'SKILL.md'));
+  await mkdir(skillPath);
+  await writeFile(path.join(skillPath, 'SKILL.md'), '---\ndescription: accent\n---\n# Accent\n');
+  fixture.record.skills = [skillName.normalize('NFD')];
+  fixture.record.integrity.value = await checksumDirectory(source);
+  await writeSourceRecord(fixture.rootDir, fixture.record);
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.equal(result.sources[0].status, 'added');
+  assert.equal(await existsImagePath(path.join(receiver, fixture.record.installPath, skillName)), true);
+});
+
+test('rejects a symlink that crosses from one registered source into another', async () => {
+  const fixture = await libraryFixture();
+  const entries = await baselineImageEntries(fixture);
+  entries.push(
+    { name: 'personal/alpha/cross-source', typeflag: '2', linkname: '../other' }
+  );
+  const image = path.join(fixture.base, 'cross-source-link.tar.gz');
+  await writeFile(image, gzipSync(buildTar(entries)));
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  await assert.rejects(
+    () => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }),
+    { category: 'image-staging-verify-failed' }
+  );
+  assert.deepEqual(await readSourceRecords(receiver), []);
+});
+
+test('rejects a malformed enablement triple before committing any source', async () => {
+  const fixture = await libraryFixture();
+  const entries = await baselineImageEntries(fixture);
+  const manifest = JSON.parse(entries[0].content);
+  manifest.enablement = [{ scope: 'project', libraryPath: 'personal/alpha', alias: 'alpha' }];
+  entries[0].content = JSON.stringify(manifest);
+  const image = path.join(fixture.base, 'malformed-enablement.tar.gz');
+  await writeFile(image, gzipSync(buildTar(entries)));
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  await assert.rejects(
+    () => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }),
+    { category: 'image-preflight-failed' }
+  );
+  assert.deepEqual(await readSourceRecords(receiver), []);
+});
+
+test('rejects an empty staged source even when its recorded checksum matches', async () => {
+  const fixture = await libraryFixture();
+  const emptySource = path.join(fixture.base, 'empty-source');
+  await mkdir(emptySource);
+  const emptyRecord = {
+    ...fixture.record,
+    integrity: { algorithm: 'sha256', value: await checksumDirectory(emptySource) },
+    skills: ['.']
+  };
+  const manifest = (await baselineImageEntries(fixture))[0].content;
+  const entries = [
+    { name: 'library-image.json', content: manifest },
+    { name: '.skillcaddy/sources/personal/alpha.json', content: JSON.stringify(emptyRecord) },
+    { name: 'personal/alpha', typeflag: '5' }
+  ];
+  const image = path.join(fixture.base, 'empty-source.tar.gz');
+  await writeFile(image, gzipSync(buildTar(entries)));
+  const receiver = path.join(fixture.base, 'receiver');
+  await mkdir(receiver);
+  await assert.rejects(
+    () => imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, image, { yes: true }),
+    { category: 'source-validation' }
+  );
+  assert.deepEqual(await readSourceRecords(receiver), []);
 });

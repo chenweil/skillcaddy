@@ -281,6 +281,11 @@ skillcaddy/
 ```bash
 # 只读清单与检查
 npm run source -- list
+
+# 搬迁中央库，包括离线来源和用户级启用
+npm run source -- image export /path/to/library.tar.gz
+npm run source -- image import /path/to/library.tar.gz --dry-run
+npm run source -- image import /path/to/library.tar.gz --yes
 npm run source -- inspect github/example/toolbox
 
 # 先预览，再获取 Git 仓库、公开 HTTP(S) ZIP、直接 SKILL.md、
@@ -316,6 +321,8 @@ CLI exit category 保持稳定：`0` 表示成功或 identical no-op，`1` 表�
 npm run source -- migrate
 npm run source -- migrate --yes
 ```
+
+Library image 导出要求仓库状态干净且已推送、所有 bucket 内容均已登记、非 Git 来源的完整性基线未漂移。镜像携带完整嵌套 Git 仓库及用户级启用，不包含项目级启用与 `skillcaddy-manager`。导入不会覆盖内容不同的来源或已有 alias；部分提交失败时会报告 committed、uncommitted、unattempted，重跑同一镜像即可继续。参见[实现合同](docs/LIBRARY_IMAGE_SPEC.md)及[验证说明](docs/LIBRARY_IMAGE_IMPLEMENTATION.md)。
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 
