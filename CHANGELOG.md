@@ -7,18 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.26.1] - 2026-09-08
+
 ### Added
-- Added library image export/import with a self-contained manifest, safe tar unpacking, atomic `0600` archives, resumable source submission, and global/Hermes enablement restoration.
-- Added the fifth `image` acquisition input type, cross-platform fidelity verification, and adversarial unpacking fixtures.
 - Web manager: Hermes section is now a topbar toggle (off by default), so day-to-day work shows project + Claude Code + global only; opening the switch re-exposes Hermes, the Hermes bulk actions, and the per-skill Hermes enable button.
 - Web manager: library advice (collection/duplicate/setup hints) collapses into an info icon with a count badge in the library panel title; clicking opens a popover with the full list.
+- Web manager: added one shared enabled-skill search across project Agents, Claude Code, global Agents, and Hermes, with per-channel match counts and clear no-match states.
 
 ### Changed
-- Web manager: the four enabled scopes (project `.agents/skills`, Claude Code, global, Hermes) now share a single 2×2 grid with a unified column-title and `.enabled` row component, so source pills, counts, and remove actions line up across every scope.
+- Web manager: the four enabled scopes now use channel slots: project Agents and Claude Code stay side by side, while global Agents and Hermes each get a full-width slot with an explicit purpose line and bottom-aligned bulk actions.
 - Web manager: Claude Code rows reuse the same source-pill and remove affordance as the agents skills column instead of a separate `.claude-skill` component, so the two project scopes no longer drift visually.
 - Web manager: `claude.css` is now a compatibility placeholder; column and row styles are consolidated in `enabled.css`.
 
-Release target: 0.26.0.
+## [0.26.0] - 2026-09-08
+
+### Added
+- Added library image export/import with a self-contained manifest, safe tar unpacking, atomic `0600` archives, resumable source submission, and global/Hermes enablement restoration.
+- Added the fifth `image` acquisition input type, cross-platform fidelity verification, and adversarial unpacking fixtures.
 
 ## [0.25.1] - 2026-08-17
 

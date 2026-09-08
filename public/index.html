@@ -74,39 +74,74 @@
             <div>
               <h2>已启用</h2>
             </div>
-            <span>当前项目</span>
+            <span>Agent 通道</span>
+          </div>
+          <div class="enabled-toolbar">
+            <label class="enabled-search" for="enabledSearch">
+              <span>查找已启用</span>
+              <input id="enabledSearch" type="search" data-focus-key="enabled-search" placeholder="搜索名称或来源…" aria-label="搜索已启用的 skill" aria-controls="enabledList claudeSkillList globalList hermesList" autocomplete="off">
+            </label>
+            <p id="enabledSearchSummary" class="enabled-search-summary" role="status" aria-live="polite" hidden></p>
           </div>
           <div class="enabled-grid">
-            <section class="enabled-column">
+            <section class="enabled-column scope-card scope-agents">
               <div class="column-title">
-                <span class="column-title-label">.agents/skills <span id="agentsCount" class="count">0</span></span>
-                <button id="disableAgents" class="danger column-title-action" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills（数量见上方计数）" aria-label="一键清空 .agents/skills">清空</button>
+                <span class="scope-icon" aria-hidden="true">⚙</span>
+                <div class="scope-title-copy">
+                  <h3>Agents</h3>
+                  <p class="scope-summary"><strong id="agentsCount" class="count">0</strong> 已启用 · 当前项目直接使用 <span id="agentsResultCount" class="scope-result" hidden></span></p>
+                </div>
               </div>
               <div id="enabledList" class="list compact"></div>
+              <div class="scope-card-footer">
+                <code>.agents/skills</code>
+                <button id="disableAgents" class="secondary danger column-title-action" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills（数量见上方计数）" aria-label="一键清空 .agents/skills">批量清空</button>
+              </div>
             </section>
-            <section class="enabled-column">
+            <section class="enabled-column scope-card scope-claude">
               <div class="column-title">
-                <span class="column-title-label">Claude Code <span id="claudeCount" class="count">0</span></span>
-                <div class="column-title-actions">
-                  <button id="syncClaude" data-focus-key="claude-sync" title="把项目已启用的 skill 同步到 Claude Code">同步</button>
-                  <button id="unlinkClaude" class="danger column-title-action" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code（数量见上方计数）" aria-label="一键清空 Claude Code">清空</button>
+                <span class="scope-icon" aria-hidden="true">⌬</span>
+                <div class="scope-title-copy">
+                  <h3>Claude Code</h3>
+                  <p class="scope-summary"><strong id="claudeCount" class="count">0</strong> 已启用 · 同步自 Agents <span id="claudeResultCount" class="scope-result" hidden></span></p>
                 </div>
               </div>
               <div id="claudeSkillList" class="list compact"></div>
+              <div class="scope-card-footer">
+                <code>.claude/skills</code>
+                <div class="column-title-actions">
+                  <button id="syncClaude" data-focus-key="claude-sync" title="把项目已启用的 skill 同步到 Claude Code">同步</button>
+                  <button id="unlinkClaude" class="secondary danger column-title-action" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code（数量见上方计数）" aria-label="一键清空 Claude Code">批量清空</button>
+                </div>
+              </div>
             </section>
-            <section class="enabled-column">
+            <section class="enabled-column scope-card scope-global">
               <div class="column-title">
-                <span class="column-title-label">全局 .agents/skills <span id="globalCount" class="count">0</span></span>
-                <button id="disableGlobal" class="danger column-title-action" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">清空</button>
+                <span class="scope-icon" aria-hidden="true">⌂</span>
+                <div class="scope-title-copy">
+                  <h3>全局</h3>
+                  <p class="scope-summary"><strong id="globalCount" class="count">0</strong> 已启用 · 所有项目都能使用 <span id="globalResultCount" class="scope-result" hidden></span></p>
+                </div>
               </div>
               <div id="globalList" class="list compact"></div>
+              <div class="scope-card-footer">
+                <code>~/.agents/skills</code>
+                <button id="disableGlobal" class="secondary danger column-title-action" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">批量清空</button>
+              </div>
             </section>
-            <section class="enabled-column hermes-column" data-hermes-section>
+            <section class="enabled-column scope-card scope-hermes" data-hermes-section>
               <div class="column-title">
-                <span class="column-title-label">Hermes <span class="column-title-path">~/.hermes/skills</span> <span id="hermesCount" class="count">0</span></span>
-                <button id="disableHermes" class="danger column-title-action" data-focus-key="hermes-clear" data-focus-fallback-key="skill-search" title="一键清空 Hermes ~/.hermes/skills（数量见上方计数）" aria-label="一键清空 Hermes ~/.hermes/skills">清空</button>
+                <span class="scope-icon" aria-hidden="true">⏣</span>
+                <div class="scope-title-copy">
+                  <h3>Hermes</h3>
+                  <p class="scope-summary"><strong id="hermesCount" class="count">0</strong> 已启用 · 仅适用于 Hermes <span id="hermesResultCount" class="scope-result" hidden></span></p>
+                </div>
               </div>
               <div id="hermesList" class="list compact"></div>
+              <div class="scope-card-footer">
+                <code>~/.hermes/skills</code>
+                <button id="disableHermes" class="secondary danger column-title-action" data-focus-key="hermes-clear" data-focus-fallback-key="skill-search" title="一键清空 Hermes ~/.hermes/skills（数量见上方计数）" aria-label="一键清空 Hermes ~/.hermes/skills">批量清空</button>
+              </div>
             </section>
           </div>
         </aside>

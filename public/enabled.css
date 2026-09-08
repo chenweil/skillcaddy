@@ -1,48 +1,132 @@
-/* 全部 4 个已启用段（.agents/skills、Claude Code、全局、Hermes）走同一个 2×2 网格。
-   第一行是 .agents/skills | Claude Code，第二行是 全局 | Hermes。
-   Hermes 关闭时只隐藏那一格，第二行的「全局」仍然单列左对齐，符合用户决定。 */
+/* 四个作用域是四个 agent 通道：项目级 Agents/Claude 并列，跨项目的全局与
+   按需出现的 Hermes 各自占满下一行。列表限高，确保全局通道不会被长列表推走。 */
 .enabled-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  background: var(--hairline);
+  gap: 12px;
+  background: var(--surface-soft);
+  padding: 12px;
 }
 
 .enabled-column {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  background: var(--canvas);
+  overflow: hidden;
+  border: 1px solid var(--scope-line, var(--hairline));
+  border-radius: var(--radius-md);
+  background: var(--scope-surface, var(--canvas));
+}
+
+.scope-agents {
+  --scope-surface: var(--scope-agents-surface);
+  --scope-line: var(--scope-agents-line);
+  --scope-ink: var(--scope-agents-ink);
+}
+
+.scope-claude {
+  --scope-surface: var(--scope-claude-surface);
+  --scope-line: var(--scope-claude-line);
+  --scope-ink: var(--scope-claude-ink);
+}
+
+.scope-global,
+.scope-hermes {
+  grid-column: 1 / -1;
+}
+
+.scope-global {
+  --scope-surface: var(--scope-global-surface);
+  --scope-line: var(--scope-global-line);
+  --scope-ink: var(--scope-global-ink);
+}
+
+.scope-hermes {
+  --scope-surface: var(--scope-hermes-surface);
+  --scope-line: var(--scope-hermes-line);
+  --scope-ink: var(--scope-hermes-ink);
 }
 
 .column-title {
   display: flex;
-  min-height: 58px;
+  min-height: 84px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
   border-bottom: 1px solid var(--hairline);
-  background: var(--surface-soft);
-  padding: 12px 16px;
+  padding: 14px 16px;
 }
 
-/* 列头左侧：标签 + 计数徽标。路径（Claude Code、~/.hermes/skills）作为弱化二级文字同行展示，
-   避免把列头撑成两行。 */
-.column-title-label {
-  display: inline-flex;
+.enabled-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--canvas);
+  padding: 12px 20px;
+}
+
+.enabled-search {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
   min-width: 0;
-  align-items: center;
-  gap: 6px;
+}
+
+.enabled-search > span {
+  display: block;
   color: var(--muted);
-  font: 500 13px/1.4 var(--sans);
+  font: 500 12px/1.4 var(--sans);
+}
+
+.enabled-search input {
+  min-height: 36px;
+}
+
+.enabled-search-summary {
+  flex: 0 0 auto;
+  margin: 0 0 9px;
+  color: var(--muted-soft);
+  font: 12px/1.4 var(--mono);
   white-space: nowrap;
 }
 
-.column-title-path {
-  color: var(--muted-soft);
-  font: 500 12px/1.4 var(--mono);
-  font-weight: 400;
+/* 专属符号是通道的快速识别物；固定线宽与单色字体避免落入彩色 emoji 风格。 */
+.scope-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--scope-ink);
+  font: 18px/1 "Apple Symbols", "Segoe UI Symbol", sans-serif;
+}
+
+.scope-title-copy {
+  min-width: 0;
+}
+
+.scope-title-copy h3 {
+  color: var(--scope-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.scope-summary {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font: 12px/1.45 var(--sans);
+}
+
+.scope-summary .count {
+  color: var(--scope-ink);
+}
+
+.scope-result {
+  color: var(--scope-ink);
+  font: 500 11px/1.4 var(--mono);
+  white-space: nowrap;
 }
 
 .column-title-actions {
@@ -51,23 +135,42 @@
   flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
 }
 
-/* 列头右侧动作按钮：和列表内 .enabled 的 .actions 区分开，固定列头位置不抖动。 */
+/* 批量动作固定在卡片底部，与通道身份、计数和说明分离。 */
 .column-title-actions button,
-.column-title > button.column-title-action {
+.scope-card-footer > button.column-title-action {
   height: 36px;
   min-height: 36px;
-  padding: 0 14px;
+  padding: 0 12px;
   font-size: 13px;
   line-height: 1;
   white-space: nowrap;
 }
 
+.scope-card-footer {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  border-top: 1px solid var(--hairline);
+  padding: 10px 12px;
+}
+
+.scope-card-footer code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted-soft);
+  font: 11px/1.4 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .count {
   display: inline-block;
-  margin-left: 6px;
+  margin-left: 0;
   border-radius: 999px;
   background: var(--surface-card);
   color: var(--ink);
@@ -87,8 +190,10 @@
 }
 
 .list.compact {
-  /* 列表底部和列头底部对齐：列头边框已给出分割，列表内仅保留行间 1px hairline。 */
+  max-height: 280px;
+  overflow-y: auto;
   margin: 0;
+  scrollbar-color: var(--scroll-thumb) transparent;
 }
 
 .enabled {
@@ -142,12 +247,31 @@
 }
 
 @media (max-width: 760px) {
+  .enabled-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .enabled-search input {
+    min-height: 44px;
+  }
+
+  .enabled-search-summary {
+    margin: 0;
+  }
+
   .enabled-grid {
     grid-template-columns: 1fr;
   }
 
+  .scope-global,
+  .scope-hermes {
+    grid-column: auto;
+  }
+
   .column-title-actions button,
-  .column-title > button.column-title-action {
+  .scope-card-footer > button.column-title-action {
     min-height: 44px;
   }
 
@@ -158,13 +282,22 @@
 }
 
 @media (max-width: 520px) {
-  .column-title {
+  .scope-card-footer {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .scope-card-footer code {
+    white-space: normal;
+  }
+
   .column-title-actions {
-    justify-content: flex-start;
-    margin-left: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .column-title-actions button,
+  .scope-card-footer > button.column-title-action {
+    width: 100%;
   }
 }

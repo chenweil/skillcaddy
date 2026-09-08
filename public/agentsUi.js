@@ -1,23 +1,31 @@
 import { emptyState } from './emptyState.js';
 
-export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope = 'project', isPreview = false }) {
+export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope = 'project', isPreview = false, query = '' }) {
   const config = scopeConfig(scope, elements);
   const list = config.list;
   const clearButton = config.clearButton;
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = enabled.filter((skill) => matchesEnabledQuery(skill, skills, normalizedQuery));
   clearButton.disabled = isPreview && config.previewOnly ? true : !enabled.some((skill) => skill.canDisable ?? skill.isSymlink);
   if (isPreview && config.previewOnly) {
     clearButton.title = '预览模式只读：先在下方读取你自己的项目再操作';
   }
+  config.resultCount.hidden = !normalizedQuery;
+  config.resultCount.textContent = normalizedQuery ? `显示 ${filtered.length}/${enabled.length}` : '';
   list.replaceChildren();
   if (enabled.length === 0) {
     list.append(emptyState(
       config.emptyTitle,
       config.emptyDetail
     ));
-    return;
+    return 0;
+  }
+  if (filtered.length === 0) {
+    list.append(emptyState('没有匹配的 skill', '换一个名称或来源，或清空上方搜索。'));
+    return 0;
   }
 
-  enabled.forEach((skill) => {
+  filtered.forEach((skill) => {
     const item = document.createElement('article');
     item.className = 'enabled';
     item.dataset.focusScope = '';
@@ -56,7 +64,7 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     button.textContent = '移除';
     button.dataset.focusKey = `${config.key}-remove:${skill.alias}`;
     button.dataset.focusFallbackSelector = `${config.selector} [data-focus-key^="${config.key}-remove:"]:not(:disabled)`;
-    button.dataset.focusFallbackKey = 'skill-search';
+    button.dataset.focusFallbackKey = 'enabled-search';
     button.setAttribute('aria-label', `从${config.label} ${config.directory} 移除 ${skill.alias}${sourceSkill ? `（${sourceSkill.source}）` : ''}`);
     button.disabled = isPreview && config.previewOnly ? true : !(skill.canDisable ?? skill.isSymlink);
     if (isPreview && config.previewOnly) {
@@ -66,6 +74,24 @@ export function renderAgentsSkills({ enabled, skills, elements, onDisable, scope
     item.querySelector('.actions').append(button);
     list.append(item);
   });
+  return filtered.length;
+}
+
+function matchesEnabledQuery(skill, skills, query) {
+  if (!query) return true;
+  const sourceSkill = skills.find((candidate) => candidate.path === skill.targetPath);
+  const fields = [
+    skill.alias,
+    skill.targetPath,
+    skill.linkPath,
+    sourceSkill?.name,
+    sourceSkill?.source,
+    sourceSkill?.collection,
+    sourceSkill?.description,
+    sourceSkill?.note,
+    ...(sourceSkill?.tags || [])
+  ];
+  return fields.some((value) => String(value || '').toLowerCase().includes(query));
 }
 
 function scopeConfig(scope, elements) {
@@ -76,6 +102,7 @@ function scopeConfig(scope, elements) {
       directory: '.agents/skills',
       list: elements.globalList,
       clearButton: elements.disableGlobal,
+      resultCount: elements.globalResultCount,
       selector: '#globalList',
       previewOnly: false,
       emptyTitle: '还没有全局 skill',
@@ -89,6 +116,7 @@ function scopeConfig(scope, elements) {
       directory: '~/.hermes/skills',
       list: elements.hermesList,
       clearButton: elements.disableHermes,
+      resultCount: elements.hermesResultCount,
       selector: '#hermesList',
       previewOnly: false,
       emptyTitle: '还没有 Hermes skill',
@@ -101,6 +129,7 @@ function scopeConfig(scope, elements) {
     directory: '.agents/skills',
     list: elements.enabledList,
     clearButton: elements.disableAgents,
+    resultCount: elements.agentsResultCount,
     selector: '#enabledList',
     previewOnly: true,
     emptyTitle: '当前项目还没有启用 skill',

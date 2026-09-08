@@ -42,6 +42,18 @@
   --scroll-thumb: #a9bddb;
   --selection: #ccddff;
   --shadow-toast: 0 8px 24px rgba(8, 18, 44, 0.24);
+  --scope-agents-surface: #edf4ff;
+  --scope-agents-line: #c8daf7;
+  --scope-agents-ink: #245bb6;
+  --scope-claude-surface: #fff2e8;
+  --scope-claude-line: #f0d2bc;
+  --scope-claude-ink: #945124;
+  --scope-global-surface: #f1f4f8;
+  --scope-global-line: #d4dce7;
+  --scope-global-ink: #42536c;
+  --scope-hermes-surface: #fff8df;
+  --scope-hermes-line: #eadba4;
+  --scope-hermes-ink: #78601b;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
@@ -84,6 +96,18 @@
     --scroll-thumb: #5d7190;
     --selection: #284d88;
     --shadow-toast: 0 12px 32px rgba(0, 0, 0, 0.42);
+    --scope-agents-surface: #13243d;
+    --scope-agents-line: #2e4f7b;
+    --scope-agents-ink: #9cc0ff;
+    --scope-claude-surface: #2b211d;
+    --scope-claude-line: #624332;
+    --scope-claude-ink: #ffc69f;
+    --scope-global-surface: #171f2c;
+    --scope-global-line: #354154;
+    --scope-global-ink: #c3cfe0;
+    --scope-hermes-surface: #282519;
+    --scope-hermes-line: #5b512b;
+    --scope-hermes-ink: #f1d875;
   }
 }
 
@@ -170,7 +194,7 @@ textarea {
   border-radius: 999px;
   background: var(--canvas);
   color: var(--muted);
-  font: 500 13px/1.4 var(--sans);
+  font: 500 13px/1 var(--sans);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -201,6 +225,11 @@ textarea {
   border-radius: 999px;
   background: var(--surface-card);
   transition: background-color 140ms ease;
+}
+
+.topbar-toggle > span {
+  display: block;
+  margin: 0;
 }
 
 .topbar-toggle-track::after {
@@ -749,7 +778,8 @@ h3 {
   color: var(--canvas);
 }
 
-label span {
+.controls label > span,
+.metadata-form label > span {
   display: block;
   margin-bottom: 8px;
   color: var(--muted);

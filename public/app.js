@@ -24,6 +24,7 @@ const state = {
   knownGroups: new Set(),
   activeTag: '',
   searchQuery: '',
+  enabledQuery: '',
   editingSkillId: '',
   stats: { total: 0, enabled: 0, available: 0 }
 };
@@ -47,13 +48,19 @@ const elements = {
   totalSkills: document.querySelector('#totalSkills'),
   sourceFilter: document.querySelector('#sourceFilter'),
   skillSearch: document.querySelector('#skillSearch'),
+  enabledSearch: document.querySelector('#enabledSearch'),
+  enabledSearchSummary: document.querySelector('#enabledSearchSummary'),
   enabledList: document.querySelector('#enabledList'),
   globalList: document.querySelector('#globalList'),
   hermesList: document.querySelector('#hermesList'),
   agentsCount: document.querySelector('#agentsCount'),
+  agentsResultCount: document.querySelector('#agentsResultCount'),
   globalCount: document.querySelector('#globalCount'),
+  globalResultCount: document.querySelector('#globalResultCount'),
   hermesCount: document.querySelector('#hermesCount'),
+  hermesResultCount: document.querySelector('#hermesResultCount'),
   claudeCount: document.querySelector('#claudeCount'),
+  claudeResultCount: document.querySelector('#claudeResultCount'),
   skillList: document.querySelector('#skillList'),
   adviceList: document.querySelector('#adviceList'),
   adviceToggle: document.querySelector('#adviceToggle'),
@@ -75,6 +82,7 @@ let filterExpandedGroups = new Set();
 let isRestoringFocus = false;
 let messageTimer = null;
 let searchDebounceTimer = null;
+let enabledSearchDebounceTimer = null;
 // 首访（无历史、URL 无项目参数）时服务端展示的是仓库默认状态：
 // 标注为预览，避免用户把 skillcaddy 自带的 skill 当成「别人配好的项目」。
 let isPreviewSession = false;
@@ -100,6 +108,13 @@ elements.skillSearch.addEventListener('input', (event) => {
     renderSkills();
   }, 120);
 });
+elements.enabledSearch.addEventListener('input', (event) => {
+  clearTimeout(enabledSearchDebounceTimer);
+  enabledSearchDebounceTimer = setTimeout(() => {
+    state.enabledQuery = event.target.value.trim().toLowerCase();
+    renderEnabled();
+  }, 120);
+});
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
@@ -112,6 +127,7 @@ elements.hermesToggle.addEventListener('change', (event) => {
   const next = event.target.checked;
   localStorage.setItem(HERMES_TOGGLE_KEY, JSON.stringify(next));
   applyHermesToggle(next);
+  renderEnabled();
 });
 
 // 只做两个高频快捷键：/ 聚焦搜索，Esc 逐级清除（先清搜索词，再清全部筛选）。
@@ -135,9 +151,17 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
+  if (event.target === elements.enabledSearch && elements.enabledSearch.value) {
+    clearTimeout(enabledSearchDebounceTimer);
+    elements.enabledSearch.value = '';
+    state.enabledQuery = '';
+    renderEnabled();
+    return;
+  }
+
   // 第一下 Esc 清掉搜索词后焦点仍在搜索框：此时再按 Esc 必须继续清 tag/来源
   // 过滤，否则键盘用户（Sam）会卡在残留过滤里。搜索框因此不算 isEditable。
-  const isSearchBox = event.target === elements.skillSearch;
+  const isSearchBox = event.target === elements.skillSearch || event.target === elements.enabledSearch;
   if ((!isEditable || isSearchBox) && hasActiveFilter()) clearFilters();
 });
 
@@ -179,17 +203,43 @@ function renderAll() {
   elements.activeProject.textContent = isPreviewSession
     ? `默认预览：${state.projectPath || 'skillcaddy 仓库'}（在下方输入你的项目路径后点「读取项目」）`
     : state.projectPath || '等待读取项目路径';
-  renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable, isPreview: isPreviewSession });
-  renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
-  // Hermes 关闭时不要拉取/渲染 hermes 列表：保持 count=0，DOM 静止。
-  if (isHermesEnabled()) {
-    renderAgentsSkills({ enabled: state.hermes, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'hermes'), scope: 'hermes' });
-  }
-  renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill, isPreview: isPreviewSession });
+  renderEnabledPanel();
   renderAdvice();
   renderProjectHistory();
   renderTagTabs();
   renderSkillList();
+}
+
+function renderEnabled() {
+  withPreservedFocus(renderEnabledPanel);
+}
+
+function renderEnabledPanel() {
+  const query = state.enabledQuery;
+  const matchedCounts = [
+    renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable, isPreview: isPreviewSession, query }),
+    renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill, isPreview: isPreviewSession, query }),
+    renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global', query })
+  ];
+  // Hermes 关闭时不要拉取/渲染 hermes 列表：保持 count=0，DOM 静止。
+  if (isHermesEnabled()) {
+    matchedCounts.push(renderAgentsSkills({ enabled: state.hermes, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'hermes'), scope: 'hermes', query }));
+  }
+  updateEnabledSearchSummary(query, matchedCounts);
+}
+
+function updateEnabledSearchSummary(query, matchedCounts) {
+  elements.enabledSearchSummary.hidden = !query;
+  if (!query) {
+    elements.enabledSearchSummary.textContent = '';
+    return;
+  }
+  const total = state.enabled.length
+    + (state.claude?.skills?.length || 0)
+    + state.global.length
+    + (isHermesEnabled() ? state.hermes.length : 0);
+  const matched = matchedCounts.reduce((sum, count) => sum + count, 0);
+  elements.enabledSearchSummary.textContent = `命中 ${matched} / ${total} 个已启用条目`;
 }
 
 function renderProjectHistory() {

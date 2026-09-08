@@ -3,7 +3,8 @@ import { emptyState } from './emptyState.js';
 // Claude Code 段复用与 .agents/skills 完全相同的 .enabled 组件。
 // 唯一差异：Claude Code 段有「同步」动作（项目 .agents/skills → Claude Code 软链），
 // 因此额外接收 syncEnabled 回调，并在列头由 index.html 提供按钮。
-export function renderClaudeStatus({ claude, skills, elements, onUnlink, onSync, isPreview = false }) {
+export function renderClaudeStatus({ claude, skills, elements, onUnlink, onSync, isPreview = false, query = '' }) {
+  const normalizedQuery = query.trim().toLowerCase();
   elements.unlinkClaude.disabled = isPreview || !claude || !claude.exists || claude.skills.length === 0;
   if (isPreview) {
     elements.unlinkClaude.title = '预览模式只读：先在下方读取你自己的项目再操作';
@@ -15,16 +16,43 @@ export function renderClaudeStatus({ claude, skills, elements, onUnlink, onSync,
   }
   if (onSync) elements.syncClaude.onclick = onSync;
   if (!claude || !claude.exists) {
+    elements.claudeResultCount.hidden = true;
+    elements.claudeResultCount.textContent = '';
     // 此前这里直接清空，整栏渲染成一片空白：用户既不知道这栏是什么，
     // 也不知道同栏标题里的「同步」就是填充它的入口。
     elements.claudeSkillList.replaceChildren(emptyState(
       '还没有 Claude Code 入口',
       '点这一栏标题右侧的「同步」，把 .agents/skills 已启用的 skill 同步到 Claude Code。'
     ));
-    return;
+    return 0;
   }
 
-  renderClaudeSkills({ skills: claude.skills, sourceSkills: skills, elements, onUnlink, isPreview });
+  const filtered = claude.skills.filter((skill) => matchesEnabledQuery(skill, skills, normalizedQuery));
+  elements.claudeResultCount.hidden = !normalizedQuery;
+  elements.claudeResultCount.textContent = normalizedQuery ? `显示 ${filtered.length}/${claude.skills.length}` : '';
+  if (filtered.length === 0 && claude.skills.length > 0) {
+    elements.claudeSkillList.replaceChildren(emptyState('没有匹配的 skill', '换一个名称或来源，或清空上方搜索。'));
+    return 0;
+  }
+
+  renderClaudeSkills({ skills: filtered, sourceSkills: skills, elements, onUnlink, isPreview });
+  return filtered.length;
+}
+
+function matchesEnabledQuery(skill, sourceSkills, query) {
+  if (!query) return true;
+  const sourceSkill = sourceSkills.find((candidate) => candidate.name === skill.alias);
+  const fields = [
+    skill.alias,
+    skill.targetPath,
+    sourceSkill?.name,
+    sourceSkill?.source,
+    sourceSkill?.collection,
+    sourceSkill?.description,
+    sourceSkill?.note,
+    ...(sourceSkill?.tags || [])
+  ];
+  return fields.some((value) => String(value || '').toLowerCase().includes(query));
 }
 
 function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink, isPreview = false }) {
@@ -75,7 +103,7 @@ function renderClaudeSkills({ skills, sourceSkills, elements, onUnlink, isPrevie
     button.textContent = '移除';
     button.dataset.focusKey = `claude-remove:${skill.alias}`;
     button.dataset.focusFallbackSelector = '#claudeSkillList [data-focus-key^="claude-remove:"]:not(:disabled)';
-    button.dataset.focusFallbackKey = 'claude-sync';
+    button.dataset.focusFallbackKey = 'enabled-search';
     button.setAttribute('aria-label', `从 Claude Code 移除 ${skill.alias}`);
     button.disabled = isPreview || !skill.isSymlink;
     if (!skill.isSymlink) {

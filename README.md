@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-Local AI skills central library + scoped symlink enablement. One AISkills directory holds every skill source; symlink what you need into a project or the shared user-level Agents directory on demand.
+Local AI skills central library + scoped symlink enablement. One AISkills directory holds every skill source; symlink what you need into a project, the shared user-level Agents directory, or Hermes on demand.
 
 ![](public/skillcaddy_EN.png)
 
@@ -40,7 +40,7 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
-The Web library keeps project, global, and Hermes enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global/Hermes progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing.
+The Web library keeps project, global, and Hermes enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global/Hermes progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing. The enabled panel presents project Agents and Claude Code as side-by-side channel slots, with full-width global and Hermes slots below; a shared enabled-skill search finds a name or source without scrolling long lists.
 
 ### Global CLI / TUI command
 
@@ -144,7 +144,7 @@ You can also pass the project path through the URL:
 http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 ```
 
-The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button. If a library was enabled by mistake, use the library-level `×` button to clean that library from both Agents and Claude Code.
+The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button. The enabled panel groups project Agents, Claude Code, global Agents, and Hermes into explicit channel slots and provides one shared search across their enabled entries. If a library was enabled by mistake, use the library-level `×` button to clean that library from both Agents and Claude Code.
 
 ## Skill metadata
 

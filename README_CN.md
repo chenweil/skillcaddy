@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-本地 AI Skills 中央库 + 按作用域软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到项目或用户共享的 Agents 目录。
+本地 AI Skills 中央库 + 按作用域软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到项目、用户共享的 Agents 目录或 Hermes。
 
 ![](public/skillcaddy_CN.png)
 
@@ -40,7 +40,7 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
-Web 原件库中的项目、全局和 Hermes 启用彼此独立。全局启用 skill 后，项目操作仍然可用：如果当前项目需要自己的 setup、Claude Code 同步或明确的项目级优先关系，仍可把同一个 skill 添加到当前项目。库级操作会分别显示项目/全局/Hermes 启用进度；关键词搜索自动展开命中的库，来源和标签筛选则保持折叠，方便紧凑浏览。
+Web 原件库中的项目、全局和 Hermes 启用彼此独立。全局启用 skill 后，项目操作仍然可用：如果当前项目需要自己的 setup、Claude Code 同步或明确的项目级优先关系，仍可把同一个 skill 添加到当前项目。库级操作会分别显示项目/全局/Hermes 启用进度；关键词搜索自动展开命中的库，来源和标签筛选则保持折叠，方便紧凑浏览。已启用面板把项目 Agents 与 Claude Code 并列为项目通道，把全局与 Hermes 放在下面的整行通道；新增的共享搜索可以按名称或来源快速定位已启用 skill，不必在长列表中滚动查找。
 
 ### 全局 CLI / TUI 命令
 
@@ -144,7 +144,7 @@ npm run check:manager
 http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 ```
 
-页面会立即加载该项目，把最近使用的项目路径保存在浏览器本地历史中，并支持通过库标题旁的 `+` 一次启用该库内可用的全部 skills。如果误点启用了整个库，可以用库标题旁的 `×` 同时清理该库在 Agents 和 Claude Code 中的启用入口。
+页面会立即加载该项目，把最近使用的项目路径保存在浏览器本地历史中，并支持通过库标题旁的 `+` 一次启用该库内可用的全部 skills。已启用面板会按 Agents、Claude Code、全局 Agents、Hermes 四个通道展示，并用一个共享搜索框过滤所有已启用条目。如果误点启用了整个库，可以用库标题旁的 `×` 同时清理该库在 Agents 和 Claude Code 中的启用入口。
 
 ## Skill 元数据
 

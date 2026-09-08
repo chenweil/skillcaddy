@@ -6,6 +6,7 @@ const appSource = await readFile(new URL('../public/app.js', import.meta.url), '
 const styleSource = await readFile(new URL('../public/styles.css', import.meta.url), 'utf8');
 const indexSource = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 const enabledSource = await readFile(new URL('../public/enabled.css', import.meta.url), 'utf8');
+const agentsUiSource = await readFile(new URL('../public/agentsUi.js', import.meta.url), 'utf8');
 const claudeUiSource = await readFile(new URL('../public/claudeUi.js', import.meta.url), 'utf8');
 
 test('global collection enable button keeps its success state after completion', () => {
@@ -74,16 +75,39 @@ test('Hermes topbar toggle persists to localStorage and applies body class', () 
   assert.match(styleSource, /body\.hermes-hidden \[data-hermes-section\],[\s\S]*?body\.hermes-hidden \.hermes-scope-actions/);
 });
 
-test('enabled panel uses a single 2x2 grid and unifies column titles', () => {
-  // 四个已启用段都在同一个 .enabled-grid 内（agents、Claude Code、global、hermes）。
+test('enabled panel presents four distinct agent channel slots', () => {
+  // 四个已启用段都在同一个 .enabled-grid 内（Agents、Claude Code、全局、Hermes）。
   assert.match(indexSource, /class="enabled-grid"[\s\S]*?id="enabledList"[\s\S]*?id="claudeSkillList"[\s\S]*?id="globalList"[\s\S]*?id="hermesList"/);
   assert.match(indexSource, /data-hermes-section/);
-  // 列头共享同一组 class，列内动作按钮复用 column-title-action / column-title-actions。
-  assert.match(indexSource, /class="column-title-label"/);
+  // 每个通道有专属标识和常驻用途说明，批量动作落在卡片底部。
+  assert.match(indexSource, /class="scope-icon"[^>]*>⚙<\/span>[\s\S]*?<h3>Agents<\/h3>/);
+  assert.match(indexSource, /class="scope-icon"[^>]*>⌬<\/span>[\s\S]*?<h3>Claude Code<\/h3>/);
+  assert.match(indexSource, /class="scope-icon"[^>]*>⌂<\/span>[\s\S]*?<h3>全局<\/h3>/);
+  assert.match(indexSource, /class="scope-icon"[^>]*>⏣<\/span>[\s\S]*?<h3>Hermes<\/h3>/);
+  assert.match(indexSource, /class="scope-card-footer"[\s\S]*?id="disableAgents"/);
+  assert.match(indexSource, /id="claudeSkillList"[\s\S]*?class="scope-card-footer"[\s\S]*?id="syncClaude"[\s\S]*?id="unlinkClaude"/);
   assert.match(indexSource, /class="column-title-actions"/);
   assert.match(indexSource, /class="column-title"/);
-  assert.match(enabledSource, /\.column-title-actions\s*\{[\s\S]*?margin-left: auto/);
+  assert.match(enabledSource, /\.scope-global,[\s\S]*?\.scope-hermes\s*\{[\s\S]*?grid-column: 1 \/ -1/);
+  assert.match(enabledSource, /\.list\.compact\s*\{[\s\S]*?max-height: 280px;[\s\S]*?overflow-y: auto/);
   assert.match(enabledSource, /\.enabled-grid\s*\{[\s\S]*?grid-template-columns: repeat\(2/);
+});
+
+test('enabled panel provides one shared search for every channel', () => {
+  assert.match(indexSource, /class="enabled-toolbar"[\s\S]*?id="enabledSearch"[^>]*type="search"/);
+  assert.match(indexSource, /id="enabledSearch"[^>]*aria-controls="enabledList claudeSkillList globalList hermesList"/);
+  assert.match(indexSource, /id="enabledSearchSummary"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(appSource, /enabledQuery: ''/);
+  assert.match(appSource, /elements\.enabledSearch\.addEventListener\('input'/);
+  assert.match(appSource, /applyHermesToggle\(next\);\s*renderEnabled\(\)/);
+  assert.match(appSource, /renderAgentsSkills\(\{ enabled: state\.enabled[\s\S]*?query \}\)/);
+  assert.match(appSource, /renderClaudeStatus\(\{ claude: state\.claude[\s\S]*?query \}\)/);
+  assert.match(appSource, /命中 \$\{matched\} \/ \$\{total\} 个已启用条目/);
+  assert.match(agentsUiSource, /const filtered = enabled\.filter\(\(skill\) => matchesEnabledQuery\(skill, skills, normalizedQuery\)\)/);
+  assert.match(agentsUiSource, /没有匹配的 skill/);
+  assert.match(claudeUiSource, /const filtered = claude\.skills\.filter\(\(skill\) => matchesEnabledQuery\(skill, skills, normalizedQuery\)\)/);
+  assert.match(claudeUiSource, /没有匹配的 skill/);
+  assert.match(enabledSource, /\.enabled-toolbar\s*\{[\s\S]*?\.enabled-search input/);
 });
 
 test('Claude Code list reuses the unified .enabled component', () => {
