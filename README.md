@@ -210,45 +210,7 @@ To make Skillcaddy work out of the box on Windows, the following strategies will
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Skillcaddy (central library)                 │
-│  ~/AISkills/                                                    │
-│  ├── official/      ─┬─ my-skill/SKILL.md                       │
-│  ├── github/        ─┤                                          │
-│  ├── personal/      ─┴─ another-skill/SKILL.md                  │
-│  ├── archived/                                                   │
-│  └── skills/         ← bundled with the repo (source: local)    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              Symlinks created on enable
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         Project directory                        │
-│  ~/projects/my-app/                                             │
-│  ├── .agents/skills/                                            │
-│  │   ├── my-skill ──────────────► ~/AISkills/official/my-skill  │
-│  │   └── another-skill ─────────► ~/AISkills/personal/...       │
-│  └── .claude/skills/                                            │
-│  │   ├── my-skill ──► ../../.agents/skills/my-skill             │
-│  │   └── another-skill ─► ../../.agents/skills/another-skill    │
-│  └── .opencode/skills/  (optional)                              │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-      Each Agent auto-discovers and loads skills directories
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Agent          │ Project-level skills path   │ User-level path │
-│─────────────────────────────────────────────────────────────────│
-│  Claude Code    │ .claude/skills/             │ ~/.claude/skills │
-│  OpenCode       │ .opencode/skills/           │ ~/.config/...    │
-│                 │ .claude/skills/             │ ~/.claude/skills │
-│                 │ .agents/skills/             │ ~/.agents/skills │
-│  Codex          │ .agents/skills/             │ ~/.agents/skills │
-│  Pi             │ .pi/skills/                 │ ~/.pi/agent/...  │
-│                 │ .agents/skills/             │ ~/.agents/skills │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Skillcaddy target architecture](docs/assets/skillcaddy-arch.svg)
 
 **Core design**:
 - `.agents/skills` is the cross-Agent standard path; every Agent recognizes it.

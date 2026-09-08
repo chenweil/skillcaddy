@@ -1,0 +1,53 @@
+<svg viewBox="0 0 700 425" width="700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- title: y=32 = 20(margin) + 12(16x0.75 ascent) -->
+  <text x="350" y="32" font-size="16" fill="#1e293b" text-anchor="middle">Skillcaddy Target Architecture</text>
+
+  <!-- Layer 1: 中央仓库虚线分组框 (背景) -->
+  <rect x="185" y="60" width="330" height="85" rx="10"
+        stroke="#94a3b8" stroke-dasharray="6,4" fill="#f8fafc"/>
+  <text x="195" y="74" font-size="11" fill="#64748b">~/skillcaddy (git 仓库)</text>
+
+  <!-- Layer 2: sc-link 连接线 (中间层) -->
+  <path d="M 245,131 C 245,180 140,250 140,309"
+        fill="none" stroke="#a855f7" stroke-width="1.5"
+        stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+  <path d="M 350,131 L 350,309"
+        fill="none" stroke="#a855f7" stroke-width="1.5"
+        stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+  <path d="M 455,131 C 455,180 560,250 560,309"
+        fill="none" stroke="#a855f7" stroke-width="1.5"
+        stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+
+  <!-- Layer 3: skill 框 + 文本 -->
+  <rect x="205" y="90" width="80" height="36" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="245" y="112" font-size="12" fill="#1e40af" text-anchor="middle">skill-a</text>
+  <rect x="310" y="90" width="80" height="36" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="350" y="112" font-size="12" fill="#1e40af" text-anchor="middle">skill-b</text>
+  <rect x="415" y="90" width="80" height="36" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="455" y="112" font-size="12" fill="#1e40af" text-anchor="middle">skill-c</text>
+
+  <!-- Layer 4: project 框 + 文本 -->
+  <rect x="50" y="320" width="180" height="80" rx="8" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="140" y="342" font-size="12" fill="#6b21a8" text-anchor="middle">projectA</text>
+  <text x="140" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.claude/skills</text>
+  <rect x="260" y="320" width="180" height="80" rx="8" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="350" y="342" font-size="12" fill="#6b21a8" text-anchor="middle">projectB</text>
+  <text x="350" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.codex/skills</text>
+  <rect x="470" y="320" width="180" height="80" rx="8" fill="#f3e8ff" stroke="#a855f7"/>
+  <text x="560" y="342" font-size="12" fill="#6b21a8" text-anchor="middle">projectC</text>
+  <text x="560" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.agents/skills</text>
+
+  <!-- Layer 5: sc-link 标签 (顶层) -->
+  <text x="180" y="220" font-size="10" fill="#64748b" text-anchor="middle">sc-link</text>
+  <text x="350" y="170" font-size="10" fill="#64748b" text-anchor="middle">sc-link</text>
+  <text x="520" y="220" font-size="10" fill="#64748b" text-anchor="middle">sc-link</text>
+</svg>
