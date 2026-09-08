@@ -767,6 +767,78 @@ test('extractLibraryImage spawn propagates non-zero tar exit into source-safety'
   assert.ok(lastArgv.includes('-xf'));
 });
 
+test('GNU tar extraction spawn receives every hardened flag and never absolute-names', async () => {
+  const workingDir = await makeTempDir('library-image-gnu-extract-');
+  const argvLogPath = path.join(workingDir, 'argv.log');
+  const fakeTar = await buildFakeTar({
+    argvLogPath,
+    versionOutput: 'tar (GNU tar) 1.35\n',
+    stderr: 'stop after argv capture\n',
+    exitCode: 2
+  });
+  const imagePath = path.join(workingDir, 'image.tar');
+  await writeFile(imagePath, buildTar([{ name: 'README.md', content: '# Root\n' }]));
+
+  await rejectsSafety(
+    () => extractLibraryImage(imagePath, stagingPathIn(workingDir), { tarPath: fakeTar }),
+    /stop after argv capture/
+  );
+
+  const argvLines = (await readFile(argvLogPath, 'utf8')).trim().split('\n');
+  const extractArgv = JSON.parse(argvLines.at(-1));
+  for (const flag of [
+    '--no-acls',
+    '--no-xattrs',
+    '--no-same-permissions',
+    '--no-same-owner',
+    '--no-selinux',
+    '--no-overwrite-dir',
+    '--delay-directory-restore'
+  ]) {
+    assert.ok(extractArgv.includes(flag), `missing GNU hardened flag: ${flag}`);
+  }
+  assert.ok(!extractArgv.includes('--absolute-names'));
+  assert.ok(!extractArgv.includes('-P'));
+});
+
+test('absolute-names harness cannot turn an absolute member into an /etc write', async (t) => {
+  const sentinel = `/etc/skillcaddy-library-image-${process.pid}-${Date.now()}`;
+  assert.equal(await existsImagePath(sentinel), false);
+  const imagePath = await writeImage('library-image-absolute-names-', [
+    { name: sentinel, content: 'must not escape\n' }
+  ]);
+  const previousTarOptions = process.env.TAR_OPTIONS;
+  process.env.TAR_OPTIONS = '--absolute-names';
+  t.after(() => {
+    if (previousTarOptions === undefined) delete process.env.TAR_OPTIONS;
+    else process.env.TAR_OPTIONS = previousTarOptions;
+  });
+
+  await rejectsSafety(
+    () => extractLibraryImage(imagePath, `${imagePath}-out`),
+    /outside staging|absolute/i
+  );
+  assert.equal(await existsImagePath(sentinel), false);
+});
+
+test('export preserves filesystem exit code when tar is unavailable', async () => {
+  const fixture = await libraryFixture();
+  const report = [];
+  await assert.rejects(
+    () => imageWorkflow.exportLibraryImage(
+      { ...fixture, tarPath: path.join(fixture.base, 'missing-tar'), report: (message) => report.push(message) },
+      fixture.imagePath
+    ),
+    (error) => {
+      assert.equal(error.category, 'filesystem');
+      assert.equal(error.exitCode, 3);
+      return true;
+    }
+  );
+  assert.ok(report.some((message) => message.startsWith('[fail] export:')));
+  assert.equal(await existsImagePath(fixture.imagePath), false);
+});
+
 test('extractLibraryImage treats a hanging tar extract as a source-safety timeout', async () => {
   // hangVersion stays off so the version probe completes and the timeout being
   // measured is the extract call's, using the caller's timeoutMs rather than the
@@ -824,6 +896,21 @@ test('exports a private gzip library image with manifest first and complete sour
   assert.equal(manifest.schemaVersion, 1);
   assert.deepEqual(manifest.sources, [{ sourceId: fixture.record.sourceId, installPath: fixture.record.installPath }]);
   assert.deepEqual(manifest.producer, { commit: await git(fixture.rootDir, 'rev-parse', 'HEAD'), branch: 'refs/heads/main', dirty: false, pushed: true });
+  assert.deepEqual(Object.keys(manifest.declarations).sort(), [
+    'gitSourceMode',
+    'noAbsolutePaths',
+    'noContiguousEntries',
+    'noEntriesAfterEnd',
+    'noExternalHardlinks',
+    'noPrivilegedModes',
+    'noSpecialFiles',
+    'noSymlinkEscape',
+    'noTraversal'
+  ]);
+  for (const [key, value] of Object.entries(manifest.declarations)) {
+    if (key !== 'gitSourceMode') assert.equal(value, true, `${key} must be declared`);
+  }
+  assert.deepEqual(manifest.declarations.gitSourceMode, { headRecords: [] });
   assert.equal(manifest.gitSourceMode.noIntegrityBaseline, true);
   assert.equal(await existsImagePath(path.join(fixture.rootDir, '.skillcaddy/staging')), false);
 });
@@ -834,7 +921,7 @@ async function existsImagePath(target) {
 
 test('imports offline sources through acquisition and reruns without replacing receiver sidecars', async () => {
   const fixture = await libraryFixture();
-  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const exported = await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
   const receiver = path.join(fixture.base, 'receiver');
   await mkdir(receiver);
   const context = { ...fixture, rootDir: receiver };
@@ -845,7 +932,10 @@ test('imports offline sources through acquisition and reruns without replacing r
   const again = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
   assert.deepEqual(again.sources.map(item => item.status), ['already-installed']);
   assert.equal(await existsImagePath(path.join(receiver, '.skillcaddy/staging')), false);
-  assert.equal(JSON.parse(await readFile(path.join(receiver, '.skillcaddy/library-image-import.json'))).commit, await git(fixture.rootDir, 'rev-parse', 'HEAD'));
+  assert.deepEqual(
+    JSON.parse(await readFile(path.join(receiver, '.skillcaddy/library-image-import.json'))),
+    exported.manifest.producer
+  );
 });
 
 test('restores a missing source directory while preserving its receiver registry record', async () => {
@@ -893,7 +983,12 @@ test('roundtrips library-relative live and dead symlinks without dereferencing t
   await symlink('missing.md', path.join(source, 'dead'));
   fixture.record.integrity.value = await checksumDirectory(source);
   await writeSourceRecord(fixture.rootDir, fixture.record);
-  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const report = [];
+  await imageWorkflow.exportLibraryImage(
+    { ...fixture, report: (message) => report.push(message) },
+    fixture.imagePath
+  );
+  assert.ok(report.some((message) => message.includes('[warn] dead-symlink: personal/alpha/dead')));
   const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
   await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
   assert.equal(await readlink(path.join(receiver, fixture.record.installPath, 'dead')), 'missing.md');
@@ -923,7 +1018,8 @@ test('plans and fills user enablements, preserving aliases and receiver metadata
   assert.equal(await readlink(path.join(fixture.globalDir, 'alpha')), path.join(receiver, fixture.record.installPath));
   assert.equal((await readSkillMetadata(receiver, path.join(receiver, fixture.record.installPath))).note, 'producer');
   await updateSkillMetadata(receiver, { skillPath: path.join(receiver, fixture.record.installPath), note: 'receiver' });
-  await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  const again = await imageWorkflow.importLibraryImage(context, fixture.imagePath, { yes: true });
+  assert.equal(again.enablement[0].disposition, 'unchanged');
   assert.equal((await readSkillMetadata(receiver, path.join(receiver, fixture.record.installPath))).note, 'receiver');
 });
 
@@ -937,10 +1033,12 @@ test('repo-local library image CLI exports, dry-runs and confirms import with st
   assert.match(stderr, /\[pass\]/);
   const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
   assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath, '--dry-run'] }), 0);
+  assert.match(stderr, /\[ready\] personal\/alpha/);
   assert.equal((await readSourceRecords(receiver)).length, 0);
   assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath], confirm: () => false }), 0);
   assert.equal((await readSourceRecords(receiver)).length, 0);
   assert.equal(await runSourceCli({ ...fixture, ...io, rootDir: receiver, argv: ['image', 'import', fixture.imagePath, '--yes'] }), 0);
+  assert.match(stderr, /\[added\] personal\/alpha/);
   for (const args of [['export', fixture.imagePath, '--yes'], ['import', fixture.imagePath, '--json'], ['import', 'image.tgz'], ['export']]) {
     assert.equal(await runSourceCli({ ...fixture, ...io, argv: ['image', ...args] }), 2);
   }
@@ -963,6 +1061,43 @@ for (const [name, change] of [
     assert.equal(await existsImagePath(fixture.imagePath), false);
   });
 }
+
+test('staging residue reports a named failure and recovery pointer', async () => {
+  const fixture = await libraryFixture();
+  await mkdir(path.join(fixture.rootDir, '.skillcaddy/staging/interrupted'), { recursive: true });
+  const report = [];
+  await assert.rejects(
+    () => imageWorkflow.exportLibraryImage(
+      { ...fixture, report: (message) => report.push(message) },
+      fixture.imagePath
+    ),
+    (error) => {
+      assert.equal(error.category, 'export-blocked');
+      assert.match(error.message, /^staging-residue:/);
+      assert.match(error.message, /Inspect \.skillcaddy\/staging\//);
+      return true;
+    }
+  );
+  assert.ok(report.some((message) => message.startsWith('[fail] staging-residue:')));
+});
+
+test('submits independent sources in stable dependency-safe sourceId order', async () => {
+  const fixture = await libraryFixture();
+  await addImageSource(fixture.rootDir, 'zeta');
+  await addImageSource(fixture.rootDir, 'beta');
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'ordered-receiver');
+  await mkdir(receiver);
+  const result = await imageWorkflow.importLibraryImage(
+    { ...fixture, rootDir: receiver },
+    fixture.imagePath,
+    { yes: true }
+  );
+  assert.deepEqual(
+    result.sources.map((source) => source.sourceId),
+    ['personal/alpha', 'personal/beta', 'personal/zeta']
+  );
+});
 
 test('partial source submit reports three lists and rerunning preserves committed bytes', async () => {
   const fixture = await libraryFixture();

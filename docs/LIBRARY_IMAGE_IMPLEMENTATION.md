@@ -23,7 +23,7 @@ allowlist from ADR-0011 and an empty staging directory. A post-flight walk check
 inode types, realpath containment, hard-link counts, and checksum or Git HEAD
 matches before any source is submitted.
 
-Archive path segments and relative link targets are normalized to NFC before
+Library image path segments and relative link targets are normalized to NFC before
 checksum validation; collisions after normalization are rejected. On APFS, a
 decomposed spelling that aliases the same inode is retained by the filesystem
 but is hashed using the same NFC policy.
@@ -49,5 +49,5 @@ npm test
 
 The cross-platform fidelity scripts under `docs/research/0034-fidelity/` remain
 the target-environment check for GNU tar and filesystem-specific metadata. A
-machine's own Linux or macOS runtime should run those scripts before adopting an
+machine's own Linux or macOS runtime should run those scripts before adopting a
 library image operationally.
