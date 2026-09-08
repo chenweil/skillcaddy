@@ -210,45 +210,7 @@ Skillcaddy 通过 Node.js 的 `fs.symlink(..., 'dir')` 创建目录符号链接�
 
 ## 架构示意
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Skillcaddy (中央库)                          │
-│  ~/AISkills/                                                    │
-│  ├── official/      ─┬─ my-skill/SKILL.md                       │
-│  ├── github/        ─┤                                          │
-│  ├── personal/      ─┴─ another-skill/SKILL.md                  │
-│  ├── archived/                                                   │
-│  └── skills/         ← 仓库自带（随本项目发布，source: local）   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-              启用时创建软链接 (symlink)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         项目目录                                 │
-│  ~/projects/my-app/                                             │
-│  ├── .agents/skills/                                            │
-│  │   ├── my-skill ──────────────► ~/AISkills/official/my-skill  │
-│  │   └── another-skill ─────────► ~/AISkills/personal/...       │
-│  └── .claude/skills/                                            │
-│  │   ├── my-skill ──► ../../.agents/skills/my-skill             │
-│  │   └── another-skill ─► ../../.agents/skills/another-skill    │
-│  └── .opencode/skills/  (可选)                                  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        各 Agent 自动发现并加载 skills 目录
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Agent          │ 项目级 Skills 路径          │ 用户级路径       │
-│─────────────────────────────────────────────────────────────────│
-│  Claude Code    │ .claude/skills/             │ ~/.claude/skills │
-│  OpenCode       │ .opencode/skills/           │ ~/.config/...    │
-│                 │ .claude/skills/             │ ~/.claude/skills │
-│                 │ .agents/skills/             │ ~/.agents/skills │
-│  Codex          │ .agents/skills/             │ ~/.agents/skills │
-│  Pi             │ .pi/skills/                 │ ~/.pi/agent/...  │
-│                 │ .agents/skills/             │ ~/.agents/skills │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Skillcaddy 目标架构](docs/assets/skillcaddy-arch.svg)
 
 **核心设计**：
 - `.agents/skills` 是跨 Agent 标准路径，所有 Agent 都能识别
