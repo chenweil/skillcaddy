@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+- Added library image export/import with a self-contained manifest, safe tar unpacking, atomic `0600` archives, resumable source submission, and global/Hermes enablement restoration.
+- Added the fifth `image` acquisition input type, cross-platform fidelity verification, and adversarial unpacking fixtures.
+
+Release target: 0.26.0.
 
 ## [0.25.1] - 2026-08-17
 
