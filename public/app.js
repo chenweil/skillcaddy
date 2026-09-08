@@ -4,6 +4,9 @@ import { emptyState } from './emptyState.js';
 
 const PROJECT_HISTORY_KEY = 'skillcaddy.projectHistory';
 const MAX_PROJECT_HISTORY = 8;
+const HERMES_TOGGLE_KEY = 'skillcaddy.showHermes';
+// 默认不展示 Hermes：项目与 Claude Code 是主要工作面，Hermes 段按需打开。
+const HERMES_TOGGLE_DEFAULT = false;
 
 const state = {
   rootDir: '',
@@ -39,6 +42,8 @@ const elements = {
   unlinkClaude: document.querySelector('#unlinkClaude'),
   syncClaude: document.querySelector('#syncClaude'),
   claudeSkillList: document.querySelector('#claudeSkillList'),
+  hermesToggle: document.querySelector('#hermesToggle'),
+  hermesSection: document.querySelector('[data-hermes-section]'),
   totalSkills: document.querySelector('#totalSkills'),
   sourceFilter: document.querySelector('#sourceFilter'),
   skillSearch: document.querySelector('#skillSearch'),
@@ -51,6 +56,8 @@ const elements = {
   claudeCount: document.querySelector('#claudeCount'),
   skillList: document.querySelector('#skillList'),
   adviceList: document.querySelector('#adviceList'),
+  adviceToggle: document.querySelector('#adviceToggle'),
+  adviceCount: document.querySelector('#adviceCount'),
   tagTabs: document.querySelector('#tagTabs'),
   message: document.querySelector('#message'),
   errorMessage: document.querySelector('#errorMessage'),
@@ -98,6 +105,14 @@ elements.syncClaude.addEventListener('click', syncClaude);
 elements.disableAgents.addEventListener('click', disableAgents);
 elements.disableGlobal.addEventListener('click', () => disableAgents('global'));
 elements.disableHermes.addEventListener('click', () => disableAgents('hermes'));
+
+// Hermes 开关：默认关，状态落到 localStorage；body.hermes-hidden 控制三处 UI 同步消失。
+applyHermesToggle(readHermesToggle());
+elements.hermesToggle.addEventListener('change', (event) => {
+  const next = event.target.checked;
+  localStorage.setItem(HERMES_TOGGLE_KEY, JSON.stringify(next));
+  applyHermesToggle(next);
+});
 
 // 只做两个高频快捷键：/ 聚焦搜索，Esc 逐级清除（先清搜索词，再清全部筛选）。
 // 输入控件内不劫持按键，避免与正常输入冲突。
@@ -166,7 +181,10 @@ function renderAll() {
     : state.projectPath || '等待读取项目路径';
   renderAgentsSkills({ enabled: state.enabled, skills: state.skills, elements, onDisable: disable, isPreview: isPreviewSession });
   renderAgentsSkills({ enabled: state.global, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'global'), scope: 'global' });
-  renderAgentsSkills({ enabled: state.hermes, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'hermes'), scope: 'hermes' });
+  // Hermes 关闭时不要拉取/渲染 hermes 列表：保持 count=0，DOM 静止。
+  if (isHermesEnabled()) {
+    renderAgentsSkills({ enabled: state.hermes, skills: state.skills, elements, onDisable: (alias) => disable(alias, 'hermes'), scope: 'hermes' });
+  }
   renderClaudeStatus({ claude: state.claude, skills: state.skills, elements, onUnlink: unlinkClaudeSkill, isPreview: isPreviewSession });
   renderAdvice();
   renderProjectHistory();
@@ -246,6 +264,35 @@ function readProjectHistory() {
   }
 }
 
+function readHermesToggle() {
+  try {
+    const raw = localStorage.getItem(HERMES_TOGGLE_KEY);
+    if (raw === null) return HERMES_TOGGLE_DEFAULT;
+    return JSON.parse(raw) === true;
+  } catch {
+    return HERMES_TOGGLE_DEFAULT;
+  }
+}
+
+function isHermesEnabled() {
+  return document.body.classList.contains('hermes-hidden') === false;
+}
+
+function applyHermesToggle(enabled) {
+  elements.hermesToggle.checked = enabled;
+  // 单一 class 触发三处折叠：已启用面板的 Hermes 段、库分组里的 Hermes 操作、单条 skill 卡片里的 Hermes 按钮。
+  document.body.classList.toggle('hermes-hidden', !enabled);
+  // 关闭时不渲染 Hermes 列表和清空按钮（按钮可空：列表项 disabled 状态更省心）
+  elements.hermesList.hidden = !enabled;
+  elements.disableHermes.hidden = !enabled;
+  if (elements.hermesSection) elements.hermesSection.hidden = !enabled;
+  if (enabled) {
+    elements.hermesCount.textContent = state.hermes?.length || 0;
+  } else {
+    elements.hermesCount.textContent = 0;
+  }
+}
+
 function initializeProjectPathFromUrl() {
   const projectPath = new URLSearchParams(window.location.search).get('projectPath');
   if (projectPath) elements.projectPath.value = projectPath;
@@ -269,11 +316,22 @@ function syncProjectPathToUrl(projectPath) {
 
 function renderAdvice() {
   elements.adviceList.replaceChildren();
-  if (!state.advice || state.advice.length === 0) return;
+  const list = state.advice || [];
+  const count = list.length;
+  // 触发按钮：0 条时整个隐藏，1 条及以上露出徽标；存在 warning 时染色提示。
+  const hasWarning = list.some((advice) => advice.severity === 'warning');
+  elements.adviceToggle.hidden = count === 0;
+  elements.adviceCount.textContent = count;
+  elements.adviceToggle.classList.toggle('has-warning', hasWarning);
+  if (count === 0) {
+    // 同时收起已展开的 popover，避免下次打开还是 0 条。
+    setAdvicePopoverOpen(false);
+    return;
+  }
 
   // 服务端最多生成 8 条（skillStore 6 + collectionSetup 2），全部渲染；
   // 此前 slice(0, 6) 会让第 7、8 条建议静默消失。
-  state.advice.forEach((advice, index) => {
+  list.forEach((advice, index) => {
     const item = document.createElement('article');
     item.className = `advice ${advice.severity || 'info'}`;
     item.innerHTML = `
@@ -304,6 +362,38 @@ function renderAdvice() {
     elements.adviceList.append(item);
   });
 }
+
+// Popover 状态机：点击 toggle 翻转 open；点 popover 外或按 Esc 关闭。
+// 状态全部落到 aria-expanded + hidden 单一来源，方便测试和无障碍工具。
+function setAdvicePopoverOpen(open) {
+  if (open) {
+    elements.adviceList.hidden = false;
+    elements.adviceToggle.setAttribute('aria-expanded', 'true');
+  } else {
+    elements.adviceList.hidden = true;
+    elements.adviceToggle.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function toggleAdvicePopover() {
+  setAdvicePopoverOpen(elements.adviceList.hidden);
+}
+
+elements.adviceToggle.addEventListener('click', (event) => {
+  event.stopPropagation();
+  toggleAdvicePopover();
+});
+// popover 内部点击不冒泡到 document 的 outside-click 关闭。
+elements.adviceList.addEventListener('click', (event) => event.stopPropagation());
+document.addEventListener('click', () => {
+  if (!elements.adviceList.hidden) setAdvicePopoverOpen(false);
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.adviceList.hidden) {
+    setAdvicePopoverOpen(false);
+    elements.adviceToggle.focus();
+  }
+});
 
 function renderSkills() {
   withPreservedFocus(renderSkillList);

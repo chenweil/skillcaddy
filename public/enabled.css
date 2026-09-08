@@ -1,3 +1,6 @@
+/* 全部 4 个已启用段（.agents/skills、Claude Code、全局、Hermes）走同一个 2×2 网格。
+   第一行是 .agents/skills | Claude Code，第二行是 全局 | Hermes。
+   Hermes 关闭时只隐藏那一格，第二行的「全局」仍然单列左对齐，符合用户决定。 */
 .enabled-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5,12 +8,10 @@
   background: var(--hairline);
 }
 
-.global-enabled {
-  border-top: 1px solid var(--hairline);
-}
-
 .enabled-column {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
   background: var(--canvas);
 }
 
@@ -26,16 +27,42 @@
   padding: 12px 16px;
 }
 
-.column-title > span {
+/* 列头左侧：标签 + 计数徽标。路径（Claude Code、~/.hermes/skills）作为弱化二级文字同行展示，
+   避免把列头撑成两行。 */
+.column-title-label {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font: 500 13px/1.4 var(--sans);
   white-space: nowrap;
 }
 
-.column-title .actions {
+.column-title-path {
+  color: var(--muted-soft);
+  font: 500 12px/1.4 var(--mono);
+  font-weight: 400;
+}
+
+.column-title-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
+}
+
+/* 列头右侧动作按钮：和列表内 .enabled 的 .actions 区分开，固定列头位置不抖动。 */
+.column-title-actions button,
+.column-title > button.column-title-action {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .count {
@@ -50,11 +77,18 @@
   vertical-align: middle;
 }
 
-/* 列头清空改文字按钮：破坏性操作的目标大小与可见范围（「清空」+ 上方计数）
-   都大于此前的 36px 圆形 ×。 */
-.column-title button {
-  padding: 0 14px;
-  font-size: 13px;
+/* 列表行：四个段（.agents/skills、Claude Code、全局、Hermes）共用同一个 .enabled 组件。
+   之前 Claude Code 单独走 .claude-skill，导致没有「来源徽标」与项目列不齐。 */
+.list {
+  display: grid;
+  gap: 1px;
+  background: var(--hairline);
+  min-width: 0;
+}
+
+.list.compact {
+  /* 列表底部和列头底部对齐：列头边框已给出分割，列表内仅保留行间 1px hairline。 */
+  margin: 0;
 }
 
 .enabled {
@@ -64,6 +98,7 @@
   gap: 12px;
   background: var(--canvas);
   padding: 14px 16px;
+  min-width: 0;
 }
 
 .enabled-head {
@@ -71,15 +106,25 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .enabled-head .name {
   min-width: 0;
   overflow-wrap: anywhere;
+  color: var(--body-strong);
+  font-weight: 500;
 }
 
 .enabled-source {
   flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--ink);
+  padding: 2px 8px;
+  font: 500 12px/1.4 var(--sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .enabled p {
@@ -96,35 +141,13 @@
   display: block;
 }
 
-/* 「同步」用文字按钮：此前的「+」字形与库分组的批量启用「+」语义冲突。 */
-#syncClaude {
-  height: 36px;
-  min-height: 36px;
-  flex: 0 0 auto;
-  background: var(--primary-strong);
-  color: var(--on-primary);
-  padding: 0 14px;
-  font-size: 13px;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-#syncClaude:active,
-#syncClaude:hover {
-  background: var(--primary-active);
-}
-
 @media (max-width: 760px) {
   .enabled-grid {
     grid-template-columns: 1fr;
   }
 
-  .column-title button {
-    min-height: 44px;
-  }
-
-  #syncClaude {
-    height: 44px;
+  .column-title-actions button,
+  .column-title > button.column-title-action {
     min-height: 44px;
   }
 
@@ -140,7 +163,7 @@
     flex-direction: column;
   }
 
-  .column-title .actions {
+  .column-title-actions {
     justify-content: flex-start;
     margin-left: 0;
   }

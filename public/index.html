@@ -17,6 +17,11 @@
           <span>SkillCaddy</span>
         </div>
         <div class="topbar-actions">
+          <label class="topbar-toggle" title="在已启用面板和库操作里显示或隐藏 Hermes 段">
+            <input id="hermesToggle" type="checkbox" data-focus-key="hermes-toggle" aria-describedby="hermesToggleLabel">
+            <span class="topbar-toggle-track" aria-hidden="true"></span>
+            <span id="hermesToggleLabel" class="topbar-toggle-label">Hermes</span>
+          </label>
           <span id="versionTag" class="version" aria-label="版本号"></span>
           <button id="refreshButton" class="icon-button" data-focus-key="refresh" title="刷新" aria-label="刷新">↻</button>
         </div>
@@ -74,36 +79,36 @@
           <div class="enabled-grid">
             <section class="enabled-column">
               <div class="column-title">
-                <span>.agents/skills <span id="agentsCount" class="count">0</span></span>
-                <button id="disableAgents" class="danger" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills（数量见上方计数）" aria-label="一键清空 .agents/skills">清空</button>
+                <span class="column-title-label">.agents/skills <span id="agentsCount" class="count">0</span></span>
+                <button id="disableAgents" class="danger column-title-action" data-focus-key="agents-clear" data-focus-fallback-key="skill-search" title="一键清空 .agents/skills（数量见上方计数）" aria-label="一键清空 .agents/skills">清空</button>
               </div>
               <div id="enabledList" class="list compact"></div>
             </section>
             <section class="enabled-column">
               <div class="column-title">
-                <span>Claude Code <span id="claudeCount" class="count">0</span></span>
-                <div class="actions">
+                <span class="column-title-label">Claude Code <span id="claudeCount" class="count">0</span></span>
+                <div class="column-title-actions">
                   <button id="syncClaude" data-focus-key="claude-sync" title="把项目已启用的 skill 同步到 Claude Code">同步</button>
-                  <button id="unlinkClaude" class="danger" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code（数量见上方计数）" aria-label="一键清空 Claude Code">清空</button>
+                  <button id="unlinkClaude" class="danger column-title-action" data-focus-key="claude-clear" data-focus-fallback-key="claude-sync" title="一键清空 Claude Code（数量见上方计数）" aria-label="一键清空 Claude Code">清空</button>
                 </div>
               </div>
-              <section id="claudeSkillList" class="claude-list"></section>
+              <div id="claudeSkillList" class="list compact"></div>
+            </section>
+            <section class="enabled-column">
+              <div class="column-title">
+                <span class="column-title-label">全局 .agents/skills <span id="globalCount" class="count">0</span></span>
+                <button id="disableGlobal" class="danger column-title-action" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">清空</button>
+              </div>
+              <div id="globalList" class="list compact"></div>
+            </section>
+            <section class="enabled-column hermes-column" data-hermes-section>
+              <div class="column-title">
+                <span class="column-title-label">Hermes <span class="column-title-path">~/.hermes/skills</span> <span id="hermesCount" class="count">0</span></span>
+                <button id="disableHermes" class="danger column-title-action" data-focus-key="hermes-clear" data-focus-fallback-key="skill-search" title="一键清空 Hermes ~/.hermes/skills（数量见上方计数）" aria-label="一键清空 Hermes ~/.hermes/skills">清空</button>
+              </div>
+              <div id="hermesList" class="list compact"></div>
             </section>
           </div>
-          <section class="enabled-column global-enabled">
-            <div class="column-title">
-              <span>全局 .agents/skills <span id="globalCount" class="count">0</span></span>
-              <button id="disableGlobal" class="danger" data-focus-key="global-clear" data-focus-fallback-key="skill-search" title="一键清空全局 .agents/skills（数量见上方计数）" aria-label="一键清空全局 .agents/skills">清空</button>
-            </div>
-            <div id="globalList" class="list compact"></div>
-          </section>
-          <section class="enabled-column hermes-enabled">
-            <div class="column-title">
-              <span>Hermes ~/.hermes/skills <span id="hermesCount" class="count">0</span></span>
-              <button id="disableHermes" class="danger" data-focus-key="hermes-clear" data-focus-fallback-key="skill-search" title="一键清空 Hermes ~/.hermes/skills（数量见上方计数）" aria-label="一键清空 Hermes ~/.hermes/skills">清空</button>
-            </div>
-            <div id="hermesList" class="list compact"></div>
-          </section>
         </aside>
 
         <section class="panel library-panel">
@@ -111,21 +116,32 @@
             <div>
               <h2>Skill 原件库 <strong id="totalSkills" class="count">0</strong></h2>
             </div>
-            <select id="sourceFilter" data-focus-key="source-filter" title="来源过滤">
-              <option value="">全部来源</option>
-              <option value="local">local</option>
-              <option value="official">official</option>
-              <option value="github">github</option>
-              <option value="personal">personal</option>
-              <option value="archived">archived</option>
-            </select>
+            <div class="library-title-actions">
+              <div class="advice-popover-anchor">
+                <button id="adviceToggle" class="advice-toggle" type="button" data-focus-key="advice-toggle" hidden aria-expanded="false" aria-controls="adviceList" title="查看提示">
+                  <svg class="advice-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <line x1="8" y1="7" x2="8" y2="11.5" />
+                    <circle cx="8" cy="4.5" r="0.6" fill="currentColor" stroke="none" />
+                  </svg>
+                  <span id="adviceCount" class="count">0</span>
+                </button>
+                <section id="adviceList" class="advice-list advice-popover" hidden role="dialog" aria-label="提示列表"></section>
+              </div>
+              <select id="sourceFilter" data-focus-key="source-filter" title="来源过滤">
+                <option value="">全部来源</option>
+                <option value="local">local</option>
+                <option value="official">official</option>
+                <option value="github">github</option>
+                <option value="personal">personal</option>
+                <option value="archived">archived</option>
+              </select>
+            </div>
           </div>
           <div class="library-search">
             <input id="skillSearch" type="text" data-focus-key="skill-search" placeholder="搜索名称、描述或标签…（/ 聚焦，Esc 清除）" aria-label="搜索 skills" aria-keyshortcuts="/">
           </div>
-          <!-- advice 是诊断信息，放在检索入口之后：此前插在搜索框上方，把主工作流
-               「过滤 → 找 → 启用」的入口往下推。 -->
-          <section id="adviceList" class="advice-list"></section>
+          <!-- advice 已搬到右上角 popover；主工作流（搜索 → 标签 → 库）保持线性。 -->
           <nav id="tagTabs" class="tag-tabs" aria-label="Skill 标签过滤"></nav>
           <div id="skillList" class="list"></div>
         </section>

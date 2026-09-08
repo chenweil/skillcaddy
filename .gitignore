@@ -35,3 +35,7 @@ archived/*
 
 # impeccable 工具本地产物
 .impeccable/
+
+# 本地浏览器自动化与截图产物（不入库）
+.playwright-cli/
+output/
