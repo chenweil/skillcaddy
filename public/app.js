@@ -703,6 +703,9 @@ function renderSkill(skill, enabledTargets, globalTargets = new Set(), hermesTar
     }
     item.querySelector('.meta').textContent = skill.description || (skill.hasSkillFile ? '未填写 description' : '缺少 SKILL.md');
     item.querySelector('.path').textContent = skill.path;
+    // 原件库卡片与已启用卡片保持同一悬停契约：优先展示人为备注，其次回退到 description。
+    const hoverText = skill.note || skill.description;
+    if (hoverText) item.title = hoverText;
     if (state.editingSkillId === skill.id) renderMetadataEditor(item.querySelector('.metadata-editor'), skill);
 
     const actions = item.querySelector('.actions');

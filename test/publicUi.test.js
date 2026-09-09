@@ -55,6 +55,15 @@ test('top bar uses a header while tag filters retain the navigation landmark', (
   assert.match(indexSource, /<nav id="tagTabs"[^>]*aria-label="Skill 标签过滤"/);
 });
 
+test('top bar exposes the repository beside the version badge', () => {
+  assert.match(indexSource, /id="versionTag"[\s\S]*?id="githubLink"[^>]*href="https:\/\/github\.com\/chenweil\/skillcaddy"/);
+  assert.match(indexSource, /id="githubLink"[^>]*target="_blank"[^>]*rel="noreferrer noopener"/);
+  assert.match(indexSource, /id="githubLink"[\s\S]*?class="github-icon"[^>]*viewBox="0 0 16 16"/);
+  assert.match(styleSource, /\.topbar-link\s*\{[\s\S]*?min-height: 36px[\s\S]*?border-radius: 999px/);
+  assert.match(styleSource, /\.topbar-link:focus-visible\s*\{[\s\S]*?outline: 2px solid var\(--primary-strong\)/);
+  assert.match(styleSource, /\.topbar-link-label\s*\{[\s\S]*?display: none/);
+});
+
 test('theme and metadata controls cover dark mode and mobile touch targets', () => {
   assert.match(styleSource, /@media \(prefers-color-scheme: dark\)\s*\{[\s\S]*?color-scheme: dark/);
   assert.match(styleSource, /\.toggle-field\s*\{[\s\S]*?min-height: 44px/);
@@ -108,6 +117,12 @@ test('enabled panel provides one shared search for every channel', () => {
   assert.match(claudeUiSource, /const filtered = claude\.skills\.filter\(\(skill\) => matchesEnabledQuery\(skill, skills, normalizedQuery\)\)/);
   assert.match(claudeUiSource, /没有匹配的 skill/);
   assert.match(enabledSource, /\.enabled-toolbar\s*\{[\s\S]*?\.enabled-search input/);
+});
+
+test('library skill cards expose the same note-first hover text as enabled cards', () => {
+  assert.match(appSource, /const hoverText = skill\.note \|\| skill\.description;\s*if \(hoverText\) item\.title = hoverText;/);
+  assert.match(agentsUiSource, /const description = sourceSkill\.note \|\| sourceSkill\.description;/);
+  assert.match(claudeUiSource, /const description = sourceSkill\.note \|\| sourceSkill\.description;/);
 });
 
 test('Claude Code list reuses the unified .enabled component', () => {

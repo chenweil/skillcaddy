@@ -263,6 +263,37 @@ textarea {
   border-color: var(--primary-wash, var(--primary-strong));
 }
 
+.topbar-link {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--canvas);
+  color: var(--muted);
+  padding: 0 10px;
+  font: 500 13px/1 var(--sans);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.topbar-link:hover {
+  background: var(--surface-card);
+  color: var(--ink);
+}
+
+.topbar-link:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+.github-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .topbar-toggle-track,
   .topbar-toggle-track::after {
@@ -1497,6 +1528,16 @@ button.danger:disabled,
 
   .topbar {
     min-height: 56px;
+  }
+
+  .topbar-link {
+    width: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .topbar-link-label {
+    display: none;
   }
 
   .hero {

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.26.2] - 2026-09-09
+
+### Added
+- Web manager: the top bar now links directly to the Skillcaddy GitHub repository beside the version badge, with a compact icon-only layout on narrow screens.
+
+### Fixed
+- Web manager: source-library skill cards now expose the same note-first hover text as Agents and Claude Code enabled cards, falling back to the source description when no note exists.
+
 ## [0.26.1] - 2026-09-08
 
 ### Added
