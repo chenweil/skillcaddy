@@ -22,7 +22,7 @@ test('lists and searches skill choices with enabled state', async () => {
 
   await symlink(skill, await agentsLink(project, 'review'), 'dir');
 
-  const state = await loadTuiState(root, project);
+  const state = await loadTuiState(root, project, await isolatedScopeDirs());
   const choices = listSkillChoices(state, { query: 'review' });
 
   assert.equal(choices.length, 1);
@@ -43,14 +43,14 @@ test('prefers the metadata note as the skill introduction', async () => {
   const project = await makeTempDir('tui-project-');
   await createSkill(root, 'personal', 'review', 'Review code changes');
 
-  let state = await loadTuiState(root, project);
+  let state = await loadTuiState(root, project, await isolatedScopeDirs());
   await saveSkillMetadata(root, state, 'personal/review', {
     note: '审查代码改动。',
     tags: [],
     autoEnable: true
   });
 
-  state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project, await isolatedScopeDirs());
   const [choice] = listSkillChoices(state, { query: 'review' });
 
   assert.equal(choice.label, 'personal/review - 审查代码改动。');
@@ -61,18 +61,18 @@ test('enables and disables a skill by TUI choice', async () => {
   const project = await makeTempDir('tui-project-');
   await createSkill(root, 'personal', 'implement', 'Implement a change');
 
-  let state = await loadTuiState(root, project);
+  let state = await loadTuiState(root, project, await isolatedScopeDirs());
   const enableResult = await enableSkillChoice(root, state, 'personal/implement');
   assert.equal(enableResult.alias, 'implement');
   assert.equal(enableResult.unchanged, false);
 
-  state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project, await isolatedScopeDirs());
   assert.deepEqual(listEnabledAliases(state).map((item) => item.alias), ['implement']);
 
   const disableResult = await disableAlias(state, 'implement');
   assert.equal(disableResult.removed, true);
 
-  state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project, await isolatedScopeDirs());
   assert.deepEqual(state.enabled, []);
 });
 
@@ -82,11 +82,11 @@ test('enables a duplicate-name skill with a custom alias', async () => {
   await createSkill(root, 'personal', 'review', 'Personal review');
   await createSkill(root, 'github/toolbox/skills', 'review', 'Toolbox review');
 
-  let state = await loadTuiState(root, project);
+  let state = await loadTuiState(root, project, await isolatedScopeDirs());
   const result = await enableSkillChoice(root, state, 'github/toolbox/skills/review', { alias: 'toolbox-review' });
   assert.equal(result.alias, 'toolbox-review');
 
-  state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project, await isolatedScopeDirs());
   assert.deepEqual(listEnabledAliases(state).map((item) => item.alias), ['toolbox-review']);
 });
 
@@ -127,7 +127,7 @@ test('saves metadata through sidecar storage', async () => {
   const project = await makeTempDir('tui-project-');
   await createSkill(root, 'github/toolbox/skills', 'triage', 'Triage issues');
 
-  let state = await loadTuiState(root, project);
+  let state = await loadTuiState(root, project, await isolatedScopeDirs());
   const result = await saveSkillMetadata(root, state, 'github/toolbox/skills/triage', {
     note: 'Use before implementation.',
     tags: ['Workflow'],
@@ -141,7 +141,7 @@ test('saves metadata through sidecar storage', async () => {
     /ENOENT/
   );
 
-  state = await loadTuiState(root, project);
+  state = await loadTuiState(root, project, await isolatedScopeDirs());
   const skill = findSkillByChoice(state, 'github/toolbox/skills/triage');
   assert.equal(skill.note, 'Use before implementation.');
   assert.deepEqual(skill.tags, ['Workflow']);
@@ -165,4 +165,14 @@ async function agentsLink(project, alias) {
 async function makeTempDir(prefix) {
   const { mkdtemp } = await import('node:fs/promises');
   return mkdtemp(path.join(tmpdir(), prefix));
+}
+
+// getState 未显式传 globalDir/hermesDir 时会回落到宿主 ~/.agents/skills 与
+// ~/.hermes/skills（lib/skillStore.js、lib/hermesStore.js），导致与 fixture
+// 同名 alias 碰撞出环境相关的 advice。这里用空目录隔离两个 scope。
+async function isolatedScopeDirs() {
+  return {
+    globalDir: await makeTempDir('tui-global-dir-'),
+    hermesDir: await makeTempDir('tui-hermes-dir-')
+  };
 }
