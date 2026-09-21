@@ -154,3 +154,14 @@ test('library advice collapses into an SVG info toggle and popover', () => {
   assert.match(styleSource, /\.advice-popover\s*\{[\s\S]*?position: absolute/);
   assert.match(styleSource, /\.advice-toggle\.has-warning\s*\{[\s\S]*?background: var\(--warning-surface\)/);
 });
+
+test('Agents bulk-clear passes an explicit project scope', () => {
+  // 回归：裸绑 click 会把 PointerEvent 当作 scope 传入，导致全部 /api/disable 被拒绝、
+  // 提示文案出现 [object PointerEvent]。三个批量清空按钮都必须传字符串 scope。
+  assert.match(appSource, /elements\.disableAgents\.addEventListener\('click', \(\) => disableAgents\('project'\)\)/);
+  assert.match(appSource, /elements\.disableGlobal\.addEventListener\('click', \(\) => disableAgents\('global'\)\)/);
+  assert.match(appSource, /elements\.disableHermes\.addEventListener\('click', \(\) => disableAgents\('hermes'\)\)/);
+  assert.doesNotMatch(appSource, /addEventListener\('click', disableAgents\)/);
+  // 纵深防御：disableAgents 入口把非字符串 scope 纠回 project。
+  assert.match(appSource, /async function disableAgents\(scope = 'project'\) \{[^}]*?if \(typeof scope !== 'string'\) scope = 'project';/);
+});
