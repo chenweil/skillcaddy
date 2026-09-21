@@ -117,7 +117,7 @@ elements.enabledSearch.addEventListener('input', (event) => {
 });
 elements.unlinkClaude.addEventListener('click', unlinkClaude);
 elements.syncClaude.addEventListener('click', syncClaude);
-elements.disableAgents.addEventListener('click', disableAgents);
+elements.disableAgents.addEventListener('click', () => disableAgents('project'));
 elements.disableGlobal.addEventListener('click', () => disableAgents('global'));
 elements.disableHermes.addEventListener('click', () => disableAgents('hermes'));
 
@@ -1205,6 +1205,8 @@ async function disable(alias, scope = 'project') {
 }
 
 async function disableAgents(scope = 'project') {
+  // 防御：click 裸绑定会把 PointerEvent 当作 scope 传入，这里兜底回 project。
+  if (typeof scope !== 'string') scope = 'project';
   const enabledItems = scope === 'global' ? state.global : scope === 'hermes' ? state.hermes : state.enabled;
   const aliases = enabledItems.filter((skill) => skill.canDisable ?? skill.isSymlink).map((skill) => skill.alias);
   if (aliases.length === 0) {
