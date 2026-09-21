@@ -996,6 +996,26 @@ test('roundtrips library-relative live and dead symlinks without dereferencing t
 });
 
 
+test('imports an NFD-named source without a spurious checksum mismatch (ADR 0011 Decision 7)', async () => {
+  // macOS stores some names NFD. ADR 0011:117-119 and the SPEC diagnose rules say that
+  // artifact must not block import. The integrity baseline is the plain checksumDirectory
+  // (SPEC:127; sourceAcquisitionPolicy.js builds it from the same), so a producer whose source
+  // is already NFD on disk must import: the Phase-1 gate accepts a match under the plain
+  // checksum like-for-like (and still tolerates an NFD-archive/NFC-baseline pairing via the
+  // normalized checksum), only real byte/structural drift fails.
+  const fixture = await libraryFixture();
+  const source = path.join(fixture.rootDir, fixture.record.installPath);
+  await writeFile(path.join(source, 'caf\u00e9.md'.normalize('NFD')), 'body');
+  fixture.record.integrity.value = await checksumDirectory(source);
+  await writeSourceRecord(fixture.rootDir, fixture.record);
+  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+  const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
+  const result = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  assert.deepEqual(result.sources.map(item => item.status), ['added']);
+  const imported = await readdir(path.join(receiver, fixture.record.installPath));
+  assert.ok(imported.some(name => name.normalize('NFC') === 'caf\u00e9.md'));
+});
+
 test('plans and fills user enablements, preserving aliases and receiver metadata', async (t) => {
   const fixture = await libraryFixture();
   const oldHome = process.env.HOME; process.env.HOME = fixture.home;
