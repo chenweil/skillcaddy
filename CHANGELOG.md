@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.26.4] - 2026-09-21
+
+### Fixed
+- Library image import no longer reports a spurious checksum mismatch for NFD-named sources: the Phase-1 gate fails only when both the plain and the NFC-normalized checksums differ from the baseline, keeping SPEC:127 like-for-like comparison and the ADR 0011 cross-platform promise.
+
 ## [0.26.3] - 2026-09-21
 
 ### Fixed
