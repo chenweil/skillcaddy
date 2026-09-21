@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 No unreleased changes.
 
+## [0.26.3] - 2026-09-21
+
+### Fixed
+- Web manager: the project Agents bulk-clear button now passes an explicit `project` scope instead of the click event, so all selected skills are removed and the confirmation no longer reports `[object PointerEvent]`; `disableAgents` also falls back to `project` for any non-string scope.
+
 ## [0.26.2] - 2026-09-09
 
 ### Added

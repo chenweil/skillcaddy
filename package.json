@@ -1,6 +1,6 @@
 {
   "name": "skillcaddy",
-  "version": "0.26.2",
+  "version": "0.26.3",
   "private": true,
   "description": "Local skill source library with project, global, and Hermes symlink scopes.",
   "type": "module",
