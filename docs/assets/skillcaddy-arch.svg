@@ -41,7 +41,7 @@
   <text x="140" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.claude/skills</text>
   <rect x="260" y="320" width="180" height="80" rx="8" fill="#f3e8ff" stroke="#a855f7"/>
   <text x="350" y="342" font-size="12" fill="#6b21a8" text-anchor="middle">projectB</text>
-  <text x="350" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.codex/skills</text>
+  <text x="350" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.agents/skills</text>
   <rect x="470" y="320" width="180" height="80" rx="8" fill="#f3e8ff" stroke="#a855f7"/>
   <text x="560" y="342" font-size="12" fill="#6b21a8" text-anchor="middle">projectC</text>
   <text x="560" y="360" font-size="12" fill="#6b21a8" text-anchor="middle">.agents/skills</text>
