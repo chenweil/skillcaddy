@@ -1,0 +1,51 @@
+{
+  "baseline": "439eb41f009b704dc2ebacee2e95f40335955e6e",
+  "patch_sha256": "132f1622430d760442b10b88eb973f49676f3ce151cef260c6fa78a2df8d2c4d",
+  "checks": [
+    {
+      "name": "format",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "headless",
+      "command": [
+        "bash",
+        "tests/headless_mainline.sh"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "skill",
+      "command": [
+        "bash",
+        "skills/apple-books-export-rust/tests/contract.sh"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "diff",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "tests": {
+    "before": 48,
+    "after": 49
+  },
+  "original_checkout": "appkit@5791c3d49614277130cb68d8d9c3b53ff88ba7cd",
+  "original_checkout_clean_after": true,
+  "committed": false,
+  "pushed": false,
+  "github_updated": false
+}

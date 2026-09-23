@@ -1,0 +1,108 @@
+diff --git a/src/machine.rs b/src/machine.rs
+index 24d2103..2f206c3 100644
+--- a/src/machine.rs
++++ b/src/machine.rs
+@@ -125,9 +125,9 @@ impl MachineError {
+                         .to_string(),
+                 ),
+             },
+-            crate::DatabaseAccessError::Unreadable { path, message } => Self {
++            crate::DatabaseAccessError::Unreadable { path, .. } => Self {
+                 code: "DATABASE_UNREADABLE",
+-                message: format!("Apple Books database is unreadable at {}: {message}", path.display()),
++                message: format!("Apple Books database is unreadable at {}.", path.display()),
+                 remediation: Some(
+                     "Close Apple Books, verify the database is intact and readable, then retry."
+                         .to_string(),
+@@ -165,10 +165,13 @@ impl MachineError {
+         }
+     }
+ 
+-    pub fn database_unreadable(message: impl Into<String>) -> Self {
++    pub fn database_unreadable(_message: impl Into<String>) -> Self {
+         Self {
+             code: "DATABASE_UNREADABLE",
+-            message: message.into(),
++            // Keep SQLite schema and query details outside the public protocol.
++            message:
++                "Apple Books data could not be read. The database may be damaged or incompatible."
++                    .to_string(),
+             remediation: Some(
+                 "Close Apple Books, verify its databases are present and readable, then retry."
+                     .to_string(),
+diff --git a/src/main.rs b/src/main.rs
+index cfc5c4d..2e6ef7b 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -160,7 +160,23 @@ enum Commands {
+ 
+ #[tokio::main]
+ async fn main() {
+-    let cli = Cli::parse();
++    let args: Vec<_> = std::env::args_os().collect();
++    let cli = match Cli::try_parse_from(&args) {
++        Ok(cli) => cli,
++        Err(error) => {
++            let machine_requested = args
++                .iter()
++                .skip(1)
++                .take_while(|arg| *arg != "--")
++                .any(|arg| arg == "--json");
++            if machine_requested && error.use_stderr() {
++                return finish_machine(Err(MachineError::invalid_argument(
++                    "Invalid command arguments. Run the command with --help for usage.",
++                )));
++            }
++            error.exit();
++        }
++    };
+ 
+     let result = match cli.command {
+         Commands::List { json: true } => {
+diff --git a/tests/machine_cli.rs b/tests/machine_cli.rs
+index 905ee01..bce1043 100644
+--- a/tests/machine_cli.rs
++++ b/tests/machine_cli.rs
+@@ -105,6 +105,31 @@ impl Fixture {
+     }
+ }
+ 
++#[test]
++fn machine_argument_errors_are_json_while_help_remains_human() {
++    let fixture = Fixture::new();
++    for args in [
++        vec!["annotations", "--json", "--asset-id"],
++        vec!["export", "--json", "bad-index"],
++        vec!["doctor", "--json", "--unknown"],
++    ] {
++        let output = fixture.run(&args);
++        assert!(!output.status.success());
++        assert!(output.stdout.is_empty());
++        let value: Value = serde_json::from_slice(&output.stderr)
++            .expect("argument failures must remain machine-readable");
++        assert_eq!(value["schema_version"], 1);
++        assert_eq!(value["error"]["code"], "INVALID_ARGUMENT");
++    }
++    let help = fixture.run(&["doctor", "--json", "--help"]);
++    assert!(help.status.success());
++    assert!(help.stderr.is_empty());
++    assert!(String::from_utf8_lossy(&help.stdout).contains("Usage:"));
++    let human = fixture.run(&["export", "bad-index"]);
++    assert!(!human.status.success());
++    assert!(String::from_utf8_lossy(&human.stderr).contains("error:"));
++}
++
+ #[test]
+ fn annotations_json_returns_normalized_machine_dtos() {
+     let fixture = Fixture::new();
+@@ -425,6 +450,10 @@ fn doctor_json_reports_unreadable_database_schema() {
+     let value: Value = serde_json::from_slice(&output.stderr).expect("stderr is JSON only");
+     assert_eq!(value["error"]["code"], "DATABASE_UNREADABLE");
+     assert!(value["error"]["remediation"].is_string());
++    let diagnostic = String::from_utf8_lossy(&output.stderr);
++    assert!(!diagnostic.contains("ZBKLIBRARYASSET"));
++    assert!(!diagnostic.contains("SELECT"));
++    assert!(!diagnostic.contains("no such table"));
+ }
+ 
+ #[test]

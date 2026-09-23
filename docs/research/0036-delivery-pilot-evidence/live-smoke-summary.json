@@ -1,0 +1,27 @@
+{
+  "time": "2026-09-23T01:35:50.427823+08:00",
+  "binary_sha256": "0bb4fa4482ab35f9911606c5f4565efca0143dc50d2407fc59b7367271662bd1",
+  "source": "439eb41 plus working diff",
+  "checks": {
+    "doctor": {
+      "status": "pass",
+      "os": "macos",
+      "architecture": "aarch64"
+    },
+    "list": {
+      "status": "pass",
+      "book_count": 70
+    },
+    "annotations": {
+      "status": "pass",
+      "annotation_count": 1
+    },
+    "export": {
+      "status": "pass",
+      "nonempty_files": 1,
+      "overwrite_guard": "pass",
+      "temporary_content_removed": true
+    }
+  },
+  "result": "pass"
+}
