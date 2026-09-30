@@ -10,8 +10,10 @@
   "scripts": {
     "start": "node server.js",
     "source": "node scripts/source.js",
-    "test": "node --test test/*.test.js && npm run lint:imports",
+    "test": "node --test test/*.test.js && npm run lint:imports && npm run check:specs",
     "test:unit": "node --test test/*.test.js",
+    "check:specs": "node scripts/check-specs.js",
+    "enable:spec-pipeline": "node scripts/enable-spec-pipeline.js",
     "lint:imports": "node scripts/check-imports.js",
     "lint": "node scripts/check-imports.js",
     "install:manager": "node scripts/manager-skill.js install",

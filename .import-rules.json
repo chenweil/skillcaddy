@@ -12,6 +12,11 @@
   "requireRulesFor": ["server.js", "lib/*.js", "scripts/*.js"],
   "rules": [
     {
+      "from": "lib/specGate.js",
+      "allow": [],
+      "reason": "Leaf module — spec-pipeline gate decisions shared by the check scripts and the test suite"
+    },
+    {
       "from": "lib/projectPath.js",
       "allow": [],
       "reason": "Leaf module — no internal dependencies"

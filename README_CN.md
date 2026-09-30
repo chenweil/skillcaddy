@@ -40,6 +40,24 @@ npm start
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
 
+### 随仓库提供的 spec-pipeline 技能
+
+本仓库在 `skills/spec-pipeline/` 下提供三个技能，实现 [`docs/research/0037`](docs/research/0037-spec-doc-pipeline-gaps-improvement-plan.md) 描述的方向确认关卡。技能内容已入版本控制，clone 后即存在；但**项目级启用链接不会随 clone 到达**，这是设计如此：ADR 0011 Decision 4 明确把项目级启用排除在库镜像之外（`lib/libraryImage.js` 只携带 `global` 和 `hermes` 三元组）。每个 checkout 重建一次即可：
+
+```bash
+npm run enable:spec-pipeline
+# 只预览，不做任何改动
+npm run enable:spec-pipeline -- --dry-run
+```
+
+然后检查本仓库内所有 spec 是否通过关卡：
+
+```bash
+npm run check:specs
+```
+
+两个命令都可重复执行。`check:specs` 同时是 `npm test` 的一环；没有 `specs/` 目录的仓库判为通过，加 `--strict` 可反转这一判定。
+
 Web 原件库中的项目、全局和 Hermes 启用彼此独立。全局启用 skill 后，项目操作仍然可用：如果当前项目需要自己的 setup、Claude Code 同步或明确的项目级优先关系，仍可把同一个 skill 添加到当前项目。库级操作会分别显示项目/全局/Hermes 启用进度；关键词搜索自动展开命中的库，来源和标签筛选则保持折叠，方便紧凑浏览。已启用面板把项目 Agents 与 Claude Code 并列为项目通道，把全局与 Hermes 放在下面的整行通道；新增的共享搜索可以按名称或来源快速定位已启用 skill，不必在长列表中滚动查找。
 
 ### 全局 CLI / TUI 命令
