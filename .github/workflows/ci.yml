@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref. A push makes an in-flight PR run
+# describe a commit nobody will review, and its time is better spent on the
+# new head.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: npm test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # package.json declares engines >= 20. 20 is the floor, 22 is what the
+        # suite is developed against. Testing both catches an accidental
+        # dependency on a newer runtime; testing only the newest would let
+        # the declared floor rot.
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # One step, not three: `npm test` already chains unit tests, the import
+      # lint, and the spec gate. Running them separately here would let a
+      # partial pass look green and would drift from what developers run.
+      - name: Test
+        run: npm test
