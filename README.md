@@ -40,6 +40,24 @@ npm start
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
 
+### Bundled spec-pipeline skills
+
+This repository ships three skills under `skills/spec-pipeline/` that implement the direction-confirmation gate described in [`docs/research/0037`](docs/research/0037-spec-doc-pipeline-gaps-improvement-plan.md). They are tracked in git, so a clone has the content — but the project enablement links are not, by design: ADR 0011 Decision 4 keeps project enablements out of the library image (`lib/libraryImage.js` carries only `global` and `hermes` triples). Recreate the links once per checkout:
+
+```bash
+npm run enable:spec-pipeline
+# preview without touching anything
+npm run enable:spec-pipeline -- --dry-run
+```
+
+Then check that every spec in this repository satisfies the gate:
+
+```bash
+npm run check:specs
+```
+
+Both commands are idempotent. `check:specs` is also part of `npm test`; a repository with no `specs/` directory passes, and `--strict` inverts that.
+
 The Web library keeps project, global, and Hermes enablement independent. Enabling a skill globally does not disable its project action: you can still add the same skill to the current project when that project needs its own setup, Claude Code synchronization, or explicit project-level precedence. Collection actions show separate project/global/Hermes progress; text search expands matching collections, while source and tag filters keep collections collapsed for compact browsing. The enabled panel presents project Agents and Claude Code as side-by-side channel slots, with full-width global and Hermes slots below; a shared enabled-skill search finds a name or source without scrolling long lists.
 
 ### Global CLI / TUI command
