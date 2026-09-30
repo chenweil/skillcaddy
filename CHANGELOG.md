@@ -16,9 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Library image scope-change detection no longer depends on `dev:ino` alone. On Linux, removing and recreating a directory at the same path returns the identical inode, so a scope directory replaced between planning and confirmation passed the stale-plan check undetected. The snapshot now also compares the directory's entry set. macOS increments inodes, which is why this was invisible there.
 
-### Known issues
-- One Linux-only test failure remains in `test/libraryImage.test.js` ("imports an NFD-named source without a spurious checksum mismatch"). It is pre-existing — the same workflow fails identically on the commit before these changes — and it is tracked with its diagnosis in `docs/research/0038-library-image-nfd-export-failure.md`. CI carries it in a separate non-blocking job.
-- The 0.26.4 entry below describes the plain-or-normalized tolerance as a fix. That tolerance has been present since the workflow was first implemented (`2d89f62`); 0.26.4 shipped no library-image change. The tolerance is real but insufficient on Linux — see the known issue above.
+### Fixed
+- Library image import no longer fails on an NFD-named source under Linux. Staged path names were normalized to NFC *before* the integrity check, and on Linux that rename actually happens (on APFS the NFC spelling already resolves to the same inode, so the name is kept). The directory's plain checksum therefore became the normalized one, matching neither form of the NFD baseline. Verification now runs first and normalization second. ADR 0011 Decision 7 is unchanged — the receiving library still ends up in NFC form. Diagnosis in `docs/research/0038-library-image-nfd-export-failure.md`.
+
+### Notes
+- The 0.26.4 entry below describes the plain-or-normalized tolerance as a fix it shipped. That tolerance has been present since the workflow was first implemented (`2d89f62`), and the v0.26.4 release commit touches no library-image file. It was also not sufficient on Linux, for the ordering reason described above.
 
 ## [0.26.4] - 2026-09-21
 

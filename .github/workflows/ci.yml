@@ -36,51 +36,8 @@ jobs:
 
       - run: npm ci
 
-      # `npm test` is the full suite and still fails on Linux — two pre-existing
-      # cases in test/libraryImage.test.js, which the known-failures job below
-      # tracks. Running it here anyway would leave every run red and stop anyone
-      # from reading the signal that matters, so this step runs everything
-      # except that one file, and the file is not skipped silently: the other
-      # job fails if it ever goes green without the two being fixed.
-      - name: Test (excluding known-failing libraryImage)
-        run: |
-          set -o pipefail
-          node --test $(ls test/*.test.js | grep -v 'libraryImage.test.js') \
-            && npm run lint:imports \
-            && npm run check:specs
-
-  # One Linux-only failure remains. It is pre-existing: verified by running
-  # this workflow against main, which fails identically, and it lives in a file
-  # the spec-pipeline work never touches.
-  #
-  #   "imports an NFD-named source without a spurious checksum mismatch"
-  #     ADR 0011 Decision 7 promises the NFD naming artifact must not block
-  #     import, and the import gate (libraryImage.js:1181) accepts plain OR
-  #     normalized checksums for that reason. The export self-check compares
-  #     against the registry baseline, and on Linux the staged copy is in the
-  #     opposite Unicode form: measured there, baseline=7c9fab4b (NFD plain)
-  #     while the staged directory yields plain=norm=64d24639 (NFC).
-  #
-  #     Ruled out by measurement, not assumption: the filesystem returns the
-  #     NFD form on both platforms with byte-identical checksums, `cp` and a
-  #     tar round-trip both preserve the form on both, so the divergence is
-  #     introduced somewhere inside the export pipeline. Where exactly is not
-  #     yet established, and guessing at it produced two wrong fixes already
-  #     (c6fda80, 3d50484, both reverted — the second broke the import
-  #     contract by removing normalization the receiver needs).
-  #
-  # Allowed to fail so the rest of the suite stays enforced. It remains on the
-  # checks list and in the branch-protection surface rather than disappearing.
-  known-failures:
-    name: known Linux failures (libraryImage)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - name: libraryImage suite
-        run: node --test test/libraryImage.test.js
+      # One step, not three: `npm test` already chains unit tests, the import
+      # lint, and the spec gate. Running them separately here would let a
+      # partial pass look green and would drift from what developers run.
+      - name: Test
+        run: npm test
