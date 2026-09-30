@@ -7,12 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-No unreleased changes.
+### Added
+- `skills/spec-pipeline/`: three skills implementing the direction-confirmation gap identified in `docs/research/0037`. `spec-direction-gate` (B, rejects rather than advises, records approval in the spec's `## Approval` section), `spec-draft-intake` (F, treats an external draft as untrusted input and reconciles it against the repository), `spec-role-contract` (cross-cutting author/implementer/verifier positions). Design in `docs/research/0037-spec-doc-pipeline-gaps-improvement-plan.md`.
+- `npm run check:specs` — walks `specs/*/TECH.md` and `specs/*/ROLE.md` and exits non-zero when a document fails its gate. Wired into `npm test`. A repository with no `specs/` directory passes; `--strict` inverts that.
+- `npm run enable:spec-pipeline` — recreates the project enablement links for the three skills. They are deliberately absent from the library image (ADR 0011 Decision 4), so this is a once-per-checkout step. Idempotent; `--dry-run`, `--uninstall`, and `--global` are available.
+- CI (`.github/workflows/ci.yml`): `npm ci && npm test` on Node 20 and 22, on pushes to `main` and on pull requests.
+
+### Fixed
+- Library image scope-change detection no longer depends on `dev:ino` alone. On Linux, removing and recreating a directory at the same path returns the identical inode, so a scope directory replaced between planning and confirmation passed the stale-plan check undetected. The snapshot now also compares the directory's entry set. macOS increments inodes, which is why this was invisible there.
+
+### Known issues
+- One Linux-only test failure remains in `test/libraryImage.test.js` ("imports an NFD-named source without a spurious checksum mismatch"). It is pre-existing — the same workflow fails identically on the commit before these changes — and it is tracked with its diagnosis in `docs/research/0038-library-image-nfd-export-failure.md`. CI carries it in a separate non-blocking job.
+- The 0.26.4 entry below describes the plain-or-normalized tolerance as a fix. That tolerance has been present since the workflow was first implemented (`2d89f62`); 0.26.4 shipped no library-image change. The tolerance is real but insufficient on Linux — see the known issue above.
 
 ## [0.26.4] - 2026-09-21
 
 ### Fixed
-- Library image import no longer reports a spurious checksum mismatch for NFD-named sources: the Phase-1 gate fails only when both the plain and the NFC-normalized checksums differ from the baseline, keeping SPEC:127 like-for-like comparison and the ADR 0011 cross-platform promise.
+- Library image import no longer reports a spurious checksum mismatch for NFD-named sources: the Phase-1 gate fails only when both the plain and the NFC-normalized checksums differ from the baseline, keeping SPEC:127 like-for-like comparison and the ADR 0011 cross-platform promise. *(No library-image change shipped in this release; the tolerance described here has been present since `2d89f62`.)*
 
 ## [0.26.3] - 2026-09-21
 
