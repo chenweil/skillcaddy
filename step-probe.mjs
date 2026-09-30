@@ -1,9 +1,4 @@
-/**
- * Reports, at each instrumented export step, the raw entry names and both
- * checksums. Run on macOS and on Linux; the difference between the two
- * outputs is the answer to where the Unicode form changes.
- */
-import { readdir, writeFile } from 'node:fs/promises';
+import { readdir, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { checksumDirectory, checksumDirectoryNormalized } from './lib/sourceTree.js';
 import { writeSourceRecord } from './lib/sourceRegistry.js';
@@ -11,47 +6,30 @@ import { libraryFixture } from './test/libraryImageFixtures.js';
 import * as imageWorkflow from './lib/libraryImage.js';
 
 const NFD = 'café.md'.normalize('NFD');
-
 async function describe(label, root) {
   const sub = path.join(root, 'personal', 'alpha');
   let names;
-  try {
-    names = await readdir(sub);
-  } catch (e) {
-    return `${label}: (unreadable ${e.code})`;
-  }
+  try { names = await readdir(sub); } catch (e) { return `${label}: (unreadable ${e.code})`; }
   const cafe = names.find((n) => n.normalize('NFC') === 'café.md');
-  const out = [
-    `${label}:`,
-    `  listed   = ${JSON.stringify(names)}`,
-    `  isNFD=${cafe === NFD} isNFC=${cafe === 'café.md'} hex=${cafe ? Buffer.from(cafe, 'utf8').toString('hex') : 'n/a'}`
-  ];
-  try {
-    out.push(`  plain=${(await checksumDirectory(sub)).slice(0, 12)} norm=${(await checksumDirectoryNormalized(sub)).slice(0, 12)}`);
-  } catch (e) {
-    out.push(`  checksum failed: ${e.code}`);
-  }
-  return out.join('\n');
+  let cs = 'checksum n/a';
+  try { cs = `plain=${(await checksumDirectory(sub)).slice(0,12)} norm=${(await checksumDirectoryNormalized(sub)).slice(0,12)}`; } catch (e) { cs = e.code; }
+  return `${label}:\n  isNFD=${cafe === NFD} isNFC=${cafe === 'café.md'}  ${cs}`;
 }
-
 const fixture = await libraryFixture();
 const source = path.join(fixture.rootDir, fixture.record.installPath);
 await writeFile(path.join(source, NFD), 'body');
 fixture.record.integrity.value = await checksumDirectory(source);
 await writeSourceRecord(fixture.rootDir, fixture.record);
-
 console.log('platform:', process.platform);
-console.log(await describe('0 BASELINE', fixture.rootDir));
-
-globalThis.__STEP = async (label, dir) => {
-  // packing and roundtrip are workspace siblings of 'personal'
-  const text = await describe(label, dir);
-  console.log(text);
-};
-
+console.log('BASELINE (producer source):');
+console.log('  isNFD=true  plain=' + fixture.record.integrity.value.slice(0,12));
+globalThis.__STEP = async (label, dir) => { console.log(await describe(label, dir)); };
+await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
+const receiver = path.join(fixture.base, 'receiver'); await mkdir(receiver);
 try {
-  await imageWorkflow.exportLibraryImage(fixture, fixture.imagePath);
-  console.log('\nEXPORT SUCCEEDED');
+  const r = await imageWorkflow.importLibraryImage({ ...fixture, rootDir: receiver }, fixture.imagePath, { yes: true });
+  console.log('\nIMPORT OK:', JSON.stringify(r.sources.map(s => s.status)));
 } catch (e) {
-  console.log('\nEXPORT FAILED: ' + e.message);
+  console.log('\nIMPORT FAILED: ' + e.message);
 }
+console.log(await describe('FINAL receiver', receiver));
