@@ -71,11 +71,23 @@ version = os.environ['VERSION']
 sha256 = os.environ['SHA256']
 text = formula.read_text()
 
-text, count_version = re.subn(r'^(\s*version\s+)"[^"]+"$', r'\1"%s"' % version, text, count=1, flags=re.M)
-text, count_sha = re.subn(r'^(\s*sha256\s+)"[^"]+"$', r'\1"%s"' % sha256, text, count=1, flags=re.M)
+# URL 里的版本号写死（Homebrew 要求 url 声明在 version 之前，插值会拿到空串），
+# 所以这里要同时改写 URL、version 与 sha256 三处，并检查它们一致。
+text, count_url = re.subn(
+    r'^(  url "https://registry\.npmjs\.org/skillcaddy/-/skillcaddy-)[^"]+(\.tgz")$',
+    r'\g<1>%s\g<2>' % version,
+    text,
+    count=1,
+    flags=re.M,
+)
+text, count_version = re.subn(r'^(  version )"[^"]+"$', r'\1"%s"' % version, text, count=1, flags=re.M)
+text, count_sha = re.subn(r'^(  sha256 )"[^"]+"$', r'\1"%s"' % sha256, text, count=1, flags=re.M)
 
-if count_version != 1 or count_sha != 1:
+if count_url != 1 or count_version != 1 or count_sha != 1:
     raise SystemExit('错误：Formula/skillcaddy.rb 的结构与预期不符，请手工检查。')
+
+if ('skillcaddy-%s.tgz' % version) not in text:
+    raise SystemExit('错误：URL 与 version 不一致。')
 
 formula.write_text(text)
 print('==> 已更新 %s' % formula)

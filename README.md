@@ -37,13 +37,12 @@ npx skillcaddy                 # one-shot run, nothing to install
 npm install -g skillcaddy       # persistent global command
 ```
 
-Homebrew installs the published npm tarball through `Formula/skillcaddy.rb`.
-Homebrew only installs formulae that live in a tap, so point it at a tap that
-carries that file (a personal `homebrew-<repo>` tap, or homebrew-core):
+Homebrew installs the published npm tarball through `Formula/skillcaddy.rb`,
+which lives in the `chenweil/tap` tap:
 
 ```bash
-brew tap <user>/<repo>          # a tap that contains Formula/skillcaddy.rb
-brew install <user>/<repo>/skillcaddy
+brew tap chenweil/tap
+brew install chenweil/tap/skillcaddy
 ```
 
 Or use the shell installer:

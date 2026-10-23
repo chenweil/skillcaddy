@@ -37,13 +37,12 @@ npx skillcaddy                 # 免安装直接跑
 npm install -g skillcaddy       # 装成全局命令
 ```
 
-Homebrew 通过 `Formula/skillcaddy.rb` 安装 npm 上已发布的 tarball。Homebrew 只接受
-位于 tap 里的 formula，所以需要把该文件放进一个 tap（个人 `homebrew-<repo>` tap，
-或 homebrew-core）：
+Homebrew 通过 `Formula/skillcaddy.rb` 安装 npm 上已发布的 tarball，该文件放在
+`chenweil/tap` 这个 tap 里：
 
 ```bash
-brew tap <user>/<repo>          # 该 tap 内含 Formula/skillcaddy.rb
-brew install <user>/<repo>/skillcaddy
+brew tap chenweil/tap
+brew install chenweil/tap/skillcaddy
 ```
 
 也可以用 shell 安装脚本：
