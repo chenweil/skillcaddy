@@ -7,16 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-23
+
 ### Added
+- The code root and the library root are now separate concepts (ADR 0012). A clone keeps the library inside the clone exactly as before; every packaged install (`npx`, `npm i -g`, `brew`) keeps the library in `~/.skillcaddy/library`, so reinstalling or upgrading the program never touches installed skills. `SKILLCADDY_ROOT` (already used by `scripts/pull-github.sh`) and `--root` select any other library root; `skillcaddy -a` reports both roots.
+- `lib/roots.js` — the single place that resolves the code root, the library root, and the legacy single-root call shape.
+- `scripts/install.sh` — one-command installer (`curl … | bash`) for the global command, with `--prefix` and `--version` options and a Node.js >= 20 pre-check.
+- `Formula/skillcaddy.rb` — Homebrew formula installing the published npm tarball, plus `scripts/update-homebrew-formula.sh` to refresh its version and checksum after each publish.
+- The package is publishable: `files` restricts the tarball to the runtime (100 files, ~1.4 MB) so the local library is never packaged, `bin` exposes the `skillcaddy` command, and `repository`/`homepage`/`bugs`/`license`/`keywords` are declared.
 - `skills/spec-pipeline/`: three skills implementing the direction-confirmation gap identified in `docs/research/0037`. `spec-direction-gate` (B, rejects rather than advises, records approval in the spec's `## Approval` section), `spec-draft-intake` (F, treats an external draft as untrusted input and reconciles it against the repository), `spec-role-contract` (cross-cutting author/implementer/verifier positions). Design in `docs/research/0037-spec-doc-pipeline-gaps-improvement-plan.md`.
 - `npm run check:specs` — walks `specs/*/TECH.md` and `specs/*/ROLE.md` and exits non-zero when a document fails its gate. Wired into `npm test`. A repository with no `specs/` directory passes; `--strict` inverts that.
 - `npm run enable:spec-pipeline` — recreates the project enablement links for the three skills. They are deliberately absent from the library image (ADR 0011 Decision 4), so this is a once-per-checkout step. Idempotent; `--dry-run`, `--uninstall`, and `--global` are available.
 - CI (`.github/workflows/ci.yml`): `npm ci && npm test` on Node 20 and 22, on pushes to `main` and on pull requests.
 
-### Fixed
-- Library image scope-change detection no longer depends on `dev:ino` alone. On Linux, removing and recreating a directory at the same path returns the identical inode, so a scope directory replaced between planning and confirmation passed the stale-plan check undetected. The snapshot now also compares the directory's entry set. macOS increments inodes, which is why this was invisible there.
+### Changed
+- `--root` now selects the library root for every command, including `start`/`stop`/`restart`. Previously Web lifecycle commands rejected a custom root and always used the clone that provided the executable; the Web process still runs that code root, and the resolved library root reaches it through `SKILLCADDY_ROOT`. ADR 0007 is amended accordingly (see `docs/adr/0012-decoupled-code-root-and-library-root.md`).
+- The library image manifest's `producer` object gained an explicit `mode`: `repository` (the library root is a git repository) or `no-repository` (it is a plain directory, with `commit` and `branch` set to `null`). Export no longer refuses to produce an archive when the library root is not a git repository; the repository-state check is skipped with a reported warning instead. Archive format, member list, and `schemaVersion: 1` are unchanged.
+- The bundled `skills/` bucket is scanned from the code root, and its metadata sidecars are stored in the library root, so notes and tags survive a reinstall of the program.
+- `package.json` is no longer `private`. The package is published to the npm registry as `skillcaddy`; this is its first registry release, and `npx skillcaddy` / `npm i -g skillcaddy` work from it.
 
 ### Fixed
+- Library image scope-change detection no longer depends on `dev:ino` alone. On Linux, removing and recreating a directory at the same path returns the identical inode, so a scope directory replaced between planning and confirmation passed the stale-plan check undetected. The snapshot now also compares the directory's entry set. macOS increments inodes, which is why this was invisible there.
 - Library image import no longer fails on an NFD-named source under Linux. Staged path names were normalized to NFC *before* the integrity check, and on Linux that rename actually happens (on APFS the NFC spelling already resolves to the same inode, so the name is kept). The directory's plain checksum therefore became the normalized one, matching neither form of the NFD baseline. Verification now runs first and normalization second. ADR 0011 Decision 7 is unchanged — the receiving library still ends up in NFC form. Diagnosis in `docs/research/0038-library-image-nfd-export-failure.md`.
 
 ### Notes
