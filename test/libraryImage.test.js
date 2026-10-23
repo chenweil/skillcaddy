@@ -895,7 +895,7 @@ test('exports a private gzip library image with manifest first and complete sour
   const manifest = JSON.parse((await execImageCommand('tar', ['-xOzf', result.path, 'library-image.json'])).stdout);
   assert.equal(manifest.schemaVersion, 1);
   assert.deepEqual(manifest.sources, [{ sourceId: fixture.record.sourceId, installPath: fixture.record.installPath }]);
-  assert.deepEqual(manifest.producer, { commit: await git(fixture.rootDir, 'rev-parse', 'HEAD'), branch: 'refs/heads/main', dirty: false, pushed: true });
+  assert.deepEqual(manifest.producer, { mode: 'repository', commit: await git(fixture.rootDir, 'rev-parse', 'HEAD'), branch: 'refs/heads/main', dirty: false, pushed: true });
   assert.deepEqual(Object.keys(manifest.declarations).sort(), [
     'gitSourceMode',
     'noAbsolutePaths',

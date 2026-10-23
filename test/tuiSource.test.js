@@ -11,6 +11,7 @@ import { inspectSource } from '../lib/sourceManager.js';
 import { isRemoteSkillFileInput } from '../lib/sourceHttp.js';
 import { isDefiniteGitSourceInput } from '../lib/sourceGitUrl.js';
 import { loadTuiState } from '../lib/tuiActions.js';
+import { scanSkills } from '../lib/skillStore.js';
 import { makeTempDir } from './testHelpers.js';
 import { buildZip } from './zipFixtures.js';
 
@@ -35,6 +36,8 @@ test('TUI adds a remote archive, refreshes state, and keeps the project untouche
 
   const root = await makeTempDir('tui-source-root-');
   const project = await makeTempDir('tui-source-project-');
+  // 仓库自带 skills 来自代码根，与原件库根解耦后依然可见。
+  const bundled = await scanSkills({ libraryRoot: root, codeRoot: repoRoot });
   const input =
     `http://user:password@127.0.0.1:${server.address().port}` +
     '/publisher-package?token=secret#fragment';
@@ -44,7 +47,7 @@ test('TUI adds a remote archive, refreshes state, and keeps the project untouche
   assert.match(result.stdout, /Add plan: ready/);
   assert.match(result.stdout, /Outcome: added/);
   assert.match(result.stdout, /official\/publisher-package/);
-  assert.match(result.stdout, /Skills: 1/);
+  assert.match(result.stdout, new RegExp(`Skills: ${bundled.length + 1}\\b`));
   assert.doesNotMatch(result.stdout, /user|password|token|secret|fragment/);
 
   const record = await inspectSource({ rootDir: root }, 'official/publisher-package');

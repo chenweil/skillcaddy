@@ -9,6 +9,7 @@ import {
 } from './lib/skillStore.js';
 import { syncClaudeSkills, unlinkClaudeSkill, unlinkClaudeSkills } from './lib/claudeStore.js';
 import { executeCollectionEnablement } from './lib/collectionEnablement.js';
+import { resolveRoots } from './lib/roots.js';
 import { readVersion } from './lib/version.js';
 import { enableProjectSkill } from './lib/projectActions.js';
 import { buildCollectionEnablePlan } from './lib/enablePlan.js';
@@ -16,12 +17,14 @@ import { updateSkillMetadata } from './lib/skillMetadata.js';
 import { normalizeEnablementScope } from './lib/enablementScope.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = __dirname;
-const publicDir = path.join(rootDir, 'public');
+// 代码根 = server.js 所在目录；原件库根由 SKILLCADDY_ROOT 指定，或按代码根推导。
+const roots = resolveRoots({ codeRoot: __dirname });
+const rootDir = roots.libraryRoot;
+const publicDir = path.join(roots.codeRoot, 'public');
 const port = Number(process.env.PORT || 4173);
 
-await ensureSourceFolders(rootDir);
-const appInfo = await readVersion(rootDir);
+await ensureSourceFolders(roots);
+const appInfo = await readVersion(roots);
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -58,7 +61,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
     const projectPath = url.searchParams.get('projectPath') || rootDir;
-    sendJson(res, 200, await getState(rootDir, projectPath));
+    sendJson(res, 200, await getState(roots, projectPath));
     return;
   }
 
@@ -66,7 +69,7 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     const scope = requireApiScope(body);
     requireProjectForScope(body, scope);
-    sendJson(res, 200, await enableProjectSkill(rootDir, {
+    sendJson(res, 200, await enableProjectSkill(roots, {
       scope,
       ...(scope === 'project' ? { projectPath: body.projectPath } : {}),
       skillPath: body.skillPath,
@@ -79,7 +82,7 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     const scope = requireApiScope(body);
     requireProjectForScope(body, scope);
-    const state = await getState(rootDir, body.projectPath || rootDir);
+    const state = await getState(roots, body.projectPath || rootDir);
     sendJson(res, 200, buildCollectionEnablePlan(
       state,
       Array.isArray(body.skillIds) ? body.skillIds : [],
@@ -92,7 +95,7 @@ async function handleApi(req, res, url) {
     const body = await readJson(req);
     const scope = requireApiScope(body);
     requireProjectForScope(body, scope);
-    sendJson(res, 200, await executeCollectionEnablement(rootDir, {
+    sendJson(res, 200, await executeCollectionEnablement(roots, {
       scope,
       ...(body.projectPath ? { projectPath: body.projectPath } : {}),
       skillIds: body.skillIds
@@ -102,7 +105,7 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/skill-metadata') {
     const body = await readJson(req);
-    sendJson(res, 200, await updateSkillMetadata(rootDir, body));
+    sendJson(res, 200, await updateSkillMetadata(roots, body));
     return;
   }
 
@@ -112,7 +115,7 @@ async function handleApi(req, res, url) {
     requireProjectForScope(body, scope);
     sendJson(res, 200, await disableSkill({
       scope,
-      rootDir,
+      roots,
       ...(scope === 'project' ? { projectPath: body.projectPath } : {}),
       alias: body.alias
     }));

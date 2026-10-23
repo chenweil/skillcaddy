@@ -4,6 +4,15 @@ status: accepted
 
 # Expose a clone-backed CLI and local Web lifecycle
 
+> **Amended by [ADR-0012](0012-decoupled-code-root-and-library-root.md).** The
+> clause "Skillcaddy is not published or downloaded as a global npm package" is
+> superseded: Skillcaddy is now also distributed as a package and as a Homebrew
+> formula. The consequence clause "`--root` selects the central library for
+> source and analysis operations; Web lifecycle commands use the clone that
+> provides the executable" is replaced by ADR-0012's Decision 5, which keeps
+> the code-root boundary but lets Web lifecycle commands use an explicit
+> library root. Every other clause below stands as written.
+
 Skillcaddy will expose one clone-backed `skillcaddy` executable through the
 existing `scripts/tui.js` entry. The entry keeps no-argument TUI behavior and
 adds CLI commands for local Web lifecycle management, read-only project

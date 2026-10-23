@@ -3,6 +3,7 @@
 import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import path from 'node:path';
+import { resolveLibraryRoot } from '../lib/roots.js';
 import {
   applyAddSource,
   applyRepairSource,
@@ -626,9 +627,12 @@ function printUsage(stderr) {
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
+  // 原件库根：SKILLCADDY_ROOT 优先，其次由代码根推导（clone 用 clone 目录，
+  // 发行形态用 ~/.skillcaddy/library）。
+  const codeRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   process.exitCode = await runSourceCli({
     argv: process.argv.slice(2),
-    rootDir: process.env.SKILLCADDY_ROOT || process.cwd(),
+    rootDir: resolveLibraryRoot({ codeRoot }),
     projectPath: process.env.SKILLCADDY_PROJECT || process.cwd()
   });
 }

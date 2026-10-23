@@ -3,6 +3,7 @@ import path from 'node:path';
 import { disableSkill, getState, scanSkills } from '../lib/skillStore.js';
 import { installCliCommand } from '../lib/tuiInstall.js';
 import { enableProjectSkill } from '../lib/projectActions.js';
+import { resolveLibraryRoot } from '../lib/roots.js';
 import { readVersion } from '../lib/version.js';
 import { restartWeb, startWeb, stopWeb } from '../lib/webManager.js';
 import { runSourceCli } from './source.js';
@@ -229,7 +230,7 @@ export function buildHelpText() {
   skillcaddy disable <alias> --hermes
 
 选项：
-  --root <dir>                       指定 Skillcaddy 原件库根目录
+  --root <dir>                       指定原件库根目录（对所有命令生效）
   -p, --port <port>                  Web 端口，默认 4173
   --no-open                          启动 Web 后不自动打开浏览器
   --project <dir>                    显式指定项目目录（enable/disable 必须明确选择 scope）
@@ -396,6 +397,7 @@ export function buildAnalysisReport(state, catalog = {}, context = {}) {
     'Skillcaddy 项目分析',
     `项目：${state.projectPath}`,
     `原件库：${state.rootDir}`,
+    ...(state.codeRoot && state.codeRoot !== state.rootDir ? [`代码根：${state.codeRoot}`] : []),
     '',
     '当前状态：',
     `  原件库 skill：${state.stats?.total ?? state.skills?.length ?? 0}（可用 ${state.stats?.available ?? state.skills?.length ?? 0}）`,
@@ -481,10 +483,14 @@ async function detectProjectContext(projectPath) {
   return context;
 }
 
-async function loadCatalog(rootDir) {
+/**
+ * 精选合集目录属于代码根：它随发行形态（clone / npm 包）一起走，
+ * 不属于原件库，因此不参与 library image 的搬运。
+ */
+async function loadCatalog(codeRoot) {
   try {
     return JSON.parse(await readFile(
-      path.join(rootDir, 'skills', 'skillcaddy-manager', 'references', 'featured-skills.json'),
+      path.join(codeRoot, 'skills', 'skillcaddy-manager', 'references', 'featured-skills.json'),
       'utf8'
     ));
   } catch {
@@ -494,8 +500,9 @@ async function loadCatalog(rootDir) {
 
 export async function runCli({
   argv = [],
-  rootDir = process.cwd(),
-  runtimeRootDir = rootDir,
+  rootDir,
+  runtimeRootDir,
+  codeRoot,
   stdout = process.stdout,
   stderr = process.stderr,
   handlers = {}
@@ -507,8 +514,14 @@ export async function runCli({
     return 2;
   }
 
-  const resolvedRootDir = path.resolve(parsed.rootDir || rootDir);
-  const resolvedRuntimeRootDir = path.resolve(runtimeRootDir);
+  // 代码根：提供可执行文件的 clone / npm 包目录。
+  const resolvedCodeRoot = path.resolve(codeRoot || runtimeRootDir || rootDir || process.cwd());
+  // 原件库根：--root 显式指定 > 调用方传入 > 由代码根推导（checkout 用代码根，
+  // 发行形态用 ~/.skillcaddy/library）。
+  const resolvedLibraryRoot = path.resolve(
+    parsed.rootDir || rootDir || resolveLibraryRoot({ codeRoot: resolvedCodeRoot })
+  );
+  const roots = { libraryRoot: resolvedLibraryRoot, codeRoot: resolvedCodeRoot };
   const projectPath = path.resolve(parsed.projectPath || process.cwd());
   const actions = {
     readVersion,
@@ -526,26 +539,18 @@ export async function runCli({
     ...handlers
   };
 
-  if (
-    ['start', 'stop', 'restart'].includes(parsed.command) &&
-    resolvedRootDir !== resolvedRuntimeRootDir
-  ) {
-    stderr.write('错误：Web 生命周期需要使用 CLI 所在 clone 的根目录；--root 仅用于原件库操作\n');
-    return 2;
-  }
-
   try {
     if (parsed.command === 'help') {
       stdout.write(buildHelpText());
       return 0;
     }
     if (parsed.command === 'version') {
-      const version = await actions.readVersion(resolvedRootDir);
+      const version = await actions.readVersion(roots);
       stdout.write(`${version.name} v${version.version}\n`);
       return 0;
     }
     if (parsed.command === 'install') {
-      const result = await actions.installCliCommand(resolvedRootDir);
+      const result = await actions.installCliCommand(resolvedCodeRoot);
       stdout.write(`${result.message}\n`);
       stdout.write(`source: ${result.sourcePath}\n`);
       stdout.write(`target: ${result.targetPath}\n`);
@@ -555,7 +560,7 @@ export async function runCli({
     if (parsed.command === 'update') {
       return actions.runSourceCli({
         argv: ['update-git', ...(parsed.verbose ? ['--verbose'] : []), '--project', projectPath],
-        rootDir: resolvedRootDir,
+        rootDir: resolvedLibraryRoot,
         projectPath,
         stdout,
         stderr
@@ -563,19 +568,20 @@ export async function runCli({
     }
     if (parsed.command === 'analyze') {
       const [state, catalog, context] = await Promise.all([
-        actions.getState(resolvedRootDir, projectPath, { readOnly: true }),
-        actions.loadCatalog(resolvedRootDir),
+        actions.getState(roots, projectPath, { readOnly: true }),
+        actions.loadCatalog(resolvedCodeRoot),
         actions.detectProjectContext(projectPath)
       ]);
       stdout.write(buildAnalysisReport(state, catalog, context));
       return 0;
     }
     if (parsed.command === 'enable' || parsed.command === 'disable') {
-      return runEnablementCommand({ actions, parsed, rootDir: resolvedRootDir, stdout });
+      return runEnablementCommand({ actions, parsed, roots, stdout });
     }
 
     const lifecycleOptions = {
-      rootDir: resolvedRootDir,
+      codeRoot: resolvedCodeRoot,
+      libraryRoot: resolvedLibraryRoot,
       projectPath,
       port: parsed.port,
       open: parsed.open
@@ -601,9 +607,9 @@ export async function runCli({
   }
 }
 
-async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
+async function runEnablementCommand({ actions, parsed, roots, stdout }) {
   if (parsed.command === 'enable') {
-    const skills = await actions.scanSkills(rootDir);
+    const skills = await actions.scanSkills(roots);
     const skill = resolveSkill(skills, parsed.skillRef);
     const input = {
       scope: parsed.scope,
@@ -611,7 +617,7 @@ async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
       skillPath: skill.path,
       alias: parsed.alias || skill.name
     };
-    const result = await actions.enableProjectSkill(rootDir, input);
+    const result = await actions.enableProjectSkill(roots, input);
     const status = result.unchanged ? '已存在' : '已启用';
     stdout.write(`${scopeLabel(parsed.scope)}${status}：${result.alias}\n`);
     return 0;
@@ -619,7 +625,7 @@ async function runEnablementCommand({ actions, parsed, rootDir, stdout }) {
 
   const result = await actions.disableSkill({
     scope: parsed.scope,
-    rootDir,
+    roots,
     ...(parsed.scope === 'project' ? { projectPath: path.resolve(parsed.projectPath) } : {}),
     alias: parsed.alias
   });

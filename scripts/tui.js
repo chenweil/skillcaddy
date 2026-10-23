@@ -30,6 +30,7 @@ import {
   getSkillPage,
   getSkillTableLayout
 } from '../lib/tuiLayout.js';
+import { resolveLibraryRoot } from '../lib/roots.js';
 import { isCliCommand, runCli } from './cli.js';
 import { formatOrigin } from './source.js';
 
@@ -39,17 +40,22 @@ const codeRootDir = path.resolve(__dirname, '..');
 if (isCliCommand(process.argv.slice(2))) {
   const exitCode = await runCli({
     argv: process.argv.slice(2),
-    rootDir: process.env.SKILLCADDY_ROOT || codeRootDir,
+    rootDir: process.env.SKILLCADDY_ROOT,
     runtimeRootDir: codeRootDir
   });
   process.exit(exitCode);
 }
 
 const options = parseArgs(process.argv.slice(2));
-const rootDir = path.resolve(options.root || process.env.SKILLCADDY_ROOT || codeRootDir);
+// 原件库根与代码根解耦：clone 形态下两者同目录，发行形态（npm/npx）下
+// 原件库落到 ~/.skillcaddy/library，不会跟着包缓存一起消失。
+const libraryRoot = path.resolve(
+  options.root || process.env.SKILLCADDY_ROOT || resolveLibraryRoot({ codeRoot: codeRootDir })
+);
+const roots = { libraryRoot, codeRoot: codeRootDir };
 
 const rl = createInterface({ input, output });
-let state = await loadTuiState(rootDir, options.projectPath || process.cwd());
+let state = await loadTuiState(roots, options.projectPath || process.cwd());
 
 try {
   await mainLoop();
@@ -128,7 +134,7 @@ async function addRemoteSourceFlow() {
     const name = await ask('Remote file name（必填，b 返回）');
     if (isBack(name)) return;
     await applyRemoteSourcePlan(
-      await planAddSource({ rootDir }, { input, name })
+      await planAddSource({ rootDir: libraryRoot }, { input, name })
     );
     return;
   }
@@ -141,7 +147,7 @@ async function addRemoteSourceFlow() {
   let plan;
   let archiveIdentityResolved = false;
   try {
-    plan = await planAddSource({ rootDir }, { input });
+    plan = await planAddSource({ rootDir: libraryRoot }, { input });
   } catch (error) {
     if (error?.category !== 'source-collision' || isDefiniteGitSourceInput(input)) {
       throw error;
@@ -169,13 +175,13 @@ async function customizeRemoteArchivePlan(input, plan) {
   if (isBack(namespace)) return null;
   if (!name && !namespace) {
     if (plan) return plan;
-    return planAddSource({ rootDir }, { input });
+    return planAddSource({ rootDir: libraryRoot }, { input });
   }
 
   const request = { input };
   if (name) request.name = name;
   if (namespace) request.namespace = namespace;
-  return planAddSource({ rootDir }, request);
+  return planAddSource({ rootDir: libraryRoot }, request);
 }
 
 function isSupportedRemoteAddress(input) {
@@ -198,8 +204,8 @@ async function applyRemoteSourcePlan(plan) {
   printRemoteSourcePlan(plan);
   if (plan.status !== 'ready') {
     if (plan.status === 'already-installed') {
-      const result = await applyAddSource({ rootDir }, plan);
-      state = await loadTuiState(rootDir, state.projectPath);
+      const result = await applyAddSource({ rootDir: libraryRoot }, plan);
+      state = await loadTuiState(roots, state.projectPath);
       printRemoteSourceResult(result);
     } else {
       console.log(`未执行添加：${plan.status}`);
@@ -213,8 +219,8 @@ async function applyRemoteSourcePlan(plan) {
     return;
   }
 
-  const result = await applyAddSource({ rootDir }, plan);
-  state = await loadTuiState(rootDir, state.projectPath);
+  const result = await applyAddSource({ rootDir: libraryRoot }, plan);
+  state = await loadTuiState(roots, state.projectPath);
   printRemoteSourceResult(result);
 }
 
@@ -247,21 +253,22 @@ function printRemoteSourceResult(result) {
 function printSummary() {
   const summary = summarizeState(state);
   console.log('\nSkillcaddy TUI');
-  console.log(`原件库: ${rootDir}`);
+  console.log(`原件库: ${libraryRoot}`);
+  if (codeRootDir !== libraryRoot) console.log(`代码根: ${codeRootDir}`);
   console.log(`项目: ${summary.projectPath}`);
   console.log(`Skills: ${summary.totalSkills}  可用: ${summary.availableSkills}  项目 Agents: ${summary.enabledAgents}  全局 Agents: ${state.global.length}  Hermes: ${state.hermes.length}  Claude: ${summary.enabledClaude}  诊断: ${summary.advice}`);
   console.log('');
 }
 
 async function refreshState() {
-  console.log(`当前原件库: ${rootDir}`);
+  console.log(`当前原件库: ${libraryRoot}`);
   const nextProject = await ask(`项目路径 [${state.projectPath}]`);
-  state = await loadTuiState(rootDir, nextProject || state.projectPath);
+  state = await loadTuiState(roots, nextProject || state.projectPath);
   console.log('已刷新');
 }
 
 async function updateGithubSkillsFlow() {
-  const githubDir = path.join(rootDir, 'github');
+  const githubDir = path.join(libraryRoot, 'github');
   console.log(`将更新 GitHub skill 库: ${githubDir}`);
   console.log('dirty 的子库会被跳过；不会 stash、reset 或覆盖本地改动。');
   const confirm = await ask('确认运行更新? y/N');
@@ -272,7 +279,7 @@ async function updateGithubSkillsFlow() {
     githubDir,
     state.projectPath
   ]);
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log('已重新扫描本地状态');
 }
 
@@ -342,7 +349,7 @@ async function browseSkills() {
     const libraries = groupSkillChoices(skills);
     console.log(`\nSkill 库${query ? ` / 搜索: ${query}` : ''}${source ? ` / 来源: ${source}` : ''}`);
     if (libraries.length === 0) {
-      console.log(`没有匹配的 skill。当前原件库是 ${rootDir}；如果你在 worktree 里开发，请用 --root 指向真实原件库。`);
+      console.log(`没有匹配的 skill。当前原件库是 ${libraryRoot}；如果你在 worktree 里开发，请用 --root 指向真实原件库。`);
     } else {
       printLibraryChoices(libraries);
     }
@@ -455,12 +462,12 @@ async function enableLibraryFlow(library, choices, scope = 'project') {
   }
 
   const result = await enableCollectionChoice(
-    rootDir,
+    roots,
     state,
     choices.map((choice) => choice.skill.id),
     { scope }
   );
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   result.outcomes
     .filter((outcome) => outcome.status === 'failed')
     .forEach((outcome) => console.log(`失败 ${outcome.alias}: ${outcome.error}`));
@@ -498,8 +505,8 @@ function printSetupGuidance(setups) {
 async function enableSkillFlow() {
   const value = await chooseSkill('要启用的 skill 关键词或 id');
   if (!value) return;
-  const result = await enableSkillChoice(rootDir, state, value);
-  state = await loadTuiState(rootDir, state.projectPath);
+  const result = await enableSkillChoice(roots, state, value);
+  state = await loadTuiState(roots, state.projectPath);
   console.log(result.unchanged ? `已存在：${result.alias}` : `已启用：${result.alias}`);
   if (result.claudeSync?.ok === false) {
     console.log(`Claude Code 同步失败：${result.claudeSync.error}`);
@@ -525,8 +532,8 @@ async function globalSkillsFlow() {
       }
       const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
       const alias = await ask(`全局 skill 名称 [${suggestedAlias}]`) || suggestedAlias;
-      const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'global', alias });
-      state = await loadTuiState(rootDir, state.projectPath);
+      const result = await enableSkillChoice(roots, state, skill.id, { scope: 'global', alias });
+      state = await loadTuiState(roots, state.projectPath);
       console.log(result.unchanged ? `全局已存在：${result.alias}` : `全局已启用：${result.alias}`);
       continue;
     }
@@ -541,8 +548,8 @@ async function globalSkillsFlow() {
       }
       const confirm = await ask(`清理全局 skill ${alias}? y/N`);
       if (!['y', 'yes'].includes(confirm.toLowerCase())) continue;
-      const result = await disableAlias(state, alias, { scope: 'global', rootDir });
-      state = await loadTuiState(rootDir, state.projectPath);
+      const result = await disableAlias(state, alias, { scope: 'global', roots });
+      state = await loadTuiState(roots, state.projectPath);
       console.log(result.removed ? `已清理全局：${alias}` : `未找到：${alias}`);
       continue;
     }
@@ -569,8 +576,8 @@ async function hermesSkillsFlow() {
       }
       const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
       const alias = await ask(`Hermes skill 名称 [${suggestedAlias}]`) || suggestedAlias;
-      const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'hermes', alias });
-      state = await loadTuiState(rootDir, state.projectPath);
+      const result = await enableSkillChoice(roots, state, skill.id, { scope: 'hermes', alias });
+      state = await loadTuiState(roots, state.projectPath);
       console.log(result.unchanged ? `Hermes 已存在：${result.alias}` : `Hermes 已启用：${result.alias}`);
       continue;
     }
@@ -585,8 +592,8 @@ async function hermesSkillsFlow() {
       }
       const confirm = await ask(`清理 Hermes skill ${alias}? y/N`);
       if (!['y', 'yes'].includes(confirm.toLowerCase())) continue;
-      const result = await disableAlias(state, alias, { scope: 'hermes', rootDir });
-      state = await loadTuiState(rootDir, state.projectPath);
+      const result = await disableAlias(state, alias, { scope: 'hermes', roots });
+      state = await loadTuiState(roots, state.projectPath);
       console.log(result.removed ? `已清理 Hermes：${alias}` : `未找到：${alias}`);
       continue;
     }
@@ -604,13 +611,13 @@ async function disableAliasFlow() {
   const selected = await ask('输入序号或 skill 名称');
   const alias = resolveIndexedValue(aliases, selected, 'alias');
   const result = await disableAlias(state, alias);
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log(result.removed ? `已清理：${alias}` : `未找到：${alias}`);
 }
 
 async function syncClaudeFlow() {
   const result = await syncClaude(state);
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log(result.unchanged ? 'Claude Code 已是最新' : `已同步 Claude Code：${result.linkPath}`);
 }
 
@@ -679,14 +686,14 @@ function printSkillDetail(skill) {
 }
 
 async function enableSkillById(skillId) {
-  const result = await enableSkillChoice(rootDir, state, skillId);
+  const result = await enableSkillChoice(roots, state, skillId);
   await reportEnableResult(result);
 }
 
 async function enableSkillWithAlias(skill) {
   const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
   const alias = await ask(`项目中的 skill 名称 [${suggestedAlias}]`) || suggestedAlias;
-  const result = await enableSkillChoice(rootDir, state, skill.id, { alias });
+  const result = await enableSkillChoice(roots, state, skill.id, { alias });
   await reportEnableResult(result);
 }
 
@@ -695,7 +702,7 @@ async function enableGlobalSkillById(skillId) {
   if (!skill) return;
   const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
   const alias = await ask(`全局 skill 名称 [${suggestedAlias}]`) || suggestedAlias;
-  const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'global', alias });
+  const result = await enableSkillChoice(roots, state, skill.id, { scope: 'global', alias });
   await reportEnableResult(result);
 }
 
@@ -708,12 +715,12 @@ async function enableHermesSkillById(skillId) {
   }
   const suggestedAlias = findSuggestedAlias(skill.id) || skill.name;
   const alias = await ask(`Hermes skill 名称 [${suggestedAlias}]`) || suggestedAlias;
-  const result = await enableSkillChoice(rootDir, state, skill.id, { scope: 'hermes', alias });
+  const result = await enableSkillChoice(roots, state, skill.id, { scope: 'hermes', alias });
   await reportEnableResult(result);
 }
 
 async function reportEnableResult(result) {
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   const prefix = result.scope === 'global' ? '全局' : result.scope === 'hermes' ? 'Hermes' : '项目';
   console.log(result.unchanged ? `${prefix}已存在：${result.alias}` : `${prefix}已启用：${result.alias}`);
   if (result.claudeSync?.ok === false) {
@@ -742,33 +749,33 @@ async function disableSkillAlias(skill) {
   const confirm = await ask(`清理已启用 skill ${enabled.alias}? y/N`);
   if (!['y', 'yes'].includes(confirm.toLowerCase())) return;
   const result = await disableAlias(state, enabled.alias);
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log(result.removed ? `已清理：${enabled.alias}` : `未找到：${enabled.alias}`);
 }
 
 async function editNote(skill) {
   const note = await ask(`备注 [${skill.note || ''}]`);
   if (!note) return;
-  await saveSkillMetadata(rootDir, state, skill.id, { note });
-  state = await loadTuiState(rootDir, state.projectPath);
+  await saveSkillMetadata(roots, state, skill.id, { note });
+  state = await loadTuiState(roots, state.projectPath);
   console.log('已保存备注');
 }
 
 async function editTags(skill) {
   const tags = await ask(`Tags 逗号分隔 [${(skill.tags || []).join(', ')}]`);
   if (!tags) return;
-  await saveSkillMetadata(rootDir, state, skill.id, {
+  await saveSkillMetadata(roots, state, skill.id, {
     tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean)
   });
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log('已保存 tags');
 }
 
 async function toggleAutoEnable(skill) {
-  await saveSkillMetadata(rootDir, state, skill.id, {
+  await saveSkillMetadata(roots, state, skill.id, {
     autoEnable: skill.autoEnable === false
   });
-  state = await loadTuiState(rootDir, state.projectPath);
+  state = await loadTuiState(roots, state.projectPath);
   console.log('已更新一键加入设置');
 }
 
@@ -783,8 +790,8 @@ async function editAllMetadata(skillId) {
   if (tags) metadata.tags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
   if (autoEnableInput) metadata.autoEnable = parseBoolean(autoEnableInput);
 
-  await saveSkillMetadata(rootDir, state, skillId, metadata);
-  state = await loadTuiState(rootDir, state.projectPath);
+  await saveSkillMetadata(roots, state, skillId, metadata);
+  state = await loadTuiState(roots, state.projectPath);
   console.log('已保存 metadata');
 }
 
@@ -810,7 +817,7 @@ async function chooseSkill(prompt, options = {}) {
     .filter((choice) => options.scope !== 'hermes' || ['official', 'github', 'personal'].includes(choice.skill.source))
     .slice(0, 20);
   if (choices.length === 0) {
-    console.log(`没有匹配的 skill。当前原件库是 ${rootDir}；如果你在 worktree 里开发，请用 --root 指向真实原件库。`);
+    console.log(`没有匹配的 skill。当前原件库是 ${libraryRoot}；如果你在 worktree 里开发，请用 --root 指向真实原件库。`);
     return '';
   }
   if (choices.length === 1) {
@@ -1011,8 +1018,8 @@ async function batchTranslateNotesFlow() {
     }
 
     try {
-      await saveSkillMetadata(rootDir, state, skill.id, { note });
-      state = await loadTuiState(rootDir, state.projectPath);
+      await saveSkillMetadata(roots, state, skill.id, { note });
+      state = await loadTuiState(roots, state.projectPath);
       console.log('✓ 已保存');
       results.push({ skill, status: 'saved', note });
     } catch (error) {

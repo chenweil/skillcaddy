@@ -139,3 +139,11 @@ _Avoid_: Archive, bundle, backup, snapshot, image
 **Upstream-less source**:
 A registered skill source whose provenance cannot be re-fetched: its bytes exist only on the machine that produced the library image, and any future update must keep the source's current type, origin, and bytes rather than adopt a new upstream. The library image preserves them as-is; it does not upgrade them.
 _Avoid_: Orphan source, broken source, untracked source
+
+**Code root**:
+The directory that holds the running Skillcaddy code together with the artifacts that ship with that code: `package.json`, `server.js`, the bundled `skills/` bucket, and the collection setup contracts. It is whatever directory the executable was launched from — a clone, an npm package directory, or a package manager's install prefix. The code root is never a place to keep acquired content.
+_Avoid_: Install directory, root directory, working directory
+
+**Library root**:
+The directory that holds the central library: the source buckets, the source registry, and the skill metadata sidecars. It is independent of the code root, so the same library is reachable from a clone, from an `npx` one-shot run, and from a package manager install. A git checkout keeps the library root at the checkout itself for backward compatibility; every other distribution form uses the user-level library directory unless the library root is set explicitly.
+_Avoid_: Root directory, data directory, working directory

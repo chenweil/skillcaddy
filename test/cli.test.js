@@ -97,8 +97,8 @@ test('CLI enables a selected skill explicitly in the global scope', async () => 
         name: 'review',
         path: '/tmp/library/personal/review'
       }],
-      enableProjectSkill: async (rootDir, input) => {
-        calls.push({ rootDir, input });
+      enableProjectSkill: async (roots, input) => {
+        calls.push({ roots, input });
         return { ok: true, scope: 'global', alias: input.alias, unchanged: false };
       }
     }
@@ -106,7 +106,7 @@ test('CLI enables a selected skill explicitly in the global scope', async () => 
 
   assert.equal(result, 0);
   assert.deepEqual(calls, [{
-    rootDir: '/tmp/library',
+    roots: { libraryRoot: '/tmp/library', codeRoot: '/tmp/library' },
     input: {
       scope: 'global',
       skillPath: '/tmp/library/personal/review',
@@ -129,8 +129,8 @@ test('CLI enables a selected skill explicitly in the Hermes scope', async () => 
         name: 'review',
         path: '/tmp/library/github/toolbox/skills/review'
       }],
-      enableProjectSkill: async (rootDir, input) => {
-        calls.push({ rootDir, input });
+      enableProjectSkill: async (roots, input) => {
+        calls.push({ roots, input });
         return { ok: true, scope: 'hermes', alias: input.alias, unchanged: false };
       }
     }
@@ -138,7 +138,7 @@ test('CLI enables a selected skill explicitly in the Hermes scope', async () => 
 
   assert.equal(result, 0);
   assert.deepEqual(calls, [{
-    rootDir: '/tmp/library',
+    roots: { libraryRoot: '/tmp/library', codeRoot: '/tmp/library' },
     input: {
       scope: 'hermes',
       skillPath: '/tmp/library/github/toolbox/skills/review',
@@ -209,8 +209,9 @@ test('CLI -u forwards verbose update summaries', async () => {
   assert.deepEqual(calls[0].argv, ['update-git', '--verbose', '--project', '/tmp/project']);
 });
 
-test('CLI rejects a custom data root for Web lifecycle commands', async () => {
+test('CLI keeps the Web code root on its own clone and forwards a custom library root', async () => {
   const output = captureOutput();
+  const calls = [];
 
   assert.equal(
     await runCli({
@@ -219,14 +220,16 @@ test('CLI rejects a custom data root for Web lifecycle commands', async () => {
       runtimeRootDir: '/tmp/skillcaddy-clone',
       ...output.streams,
       handlers: {
-        startWeb: async () => {
-          throw new Error('startWeb should not be called');
+        startWeb: async (options) => {
+          calls.push(options);
+          return { status: 'started', managed: true, pid: 4242, port: options.port, url: 'http://127.0.0.1:4173/' };
         }
       }
     }),
-    2
+    0
   );
-  assert.match(output.stderr(), /Web 生命周期需要使用 CLI 所在 clone/);
+  assert.equal(calls[0].codeRoot, '/tmp/skillcaddy-clone');
+  assert.equal(calls[0].libraryRoot, '/tmp/library');
 });
 
 test('CLI exposes explicit global CLI installation and keeps tui as an alias', async () => {

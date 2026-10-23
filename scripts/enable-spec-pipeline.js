@@ -23,6 +23,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { getState, enableSkill, disableSkill } from '../lib/skillStore.js';
 import { buildSkillEnablePlan } from '../lib/enablePlan.js';
+import { resolveRoots } from '../lib/roots.js';
 
 const SKILL_IDS = [
   'local/spec-pipeline/spec-direction-gate',
@@ -30,7 +31,8 @@ const SKILL_IDS = [
   'local/spec-pipeline/spec-role-contract'
 ];
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// spec-pipeline skill 来自代码根的仓库 skills 桶，原件库桶来自原件库根。
+const roots = resolveRoots({ codeRoot: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..') });
 const projectPath = process.cwd();
 
 function parseArgs(argv) {
@@ -69,7 +71,7 @@ async function main() {
     return 2;
   }
 
-  const state = await getState(rootDir, projectPath);
+  const state = await getState(roots, projectPath);
   const results = [];
 
   for (const skillId of SKILL_IDS) {
@@ -94,7 +96,7 @@ async function main() {
     }
 
     try {
-      const result = await enableSkill(rootDir, {
+      const result = await enableSkill(roots, {
         skillPath: plan.skillPath,
         alias: plan.alias,
         scope: options.scope,

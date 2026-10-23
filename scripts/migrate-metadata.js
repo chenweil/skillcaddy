@@ -2,15 +2,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { migrateLegacySkillMetadata } from '../lib/skillMetadata.js';
+import { resolveRoots } from '../lib/roots.js';
 import { ensureSourceFolders, scanSkills } from '../lib/skillStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(__dirname, '..');
+const roots = resolveRoots({ codeRoot: path.resolve(__dirname, '..') });
 const write = process.argv.slice(2).includes('--yes');
 
-await ensureSourceFolders(rootDir);
-const skills = await scanSkills(rootDir);
-const result = await migrateLegacySkillMetadata(rootDir, skills, { write });
+await ensureSourceFolders(roots);
+const skills = await scanSkills(roots);
+const result = await migrateLegacySkillMetadata(roots, skills, { write });
 const invalid = [
   ...skills.filter((skill) => skill.metadataError),
   ...result.invalid
