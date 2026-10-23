@@ -7,8 +7,10 @@
 # 每次 npm publish 之后跑一次：Homebrew 会拿 sha256 校验下载到的 tarball，
 # 版本一更新就必须同步，否则 brew install 会报 checksum mismatch。
 #
-# 这里下载的是 registry 上已发布的 tarball，而不是本地 npm pack 的产物：
-# 只有前者才是用户真正会拿到的那份字节。
+# 两个坑：
+#   1. npm 的 dist.shasum 是 **sha1**，不是 sha256。Homebrew 的 sha256 要自己算。
+#   2. 刚发布的 tarball 在 CDN 上可能返回 404（负缓存），加一个 query 参数
+#      绕过去再试。
 
 set -euo pipefail
 
@@ -24,13 +26,39 @@ URL="https://registry.npmjs.org/skillcaddy/-/skillcaddy-${VERSION}.tgz"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+# registry 上这个版本的权威信息：dist.shasum 是 sha1，用来交叉校验我们下到的字节。
+REGISTRY_SHA1="$(npm view "skillcaddy@${VERSION}" dist.shasum 2>/dev/null || true)"
+if [ -z "$REGISTRY_SHA1" ]; then
+  echo "错误：registry 上还没有 skillcaddy@${VERSION}。" >&2
+  exit 1
+fi
+
 echo "==> 下载 ${URL}"
-if ! curl -fsSL "$URL" -o "$TMP_DIR/skillcaddy-${VERSION}.tgz"; then
+DOWNLOADED=""
+for attempt in 1 2 3 4 5; do
+  SUFFIX=""
+  [ "$attempt" -gt 1 ] && SUFFIX="?cachebust=${attempt}-$(date +%s)"
+  if curl -fsSL "${URL}${SUFFIX}" -o "$TMP_DIR/skillcaddy-${VERSION}.tgz"; then
+    DOWNLOADED="$TMP_DIR/skillcaddy-${VERSION}.tgz"
+    break
+  fi
+  echo "    第 ${attempt} 次下载失败，重试…"
+  sleep 5
+done
+
+if [ -z "$DOWNLOADED" ]; then
   echo "错误：下载失败。确认 ${VERSION} 已经发布到 npm registry。" >&2
   exit 1
 fi
 
-SHA256="$(shasum -a 256 "$TMP_DIR/skillcaddy-${VERSION}.tgz" | awk '{print $1}')"
+ACTUAL_SHA1="$(shasum "$DOWNLOADED" | awk '{print $1}')"
+if [ "$ACTUAL_SHA1" != "$REGISTRY_SHA1" ]; then
+  echo "错误：下载到的字节与 registry 声明的 sha1 不一致（${ACTUAL_SHA1} != ${REGISTRY_SHA1}）。" >&2
+  exit 1
+fi
+
+SHA256="$(shasum -a 256 "$DOWNLOADED" | awk '{print $1}')"
+echo "==> sha1 ${ACTUAL_SHA1}（与 registry 一致）"
 echo "==> sha256 ${SHA256}"
 
 VERSION="$VERSION" SHA256="$SHA256" FORMULA="$FORMULA" python3 - <<'PY'

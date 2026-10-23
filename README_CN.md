@@ -35,7 +35,15 @@ Skillcaddy 用一个原件库目录作单一事实来源，用明确的项目/�
 ```bash
 npx skillcaddy                 # 免安装直接跑
 npm install -g skillcaddy       # 装成全局命令
-brew install skillcaddy         # macOS / Linuxbrew
+```
+
+Homebrew 通过 `Formula/skillcaddy.rb` 安装 npm 上已发布的 tarball。Homebrew 只接受
+位于 tap 里的 formula，所以需要把该文件放进一个 tap（个人 `homebrew-<repo>` tap，
+或 homebrew-core）：
+
+```bash
+brew tap <user>/<repo>          # 该 tap 内含 Formula/skillcaddy.rb
+brew install <user>/<repo>/skillcaddy
 ```
 
 也可以用 shell 安装脚本：
