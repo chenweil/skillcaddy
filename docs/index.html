@@ -33,6 +33,13 @@
         --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
         --max: 1120px;
+        /* Motion */
+        --dur-fast: 160ms;
+        --dur-mid: 320ms;
+        --dur-slow: 620ms;
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+        --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+        --rise: 18px;
       }
 
       * { box-sizing: border-box; }
@@ -155,8 +162,15 @@
         border-radius: var(--radius);
         font-size: 14px;
         font-weight: 600;
-        transition: background .15s ease, color .15s ease, border-color .15s ease;
+        transition:
+          background .15s ease,
+          color .15s ease,
+          border-color .15s ease,
+          transform .15s ease,
+          box-shadow .15s ease;
       }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:active { transform: translateY(0); }
       .btn.btn-primary {
         background: var(--primary-active);
         color: #fff;
@@ -404,6 +418,9 @@
         align-items: start;
       }
       .install-copy .section-title { max-width: 14ch; }
+      /* A Chinese glyph is about twice the width of the `0` that `ch` measures,
+         so the Latin measure breaks the headline in the wrong place. */
+      [data-lang="zh"] .install-copy .section-title { max-width: 9em; }
       .install-list {
         margin: 20px 0 0;
         padding: 0;
@@ -577,6 +594,273 @@
       }
       .footer-links a:hover { color: var(--ink); }
 
+      /* ------------------------------------------------------------------
+         Motion
+         One idea runs through the page: a link is drawn, then it lands.
+         The library path grows a trunk, the trunk grows branches, and a
+         destination only becomes readable once its wire has reached it.
+         ------------------------------------------------------------------ */
+
+      /* Keyboard focus has to be visible on every interactive surface. */
+      :focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+
+      /* Anchor targets clear the sticky nav. */
+      section[id] { scroll-margin-top: 84px; }
+
+      /* Read progress, drawn along the nav's lower hairline. */
+      .nav-progress {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        background: var(--primary);
+        transform: scaleX(var(--p, 0));
+        transform-origin: left center;
+        pointer-events: none;
+      }
+
+      /* Scroll reveal. `opacity: 0` only exists while the element is still
+         waiting; the animation ends in the visible state and keeps it. */
+      .reveal { opacity: 0; }
+      .reveal.in {
+        animation: reveal-rise var(--dur-slow) var(--ease) both;
+        animation-delay: var(--d, 0ms);
+      }
+      @keyframes reveal-rise {
+        from { opacity: 0; translate: 0 var(--rise); }
+        to { opacity: 1; translate: 0 0; }
+      }
+
+      /* The hero runs its own sequence on load, in reading order. */
+      .hero .rise { opacity: 0; }
+      .loaded .hero .rise {
+        animation: reveal-rise var(--dur-slow) var(--ease) both;
+        animation-delay: var(--d, 0ms);
+      }
+      .loaded .hero-visual {
+        animation: hero-visual-in 900ms var(--ease) 120ms both;
+      }
+      @keyframes hero-visual-in {
+        from { opacity: 0; transform: translateY(12px) scale(1.015); }
+        to { opacity: 1; transform: none; }
+      }
+
+      /* Cards lift on approach. Transform is separate from the reveal's
+         `translate`, so the two never fight over the same property. */
+      .pain,
+      .feature {
+        transition:
+          transform var(--dur-mid) var(--ease),
+          border-color var(--dur-mid) var(--ease),
+          box-shadow var(--dur-mid) var(--ease);
+      }
+      .pain:hover,
+      .feature:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--primary) 30%, var(--hairline));
+        box-shadow: 0 14px 30px rgba(20, 20, 19, 0.07);
+      }
+      .feature-icon {
+        transition:
+          transform var(--dur-mid) var(--ease),
+          color var(--dur-mid) var(--ease);
+      }
+      .feature:hover .feature-icon {
+        transform: translateY(-1px);
+        color: var(--primary);
+      }
+
+      /* Nav links underline themselves on the way in. */
+      .nav-links a {
+        position: relative;
+        transition: color var(--dur-fast) var(--ease);
+      }
+      .nav-links a::after {
+        content: "";
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 4px;
+        height: 1px;
+        background: var(--primary);
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform var(--dur-mid) var(--ease);
+      }
+      .nav-links a:hover::after { transform: scaleX(1); }
+
+      /* Table rows and agent chips answer the pointer. The chips are labels,
+         not links, so they must not pretend to be pressable. */
+      .platform-table tbody tr { transition: background var(--dur-fast) var(--ease); }
+      .platform-table tbody tr:hover { background: var(--surface-soft); }
+
+      /* The install terminal prints itself when it comes into view. */
+      .terminal { transition: box-shadow var(--dur-slow) var(--ease); }
+      .terminal.in pre {
+        animation: term-print 900ms var(--ease) both;
+      }
+      @keyframes term-print {
+        from { clip-path: inset(0 0 100% 0); }
+        to { clip-path: inset(0 0 0 0); }
+      }
+      .caret {
+        display: inline-block;
+        width: 7px;
+        height: 1.05em;
+        margin-left: 2px;
+        vertical-align: text-bottom;
+        background: var(--primary);
+        animation: caret-blink 1.1s steps(2, start) infinite;
+      }
+      @keyframes caret-blink {
+        0%, 45% { opacity: 1; }
+        50%, 95% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      /* ---- The link board: one source, three scopes ---- */
+      .link-board {
+        margin-top: 14px;
+        padding: 12px 12px 10px;
+        border-radius: 6px;
+        background: var(--surface-dark);
+        color: var(--on-dark);
+        font-family: var(--mono);
+        font-size: 11px;
+        line-height: 1.5;
+        overflow-x: auto;
+      }
+      .lb-source {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .lb-node {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 7px;
+        border-radius: 2px;
+        background: var(--primary);
+      }
+      .flow-step.in .lb-node { animation: lb-node 700ms var(--ease) both; }
+      @keyframes lb-node {
+        0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 60%, transparent); }
+        60% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 0%, transparent); }
+        100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 0%, transparent); }
+      }
+      .lb-branches {
+        position: relative;
+        margin: 2px 0 0 3px;
+        padding-left: 16px;
+      }
+      .lb-branches::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 8px;
+        width: 1px;
+        background: rgba(250, 249, 245, 0.24);
+        transform: scaleY(0);
+        transform-origin: top center;
+      }
+      .flow-step.in .lb-branches::before {
+        animation: lb-trunk 380ms var(--ease) 140ms both;
+      }
+      @keyframes lb-trunk {
+        from { transform: scaleY(0); }
+        to { transform: scaleY(1); }
+      }
+      .lb-branch {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        white-space: nowrap;
+      }
+      .lb-branch::before {
+        content: "";
+        position: absolute;
+        left: -16px;
+        top: 50%;
+        width: 16px;
+        height: 1px;
+        margin-top: -0.5px;
+        background: rgba(250, 249, 245, 0.45);
+        transform: scaleX(0);
+        transform-origin: left center;
+      }
+      .lb-branch::after {
+        content: "";
+        position: absolute;
+        left: -18px;
+        top: 50%;
+        width: 4px;
+        height: 4px;
+        margin-top: -2px;
+        border-radius: 1px;
+        background: var(--primary);
+        opacity: 0;
+        scale: 0.4;
+      }
+      .flow-step.in .lb-branch:nth-child(1)::before { animation: lb-wire 320ms var(--ease) 340ms both; }
+      .flow-step.in .lb-branch:nth-child(2)::before { animation: lb-wire 320ms var(--ease) 470ms both; }
+      .flow-step.in .lb-branch:nth-child(3)::before { animation: lb-wire 320ms var(--ease) 600ms both; }
+      .flow-step.in .lb-branch:nth-child(1)::after { animation: lb-junction 260ms var(--ease) 620ms both; }
+      .flow-step.in .lb-branch:nth-child(2)::after { animation: lb-junction 260ms var(--ease) 750ms both; }
+      .flow-step.in .lb-branch:nth-child(3)::after { animation: lb-junction 260ms var(--ease) 880ms both; }
+      @keyframes lb-wire {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+      }
+      @keyframes lb-junction {
+        from { opacity: 0; scale: 0.4; }
+        to { opacity: 1; scale: 1; }
+      }
+      /* The path is written in from the left, the way the wire reaches it. */
+      .lb-code { display: inline-block; opacity: 0; }
+      .flow-step.in .lb-branch:nth-child(1) .lb-code { animation: lb-text 340ms var(--ease) 620ms both; }
+      .flow-step.in .lb-branch:nth-child(2) .lb-code { animation: lb-text 340ms var(--ease) 750ms both; }
+      .flow-step.in .lb-branch:nth-child(3) .lb-code { animation: lb-text 340ms var(--ease) 880ms both; }
+      @keyframes lb-text {
+        from { opacity: 0; clip-path: inset(0 100% 0 0); }
+        to { opacity: 1; clip-path: inset(0 0 0 0); }
+      }
+      .lb-scope {
+        margin-left: auto;
+        padding-left: 8px;
+        color: color-mix(in srgb, var(--primary) 70%, var(--on-dark-soft));
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0;
+      }
+      .flow-step.in .lb-branch:nth-child(1) .lb-scope { animation: lb-text 340ms var(--ease) 680ms both; }
+      .flow-step.in .lb-branch:nth-child(2) .lb-scope { animation: lb-text 340ms var(--ease) 810ms both; }
+      .flow-step.in .lb-branch:nth-child(3) .lb-scope { animation: lb-text 340ms var(--ease) 940ms both; }
+
+      /* Reduced motion: keep the states, drop the travel. */
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after {
+          animation-duration: 1ms !important;
+          animation-delay: 0ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 1ms !important;
+          transition-delay: 0ms !important;
+        }
+        .reveal,
+        .hero .rise { opacity: 1 !important; }
+        .caret { display: none !important; }
+      }
+
       [data-lang="zh"] .i18n-en,
       [data-lang="en"] .i18n-zh { display: none; }
 
@@ -602,6 +886,11 @@
         .nav-actions .btn-ghost { display: none; }
       }
     </style>
+    <script>
+      // Set before the first paint so the hero's load sequence starts with the
+      // page instead of flashing in after it.
+      document.documentElement.classList.add("loaded");
+    </script>
   </head>
   <body data-lang="en">
     <header class="nav">
@@ -626,6 +915,7 @@
             GitHub
           </a>
         </div>
+        <div class="nav-progress" id="navProgress" aria-hidden="true"></div>
       </div>
     </header>
 
@@ -633,18 +923,18 @@
       <section class="hero">
         <div class="wrap hero-grid">
           <div>
-            <p class="eyebrow">
+            <p class="eyebrow rise" style="--d:0ms">
               <span class="i18n-en">Local AI Skills Library</span>
               <span class="i18n-zh">本地 AI Skills 中央库</span>
             </p>
-            <h1>Skillcaddy</h1>
-            <p class="lede i18n-en">
+            <h1 class="rise" style="--d:70ms">Skillcaddy</h1>
+            <p class="lede i18n-en rise" style="--d:150ms">
               One AISkills directory as the source of truth. Symlink what you need into any project or user-level scope — for Claude Code, Codex, OpenCode, Pi, and Hermes.
             </p>
-            <p class="lede i18n-zh">
+            <p class="lede i18n-zh rise" style="--d:150ms">
               一个 AISkills 目录作为单一事实来源。按需 symlink 到任意项目或用户级作用域——同时服务 Claude Code、Codex、OpenCode、Pi 与 Hermes。
             </p>
-            <div class="hero-cta">
+            <div class="hero-cta rise" style="--d:240ms">
               <a class="btn btn-primary" href="#install">
                 <span class="i18n-en">Get started</span>
                 <span class="i18n-zh">开始使用</span>
@@ -654,7 +944,7 @@
                 <span class="i18n-zh">在 GitHub 查看</span>
               </a>
             </div>
-            <div class="hero-meta">
+            <div class="hero-meta rise" style="--d:320ms">
               <div>
                 <strong>Node.js ≥ 20</strong>
                 <span class="i18n-en">Small dependency footprint</span>
@@ -768,11 +1058,25 @@
               <h3 class="i18n-zh">软链接启用</h3>
               <p class="i18n-en">Point `<project>/.agents/skills/<alias>`, `~/.agents/skills/<alias>`, or `~/.hermes/skills/<alias>` at the library skill.</p>
               <p class="i18n-zh">把 `<project>/.agents/skills/<alias>`、`~/.agents/skills/<alias>` 或 `~/.hermes/skills/<alias>` 指到库中 skill。</p>
-              <div class="flow-code">
-                .agents/skills/tdd<br>
-                <span class="dim">→ ~/AISkills/github/.../tdd</span>
-                <br>~/.agents/skills/tdd <span class="dim">(shared)</span><br>
-                ~/.hermes/skills/tdd <span class="dim">(explicit)</span>
+              <div class="link-board">
+                <div class="lb-source">
+                  <span class="lb-node"></span>
+                  <code>~/AISkills/github/…/tdd</code>
+                </div>
+                <div class="lb-branches">
+                  <div class="lb-branch">
+                    <code class="lb-code">.agents/skills/tdd</code>
+                    <span class="lb-scope">project</span>
+                  </div>
+                  <div class="lb-branch">
+                    <code class="lb-code">~/.agents/skills/tdd</code>
+                    <span class="lb-scope">global</span>
+                  </div>
+                  <div class="lb-branch">
+                    <code class="lb-code">~/.hermes/skills/tdd</code>
+                    <span class="lb-scope">hermes</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="flow-step">
@@ -878,7 +1182,7 @@
             </p>
             <h2 class="section-title">
               <span class="i18n-en">One command. No build step.</span>
-              <span class="i18n-zh">一条命令装好。无需构建。</span>
+              <span class="i18n-zh">一条命令装好。<br>无需构建。</span>
             </h2>
             <p class="section-lead i18n-en">
               Skillcaddy ships on npm and Homebrew. Run it once with npx, install it globally, or build it from a clone.
@@ -1069,6 +1373,7 @@
           try {
             localStorage.setItem("skillcaddy.site.lang", next);
           } catch (_) {}
+          document.dispatchEvent(new CustomEvent("skillcaddy:lang"));
         }
 
         buttons.forEach((button) => {
@@ -1084,6 +1389,136 @@
           if (navigator.language && navigator.language.toLowerCase().startsWith("zh")) initial = "zh";
         }
         setLang(initial);
+      })();
+
+      (function () {
+        const doc = document.documentElement;
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        /* ---- Read progress --------------------------------------------- */
+        const progress = document.getElementById("navProgress");
+        let ticking = false;
+        function paintProgress() {
+          const max = doc.scrollHeight - window.innerHeight;
+          const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+          if (progress) progress.style.setProperty("--p", ratio.toFixed(4));
+          ticking = false;
+        }
+        function onScroll() {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(paintProgress);
+        }
+        window.addEventListener("scroll", onScroll, { passive: true });
+        window.addEventListener("resize", onScroll, { passive: true });
+        paintProgress();
+
+        /* ---- Scroll reveals --------------------------------------------- */
+        const HEADS = ".section-kicker, .section-title, .section-lead";
+        const BLOCKS = [
+          ".pain",
+          ".flow-step",
+          ".feature",
+          ".agent-chip",
+          ".install-list > li",
+          ".install-actions > *",
+          ".platform-table tbody tr",
+          ".cta-actions > *"
+        ].join(", ");
+
+        // The language toggle hides one of every i18n pair. Only elements that
+        // are actually on screen get a reveal, so a hidden translation can
+        // never be left stranded at opacity 0.
+        const isVisible = (el) => el.offsetParent !== null;
+        const revealed = [];
+
+        document.querySelectorAll("main > section").forEach((section) => {
+          Array.prototype.slice
+            .call(section.querySelectorAll(HEADS))
+            .filter(isVisible)
+            .forEach((el, i) => {
+              el.classList.add("reveal");
+              el.style.setProperty("--d", i * 80 + "ms");
+              revealed.push(el);
+            });
+
+          const groups = new Map();
+          Array.prototype.slice
+            .call(section.querySelectorAll(BLOCKS))
+            .filter(isVisible)
+            .forEach((el) => {
+              const key = el.parentElement;
+              if (!groups.has(key)) groups.set(key, []);
+              groups.get(key).push(el);
+            });
+          groups.forEach((items) => {
+            items.forEach((el, i) => {
+              el.classList.add("reveal");
+              el.style.setProperty("--d", 220 + i * 60 + "ms");
+              revealed.push(el);
+            });
+          });
+        });
+
+        function show(el) {
+          if (el.classList.contains("in")) return;
+          el.classList.add("in");
+          // Once the entrance has played, the stagger delay is spent. Clear it
+          // so an element that scrolls in late does not wait on a stale delay.
+          el.addEventListener("animationend", function handler(event) {
+            if (event.animationName !== "reveal-rise") return;
+            el.style.setProperty("--d", "0ms");
+            el.removeEventListener("animationend", handler);
+          });
+        }
+
+        function primeInView() {
+          revealed.forEach((el) => {
+            const box = el.getBoundingClientRect();
+            if (box.top < window.innerHeight - 40 && box.bottom > 0) show(el);
+          });
+        }
+
+        if ("IntersectionObserver" in window && !reduced) {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              show(entry.target);
+              observer.unobserve(entry.target);
+            });
+          }, { rootMargin: "0px 0px -10% 0px", threshold: 0.05 });
+          revealed.forEach((el) => observer.observe(el));
+        } else {
+          revealed.forEach(show);
+        }
+        primeInView();
+
+        // The terminal prints itself the first time it comes into view.
+        const terminal = document.querySelector(".terminal");
+        if (terminal) {
+          const pre = terminal.querySelector("pre");
+          if (pre && !pre.querySelector(".caret")) {
+            const caret = document.createElement("span");
+            caret.className = "caret";
+            caret.setAttribute("aria-hidden", "true");
+            pre.appendChild(caret);
+          }
+          if ("IntersectionObserver" in window && !reduced) {
+            const termObserver = new IntersectionObserver((entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                entry.target.classList.add("in");
+                termObserver.unobserve(entry.target);
+              });
+            }, { threshold: 0.3 });
+            termObserver.observe(terminal);
+          } else {
+            terminal.classList.add("in");
+          }
+        }
+
+        // Switching language can reveal elements that were hidden before.
+        document.addEventListener("skillcaddy:lang", primeInView);
       })();
     </script>
   </body>
