@@ -504,4 +504,4 @@ Inspired by the author of this WeChat Official Account: [Thought Prototype](http
 [Linux Do](https://linux.do/)
 [浅谈 AI 编程](https://mp.weixin.qq.com/s/f-NIkyxIuA8vjAUDp1bh5w)
 [深度思考：架构腐朽 & Loop Engineering](https://mp.weixin.qq.com/s/wINKSDQCroWBvf29h567zA)
-[Y-API](https://y-api.bestvirtualgoods.com/)
+[Y-API](https://y-api.bestvirtualgoods.com/i/48CFAS85)
