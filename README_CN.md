@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-本地 AI Skills 中央库 + 按作用域软链接启用。一个 `AISkills` 目录装下所有 skill 源，按需 symlink 到项目、用户共享的 Agents 目录或 Hermes。
+本地 AI Skills 中央库 + 按作用域软链接启用。一个原件库目录装下所有 skill 源，按需 symlink 到项目、用户共享的 Agents 目录或 Hermes。
 
 ![](public/skillcaddy_CN.png)
 
@@ -16,9 +16,10 @@
 - 需要 Claude Code 专属入口，同时还要保留 agents 列表干净
 - archived 的 skill 不小心又被启用了——因为没人设门禁
 
-Skillcaddy 用一个 AISkills 目录作单一事实来源，用明确的项目/全局/Hermes symlink 作用域作投递机制，把这些问题一次性解决。
+Skillcaddy 用一个原件库目录作单一事实来源，用明确的项目/全局/Hermes symlink 作用域作投递机制，把这些问题一次性解决。
 
-- **单一事实来源** — `~/AISkills/` 汇总 `official / github / personal / archived / skills`
+- **单一事实来源** — 一个原件库目录汇总 `official / github / personal / archived`；仓库自带的 `skills/` 随程序发布
+- **原件库与安装形态无关** — 原件库默认在 `~/.skillcaddy/library`，重装或升级 Skillcaddy 不会动到你已装好的 skill
 - **零项目污染** — 启用靠 symlink 落到 `.agents/skills/`，绝不复制
 - **项目或全局作用域** — 项目链接留在项目内；全局链接只写入 `~/.agents/skills/`
 - **独立 Hermes 作用域** — `official`/`github`/`personal` 来源都可以显式链接到 `~/.hermes/skills/`；不跟随 `HERMES_HOME`，也不会改变项目/全局作用域
@@ -32,6 +33,20 @@ Skillcaddy 用一个 AISkills 目录作单一事实来源，用明确的项目/�
 ## 安装
 
 ```bash
+npx skillcaddy                 # 免安装直接跑
+npm install -g skillcaddy       # 装成全局命令
+brew install skillcaddy         # macOS / Linuxbrew
+```
+
+也可以用 shell 安装脚本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chenweil/skillcaddy/main/scripts/install.sh | bash
+```
+
+或者从源码运行：
+
+```bash
 git clone https://github.com/chenweil/skillcaddy.git
 cd skillcaddy
 npm install
@@ -39,6 +54,16 @@ npm start
 ```
 
 需要 Node.js >= 20。Web 管理器默认固定使用 `http://127.0.0.1:4173`。在页面里填写目标项目路径，启用/禁用 skill。如果该端口临时被占用，可以用 `PORT=<其他端口> npm start` 临时覆盖。
+
+### 原件库放在哪里
+
+Skillcaddy 把**代码根**（程序本身：`package.json`、`server.js`、仓库自带的 `skills/`）和**原件库根**（你的 skill：`official / github / personal / archived`、source 注册表、skill metadata）分开了。
+
+- **clone 形态**：原件库仍在 clone 目录里，和以前完全一致。
+- **发行形态**（`npx` / `npm i -g` / `brew`）：原件库在 `~/.skillcaddy/library`，重装或升级程序不会碰它。
+- `SKILLCADDY_ROOT` 或 `--root <目录>` 可以指向任意其它原件库目录；`scripts/pull-github.sh` 用的就是这个变量。
+
+`skillcaddy -a` 会同时报告两个根，TUI 摘要里也会打印原件库根。
 
 ### 随仓库提供的 spec-pipeline 技能
 
@@ -62,7 +87,7 @@ Web 原件库中的项目、全局和 Hermes 启用彼此独立。全局启用 s
 
 ### 全局 CLI / TUI 命令
 
-从本仓库 clone 安装到全局（使用本地 `npm link`，不会下载 npm 包）：
+发行形态安装后 `skillcaddy` 命令已经就位。用 clone 开发时，把这个 clone 链到全局（本地 `npm link`）：
 
 ```bash
 npm run install:cli
@@ -89,7 +114,7 @@ skillcaddy disable <alias> --global
 skillcaddy disable <alias> --hermes
 ```
 
-`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 用于 source 和分析操作选择中央原件库，Web 生命周期使用提供 CLI 的 clone。未带参数的 `skillcaddy` 仍然进入 TUI。
+`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 选择原件库根，对所有命令生效（包括 Web 生命周期）；Web 进程始终运行提供可执行文件的代码根。未带参数的 `skillcaddy` 仍然进入 TUI。
 
 在无法验证进程归属的平台上，Web stop/restart 会安全失败，不会猜测并终止进程。
 
@@ -108,7 +133,7 @@ npm run tui -- -a /path/to/project
 ```bash
 npm run tui -- /path/to/project
 # 或显式指定原件库根目录
-npm run tui -- --root ~/AISkills /path/to/project
+npm run tui -- --root ~/.skillcaddy/library /path/to/project
 ```
 
 如果希望在任意项目中使用这份 clone 的原件库，只需安装一次本地 CLI/TUI 命令：
@@ -121,7 +146,7 @@ cd /path/to/another-project
 skillcaddy
 ```
 
-`install:cli` 使用本地 `npm link`，不会从 npm registry 下载或复制 Skillcaddy。全局 `skillcaddy` 命令始终链接到当前 clone；这个 clone 仍是中央原件库，后续通过 `git pull` 更新即可。不带参数运行 `skillcaddy` 会管理当前目录，也可以用 `skillcaddy /path/to/project` 指定其它项目。如果全局同名 package 已链接到另一份 clone，安装会停止，不会覆盖。
+`install:cli` 使用本地 `npm link`，链接的是当前 clone 而不是下载一个包。全局 `skillcaddy` 命令始终链接到当前 clone；这个 clone 仍是中央原件库，后续通过 `git pull` 更新即可。不带参数运行 `skillcaddy` 会管理当前目录，也可以用 `skillcaddy /path/to/project` 指定其它项目。如果全局同名 package 已链接到另一份 clone，安装会停止，不会覆盖。
 
 TUI 提供完整的键盘驱动界面，无需浏览器：
 
@@ -239,17 +264,21 @@ Skillcaddy 通过 Node.js 的 `fs.symlink(..., 'dir')` 创建目录符号链接�
 ## 目录约定
 
 ```text
-skillcaddy/
-├── official/      # 官方/上游 skill（ignored，本地自行填充）
-├── github/        # 从 GitHub 克隆来的 skill（ignored）
-├── personal/      # 个人原创 skill（ignored）
-├── archived/      # 停用的 skill（ignored）
-├── skills/        # 仓库自带的 skill（随本项目发布；本仓库内有 skillcaddy-manager）
+skillcaddy/                  # 代码根
 ├── lib/           # 管理器代码
 ├── public/        # Web UI
-├── scripts/       # 维护脚本（如 pull-github.sh）
+├── scripts/       # 入口与维护脚本（如 pull-github.sh）
+├── skills/        # 仓库自带的 skill（随程序发布；本仓库内有 skillcaddy-manager）
+├── collection-metadata/  # 合集初始化契约
 ├── server.js
 └── test/
+
+~/.skillcaddy/library/      # 原件库根（发行形态）
+├── official/      # 官方/上游 skill
+├── github/        # 从 GitHub 克隆来的 skill
+├── personal/      # 个人原创 skill
+├── archived/      # 停用的 skill
+└── .skillcaddy/   # source 注册表 + skill metadata sidecar
 ```
 
 四个外部 skill 源目录（`official/github/personal/archived`）已加入 `.gitignore`。请使用下面的受管 source 命令，不再手工选择目标目录。`skills/` 是仓库自带的源，与本项目一同发布，不在 `.gitignore` 内。
@@ -302,7 +331,7 @@ npm run source -- migrate
 npm run source -- migrate --yes
 ```
 
-Library image 导出要求仓库状态干净且已推送、所有 bucket 内容均已登记、非 Git 来源的完整性基线未漂移。镜像携带完整嵌套 Git 仓库及用户级启用，不包含项目级启用与 `skillcaddy-manager`。导入不会覆盖内容不同的来源或已有 alias；部分提交失败时会报告 committed、uncommitted、unattempted，重跑同一镜像即可继续。参见[实现合同](docs/LIBRARY_IMAGE_SPEC.md)及[验证说明](docs/LIBRARY_IMAGE_IMPLEMENTATION.md)。
+Library image 导出要求所有 bucket 内容均已登记、非 Git 来源的完整性基线未漂移。当原件库根本身是 git 仓库时，额外要求工作区干净且已推送；原件库根是普通目录时，这项仓库状态检查会被跳过。镜像携带完整嵌套 Git 仓库及用户级启用，不包含项目级启用与 `skillcaddy-manager`。导入不会覆盖内容不同的来源或已有 alias；部分提交失败时会报告 committed、uncommitted、unattempted，重跑同一镜像即可继续。参见[实现合同](docs/LIBRARY_IMAGE_SPEC.md)及[验证说明](docs/LIBRARY_IMAGE_IMPLEMENTATION.md)。
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。
 

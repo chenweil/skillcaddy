@@ -1,12 +1,48 @@
 {
   "name": "skillcaddy",
   "version": "0.26.4",
-  "private": true,
   "description": "Local skill source library with project, global, and Hermes symlink scopes.",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "skillcaddy": "scripts/tui.js"
   },
+  "files": [
+    "lib/",
+    "scripts/cli.js",
+    "scripts/source.js",
+    "scripts/tui.js",
+    "scripts/pull-github.sh",
+    "scripts/cron-sync-update-git.sh",
+    "public/",
+    "skills/",
+    "!skills/.claude",
+    "collection-metadata/",
+    "server.js",
+    "README.md",
+    "README_CN.md",
+    "CHANGELOG.md",
+    "CONTEXT.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chenweil/skillcaddy.git"
+  },
+  "homepage": "https://github.com/chenweil/skillcaddy#readme",
+  "bugs": {
+    "url": "https://github.com/chenweil/skillcaddy/issues"
+  },
+  "keywords": [
+    "skill",
+    "skills",
+    "agent",
+    "claude-code",
+    "codex",
+    "opencode",
+    "symlink",
+    "skill-library"
+  ],
   "scripts": {
     "start": "node server.js",
     "source": "node scripts/source.js",
@@ -31,5 +67,8 @@
   },
   "dependencies": {
     "tldts": "^7.4.9"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

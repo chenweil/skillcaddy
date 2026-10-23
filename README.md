@@ -2,7 +2,7 @@
 
 [English](README.md) · [中文](README_CN.md)
 
-Local AI skills central library + scoped symlink enablement. One AISkills directory holds every skill source; symlink what you need into a project, the shared user-level Agents directory, or Hermes on demand.
+Local AI skills central library + scoped symlink enablement. One library directory holds every skill source; symlink what you need into a project, the shared user-level Agents directory, or Hermes on demand.
 
 ![](public/skillcaddy_EN.png)
 
@@ -16,9 +16,10 @@ If you use Claude Code, Codex, OpenCode, or Pi across multiple projects, you eve
 - A Claude-Code-only entry needs to coexist with the agents-side list
 - An archived skill slips back in because no one gated it
 
-Skillcaddy fixes this with one AISkills directory as the source of truth and explicit project/global/Hermes symlink scopes as the delivery mechanism.
+Skillcaddy fixes this with one library directory as the source of truth and explicit project/global/Hermes symlink scopes as the delivery mechanism.
 
-- **One source of truth** — `~/AISkills/` aggregates `official / github / personal / archived / skills`
+- **One source of truth** — one library directory aggregates `official / github / personal / archived`; the bundled `skills/` come with the program
+- **Install-independent library** — the library lives at `~/.skillcaddy/library`, so reinstalling or upgrading Skillcaddy never touches your skills
 - **Zero project pollution** — enable by symlink into `.agents/skills/`; never copy
 - **Project or global scope** — project links stay local; global links go only to `~/.agents/skills/`
 - **Independent Hermes scope** — `official`/`github`/`personal` skills explicitly link to `~/.hermes/skills/`; it ignores `HERMES_HOME` and never changes project/global scopes
@@ -32,6 +33,20 @@ Whether you're a solo dev with half a dozen repos, a small team standardizing on
 ## Installation
 
 ```bash
+npx skillcaddy                 # one-shot run, nothing to install
+npm install -g skillcaddy       # persistent global command
+brew install skillcaddy         # macOS / Linuxbrew
+```
+
+Or use the shell installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chenweil/skillcaddy/main/scripts/install.sh | bash
+```
+
+Or run it from source:
+
+```bash
 git clone https://github.com/chenweil/skillcaddy.git
 cd skillcaddy
 npm install
@@ -39,6 +54,16 @@ npm start
 ```
 
 Requires Node.js >= 20. The web manager uses the fixed default URL `http://127.0.0.1:4173`. Fill in the target project path on the page, and enable/disable skills. If that port is temporarily occupied, start with `PORT=<other-port> npm start`.
+
+### Where the library lives
+
+Skillcaddy separates the **code root** (the program: `package.json`, `server.js`, the bundled `skills/`) from the **library root** (your skills: `official / github / personal / archived`, the source registry, and skill metadata).
+
+- A **clone** keeps the library inside the clone, exactly as before.
+- A **packaged install** (`npx`, `npm i -g`, `brew`) keeps the library in `~/.skillcaddy/library`, so reinstalling or upgrading the program never touches your skills.
+- `SKILLCADDY_ROOT` or `--root <dir>` points Skillcaddy at any other library directory; the same variable is already used by `scripts/pull-github.sh`.
+
+Both roots are reported by `skillcaddy -a`, and the library root is printed by the TUI summary.
 
 ### Bundled spec-pipeline skills
 
@@ -62,7 +87,7 @@ The Web library keeps project, global, and Hermes enablement independent. Enabli
 
 ### Global CLI / TUI command
 
-Install the clone-backed command globally from this repository (uses local `npm link`; it does not download an npm package):
+A packaged install already provides the `skillcaddy` command. When you work from a clone, link that clone's command globally instead (local `npm link`):
 
 ```bash
 npm run install:cli
@@ -89,7 +114,7 @@ skillcaddy disable <alias> --global
 skillcaddy disable <alias> --hermes
 ```
 
-`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the central library for source and analysis operations; Web lifecycle commands use the clone that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
+`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the library root and applies to every command, including the Web lifecycle; the Web process always runs the code root that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
 
 On platforms without a process-ownership probe, Web stop/restart fail closed rather than guessing which process to terminate.
 
@@ -108,7 +133,7 @@ For the interactive terminal manager, run:
 ```bash
 npm run tui -- /path/to/project
 # or with explicit root
-npm run tui -- --root ~/AISkills /path/to/project
+npm run tui -- --root ~/.skillcaddy/library /path/to/project
 ```
 
 To use the cloned library from any project, link its CLI/TUI command once:
@@ -121,7 +146,7 @@ cd /path/to/another-project
 skillcaddy
 ```
 
-`install:cli` uses local `npm link`: it does not download or copy Skillcaddy from the npm registry. The global `skillcaddy` command remains linked to this clone, which stays the central library and can be updated with `git pull`. Running `skillcaddy` without an argument manages the current directory; `skillcaddy /path/to/project` selects another project. The installer refuses to replace a global `skillcaddy` package linked to another clone.
+`install:cli` uses local `npm link`: it links this clone instead of downloading a package. The global `skillcaddy` command remains linked to this clone, which stays the central library and can be updated with `git pull`. Running `skillcaddy` without an argument manages the current directory; `skillcaddy /path/to/project` selects another project. The installer refuses to replace a global `skillcaddy` package linked to another clone.
 
 The TUI provides a full keyboard-driven interface without needing a browser:
 
@@ -239,17 +264,21 @@ To make Skillcaddy work out of the box on Windows, the following strategies will
 ## Directory layout
 
 ```text
-skillcaddy/
-├── official/      # Official / upstream skills (gitignored, fill locally)
-├── github/        # Skills cloned from GitHub (gitignored)
-├── personal/      # Personal original skills (gitignored)
-├── archived/      # Retired skills (gitignored)
-├── skills/        # Repo-bundled skills (shipped with this project; currently hosts skillcaddy-manager)
+skillcaddy/                  # code root
 ├── lib/           # Manager code
 ├── public/        # Web UI
-├── scripts/       # Maintenance scripts (e.g. pull-github.sh)
+├── scripts/       # Entry points and maintenance scripts (e.g. pull-github.sh)
+├── skills/        # Repo-bundled skills (ships with the program; currently hosts skillcaddy-manager)
+├── collection-metadata/  # Collection setup contracts
 ├── server.js
 └── test/
+
+~/.skillcaddy/library/      # library root (packaged installs)
+├── official/      # Official / upstream skills
+├── github/        # Skills cloned from GitHub
+├── personal/      # Personal original skills
+├── archived/      # Retired skills
+└── .skillcaddy/   # Source registry + skill metadata sidecars
 ```
 
 The four external skill source directories (`official / github / personal / archived`) are added to `.gitignore`. Use the managed source commands below instead of choosing a destination manually. `skills/` is the repo-bundled source, shipped with this project, and is **not** in `.gitignore`.
@@ -304,11 +333,11 @@ npm run source -- migrate
 npm run source -- migrate --yes
 ```
 
-Library image export requires a clean, pushed repository, registered bucket contents, and intact non-Git integrity baselines. Library images contain complete nested Git repositories and user enablements; project enablements and `skillcaddy-manager` are excluded. Import never replaces differing source bytes or existing aliases. A partial source submission reports committed, uncommitted, and unattempted sources; rerun the same library image to resume. See [the implementation contract](docs/LIBRARY_IMAGE_SPEC.md) and [verification notes](docs/LIBRARY_IMAGE_IMPLEMENTATION.md).
+Library image export requires registered bucket contents and intact non-Git integrity baselines. When the library root is a git repository, the export additionally requires a clean, pushed working tree; when it is a plain directory, that repository-state check is skipped. Library images contain complete nested Git repositories and user enablements; project enablements and `skillcaddy-manager` are excluded. Import never replaces differing source bytes or existing aliases. A partial source submission reports committed, uncommitted, and unattempted sources; rerun the same library image to resume. See [the implementation contract](docs/LIBRARY_IMAGE_SPEC.md) and [verification notes](docs/LIBRARY_IMAGE_IMPLEMENTATION.md).
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
 
-The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories through the CLI. TUI option 12 also acquires complete HTTPS/SSH/SCP Git repositories, public HTTP(S) ZIP files, and stable direct HTTP(S) `/SKILL.md` files into the central library only; it does not create project links, run setup, or invoke runtime preflight. Web source acquisition, replacement, and removal remain out of scope, as do TUI source replacement and removal, automatic latest-version selection, and non-ZIP archives. The clone-backed global `skillcaddy` command now also exposes Web lifecycle, read-only analysis, and registered-Git update entry points while retaining the existing source-management boundaries; it does not turn source acquisition into a global npm package. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
+The first release supports complete Git repositories, public HTTP(S) ZIP files, stable direct HTTP(S) `/SKILL.md` files, local ZIP files, and local directories through the CLI. TUI option 12 also acquires complete HTTPS/SSH/SCP Git repositories, public HTTP(S) ZIP files, and stable direct HTTP(S) `/SKILL.md` files into the central library only; it does not create project links, run setup, or invoke runtime preflight. Web source acquisition, replacement, and removal remain out of scope, as do TUI source replacement and removal, automatic latest-version selection, and non-ZIP archives. The global `skillcaddy` command exposes Web lifecycle, read-only analysis, and registered-Git update entry points while retaining the existing source-management boundaries. Skillcaddy is distributed as an npm package and a Homebrew formula, but the program and the library remain separate: installing the program never moves, rewrites, or deletes the library. A Remote file acquires only one `SKILL.md`; skills with companion files must use a ZIP, Local, or complete Git source.
 
 Bundled with this repo (only when contributing to Skillcaddy itself):
 
