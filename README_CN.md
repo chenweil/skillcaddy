@@ -338,6 +338,20 @@ npm run source -- migrate
 npm run source -- migrate --yes
 ```
 
+### 跨设备同步
+
+`image` 一次搬走整份库；`sync` 通过一个 Git 远端（默认 GitHub 私有仓库，或任意 HTTPS/SSH Git 地址）让两份库随时间保持对齐：
+
+```bash
+npm run source -- sync status [--repo <owner/name|git-url>]
+npm run source -- sync push [--repo <owner/name|git-url>] [--yes]
+npm run source -- sync pull [--repo <owner/name|git-url>] [--yes]
+```
+
+`sync` 按 **source** 粒度合并，不做字节 diff，也不整库打包。Git source 比较 HEAD commit 的祖先关系；非 Git source 比较完整性 checksum。只有单边存在的 source 才能无冲突移动：`push` 发布 local-only 与 local-ahead，`pull` 安装 remote-only 与 remote-ahead。当两端都持有不同版本时，同步**不阻塞**，也绝不静默覆盖任一端——远端副本先落到 `archived/`，报告会点名 source、冲突类型、归档路径与人工处理建议。脏的 Git 工作区会被报告并保持原样。
+
+默认远端解析为 `github.com/<当前用户>/skillcaddy-library`，使用 `gh` 认证；`--repo owner/name` 或完整的 HTTPS/SSH 地址可以覆盖。每次成功的 push/pull 都会先把当前远端快照写进 `snapshots/<timestamp>/`，默认保留最近 10 份。项目级启用和 `image` 一样不进同步（ADR-0011 Decision 4）。参见[同步合同](docs/LIBRARY_SYNC_SPEC.md)。
+
 Library image 导出要求所有 bucket 内容均已登记、非 Git 来源的完整性基线未漂移。当原件库根本身是 git 仓库时，额外要求工作区干净且已推送；原件库根是普通目录时，这项仓库状态检查会被跳过。镜像携带完整嵌套 Git 仓库及用户级启用，不包含项目级启用与 `skillcaddy-manager`。导入不会覆盖内容不同的来源或已有 alias；部分提交失败时会报告 committed、uncommitted、unattempted，重跑同一镜像即可继续。参见[实现合同](docs/LIBRARY_IMAGE_SPEC.md)及[验证说明](docs/LIBRARY_IMAGE_IMPLEMENTATION.md)。
 
 执行命令只在 `.skillcaddy/sources/` 写入 sidecar 记录；有歧义的 source 会保持 unresolved，不会猜测。需要额外恢复保障时，可在执行前复制该 registry 目录；恢复副本即可还原 registry 状态，不移动中央库内容。失败的 add/update 会自动清理或回滚；操作中断后，先运行 `npm run source -- list` 和 `npm run source -- inspect <source-id>` 核查，再重试。

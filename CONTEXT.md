@@ -136,6 +136,10 @@ _Avoid_: Library, repository
 A self-contained, relocatable snapshot of the central library that carries the library state needed to reconstruct an equivalent library on another machine: every source's installed bytes (including nested `.git`), the registry records, and the user-level enablement triples. It is the input to library image import and the output of library image export.
 _Avoid_: Archive, bundle, backup, snapshot, image
 
+**Library synchronization**:
+An explicit command-driven layer that keeps two library roots aligned through a Git remote: `sync status` reports the per-source difference, `sync push` publishes local-ahead sources, and `sync pull` applies remote-only sources. The merge unit is a source, not a byte diff or a whole-library archive; the remote keeps a manifest plus per-source payloads and snapshots before every change. Conflicting sources never block the sync and are never silently overwritten — the remote copy lands in `archived/` and the report names it for a human decision.
+_Avoid_: Auto-sync, background sync, library replication
+
 **Upstream-less source**:
 A registered skill source whose provenance cannot be re-fetched: its bytes exist only on the machine that produced the library image, and any future update must keep the source's current type, origin, and bytes rather than adopt a new upstream. The library image preserves them as-is; it does not upgrade them.
 _Avoid_: Orphan source, broken source, untracked source

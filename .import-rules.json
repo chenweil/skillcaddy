@@ -43,7 +43,7 @@
     },
     {
       "from": "lib/managerSourceWorkflow.js",
-      "allow": ["lib/enablePlan.js", "lib/enablementScope.js", "lib/projectActions.js", "lib/sourceManager.js", "lib/skillStore.js"],
+      "allow": ["lib/enablePlan.js", "lib/enablementScope.js", "lib/projectActions.js", "lib/roots.js", "lib/sourceManager.js", "lib/skillStore.js"],
       "reason": "Manager adapter — sequences source acquisition and exact project enablement through public boundaries"
     },
     {
@@ -102,7 +102,7 @@
       "from": "lib/libraryImage.js",
       "allow": ["lib/sourceAcquisitionError.js", "lib/sourceGit.js", "lib/sourcePath.js", "lib/sourceAcquisition.js", "lib/sourceRegistry.js", "lib/sourceTree.js", "lib/sourcePolicy.js", "lib/sourceWorkspace.js", "lib/skillStore.js", "lib/hermesStore.js", "lib/skillLinkStore.js", "lib/skillMetadata.js"],
       "reason": "Library image transaction — owns export, bounded tar inspection, safe extraction, acquisition submission and user enablement restoration",
-      "importedBy": ["lib/sourceManager.js"]
+      "importedBy": ["lib/sourceManager.js", "lib/librarySync.js"]
     },
     {
       "from": "lib/sourceValidation.js",
@@ -244,6 +244,11 @@
       "from": "lib/sourceMigration.js",
       "allow": ["lib/sourceGit.js", "lib/sourceMigrationIssue.js", "lib/sourceRegistry.js", "lib/sourceRecord.js", "lib/skillStore.js", "lib/sourceTree.js"],
       "reason": "Source migration — coordinates adoption planning and explicit registry-only application"
+    },
+    {
+      "from": "lib/librarySync.js",
+      "allow": ["lib/hermesStore.js", "lib/libraryImage.js", "lib/skillLinkStore.js", "lib/skillStore.js", "lib/sourceGitUrl.js", "lib/sourcePath.js", "lib/sourcePolicy.js", "lib/sourceRecord.js", "lib/sourceRegistry.js", "lib/sourceTree.js"],
+      "reason": "Library synchronization — resolves Git remotes, exchanges manifest/source payloads, applies conflict-safe source changes, and reports snapshots"
     },
     {
       "from": "lib/sourceManager.js",

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-30
+
+### Added
+- `sync` — explicit, source-granular multi-device library synchronization on top of the ADR-0011 library image (`lib/librarySync.js`). `sync status` reports the per-source difference, `sync push` publishes local-ahead sources, and `sync pull` installs remote-ahead sources through a Git remote (a GitHub private repository by default, or any HTTPS/SSH URL). Git sources compare HEAD commits by ancestor relationship; non-Git sources compare their integrity checksum. Conflicting sources never block the sync and are never silently overwritten — the remote copy lands in `archived/` and the report names it for a human decision. Every successful push/pull writes a `snapshots/<timestamp>/` rollback point first, keeping the latest 10 by default. Design and maintainer decisions are tracked in issue #41.
+- `lib/librarySync.js` — the synchronization module: remote resolution (`resolveSyncRepository`), auth via `gh` / `SKILLCADDY_SYNC_TOKEN`, manifest read/validation, per-source merge (`compareSyncState`), payload pack/unpack through the hardened ADR-0011 staging path, conflict archiving, enablement application, snapshot copy and prune, and stable text reporting (`formatSyncReport`).
+- `extractGzipLibraryArchive` in `lib/libraryImage.js` — a bounded generic-archive unpack path (with a symlink/entry validator) used to decompress sync payloads; it is deliberately not surfaced through `image import`.
+- CLI: `skillcaddy sync` / `npm run source -- sync` with `status` / `push` / `pull`, `--repo` and `--yes`; a global `skillcaddy sync` is wired through `scripts/cli.js`.
+- Tests: `test/librarySync.test.js` covers remote resolution, a push/pull round trip through a local bare Git remote, checksum-conflict status reporting, and the stable unauthenticated error category (no real network).
+
+### Fixed
+- Library image pre-flight now honours an `allowSymlinks` override (used by sync payload unpacking) without weakening the `libraryLayout` mode.
+
+### Notes
+- Project-level enablements, `skillcaddy-manager`, and the bundled `skills/` bucket stay out of sync (ADR-0011 Decision 4), matching the library image.
+
 ## [0.27.0] - 2026-10-23
 
 ### Added

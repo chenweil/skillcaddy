@@ -21,6 +21,7 @@ import {
   planUpdateSource,
   updateGitSources
 } from '../lib/sourceManager.js';
+import { formatSyncReport, syncLibrary } from '../lib/librarySync.js';
 
 export async function runSourceCli({
   argv = [],
@@ -59,6 +60,33 @@ export async function runSourceCli({
 
     const commandArgs = projectOption.args;
     const effectiveProjectPath = path.resolve(projectOption.projectPath || projectPath);
+
+    if (command === 'sync') {
+      const parsed = parseSyncArgs(commandArgs);
+      if (!parsed) {
+        printUsage(stderr);
+        return 2;
+      }
+      const context = { rootDir, globalDir, hermesDir };
+      if (parsed.operation === 'status') {
+        const result = await syncLibrary(context, 'status', parsed);
+        stdout.write(formatSyncReport(result));
+        return 0;
+      }
+      const preview = await syncLibrary(context, 'status', parsed);
+      stdout.write(formatSyncReport(preview));
+      if (!parsed.yes && !await requestConfirmation(
+        { confirm, stdin, stdout },
+        preview,
+        `Apply sync ${parsed.operation}? [y/N] `
+      )) {
+        stdout.write('Outcome: cancelled\n');
+        return 0;
+      }
+      const result = await syncLibrary(context, parsed.operation, parsed);
+      stdout.write(formatSyncReport(result));
+      return 0;
+    }
 
     if (command === 'image') {
       const [operation, filePath, ...flags] = commandArgs;
@@ -420,6 +448,33 @@ function shortCommit(commit) {
   return commit.slice(0, 7);
 }
 
+function parseSyncArgs(args) {
+  if (!args.length || !['status', 'push', 'pull'].includes(args[0])) return null;
+  const result = { operation: args[0], repo: undefined, yes: false };
+  for (let index = 1; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === '--yes' && !result.yes) {
+      result.yes = true;
+      continue;
+    }
+    if (argument === '--repo' && result.repo === undefined) {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) return null;
+      result.repo = value;
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith('--repo=') && result.repo === undefined) {
+      const value = argument.slice('--repo='.length);
+      if (!value) return null;
+      result.repo = value;
+      continue;
+    }
+    return null;
+  }
+  return result;
+}
+
 function parseProjectOption(args) {
   const remaining = [];
   let projectPath;
@@ -614,6 +669,9 @@ export function formatOrigin(origin) {
 }
 
 function printUsage(stderr) {
+  stderr.write('Usage: npm run source -- sync status [--repo <owner/name|git-url>]\n');
+  stderr.write('Usage: npm run source -- sync push [--repo <owner/name|git-url>] [--yes]\n');
+  stderr.write('Usage: npm run source -- sync pull [--repo <owner/name|git-url>] [--yes]\n');
   stderr.write('Usage: npm run source -- image export <image.tar.gz>\n');
   stderr.write('Usage: npm run source -- image import <image.tar.gz> [--dry-run] [--yes]\n');
   stderr.write('Usage: npm run source -- list\n');

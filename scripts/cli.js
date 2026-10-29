@@ -12,7 +12,7 @@ const CLI_FLAGS = new Set([
   '-h', '--help', '-v', '--version', '-u', '--update', '-a', '--analyze',
   '--verbose'
 ]);
-const CLI_COMMANDS = new Set(['start', 'stop', 'restart', 'update', 'analyze', 'install', 'server', 'web', 'enable', 'disable']);
+const CLI_COMMANDS = new Set(['start', 'stop', 'restart', 'update', 'analyze', 'install', 'server', 'web', 'enable', 'disable', 'sync']);
 
 export function isCliCommand(argv = []) {
   return argv.some((arg) =>
@@ -56,6 +56,11 @@ export function parseCliArgs(argv = []) {
       result.command = arg;
       continue;
     }
+    if (arg === 'sync') {
+      result.command = 'sync';
+      result.syncArgs = [];
+      continue;
+    }
     if (arg === 'enable' || arg === 'disable') {
       result.command = arg;
       result.scope = '';
@@ -97,6 +102,10 @@ export function parseCliArgs(argv = []) {
     if (arg.startsWith('--root=')) {
       result.rootDir = arg.slice('--root='.length);
       if (!result.rootDir) result.error = '--root 需要一个目录路径';
+      continue;
+    }
+    if (result.command === 'sync') {
+      result.syncArgs.push(arg);
       continue;
     }
     if (arg === '--project') {
@@ -228,6 +237,9 @@ export function buildHelpText() {
   skillcaddy disable <alias> --project <dir>
   skillcaddy disable <alias> --global
   skillcaddy disable <alias> --hermes
+  skillcaddy sync status [--repo <owner/name|git-url>]
+  skillcaddy sync push [--repo <owner/name|git-url>] [--yes]
+  skillcaddy sync pull [--repo <owner/name|git-url>] [--yes]
 
 选项：
   --root <dir>                       指定原件库根目录（对所有命令生效）
@@ -556,6 +568,15 @@ export async function runCli({
       stdout.write(`target: ${result.targetPath}\n`);
       if (result.command) stdout.write(`command: ${result.command}\n`);
       return 0;
+    }
+    if (parsed.command === 'sync') {
+      return actions.runSourceCli({
+        argv: ['sync', ...parsed.syncArgs],
+        rootDir: resolvedLibraryRoot,
+        projectPath,
+        stdout,
+        stderr
+      });
     }
     if (parsed.command === 'update') {
       return actions.runSourceCli({

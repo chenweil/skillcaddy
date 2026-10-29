@@ -340,6 +340,20 @@ npm run source -- migrate
 npm run source -- migrate --yes
 ```
 
+### Synchronize across machines
+
+The `image` pair moves the whole library once; `sync` keeps two libraries aligned over time through a Git remote (a GitHub private repository by default, or any HTTPS/SSH Git URL):
+
+```bash
+npm run source -- sync status [--repo <owner/name|git-url>]
+npm run source -- sync push [--repo <owner/name|git-url>] [--yes]
+npm run source -- sync pull [--repo <owner/name|git-url>] [--yes]
+```
+
+Sync merges **per source**, not per byte diff or per whole-library archive. Git sources compare HEAD commits by ancestor relationship; non-Git sources compare their integrity checksum. Only one-sided sources move without a conflict: `push` publishes local-only and local-ahead sources, `pull` installs remote-only and remote-ahead sources. When both sides hold a differing version, sync does **not** block and never silently overwrites either side — the remote copy is saved under `archived/` and the report names the source, the conflict type, the archived path, and the manual action to take. Dirty Git working trees are reported and left untouched.
+
+By default the remote resolves to `github.com/<current user>/skillcaddy-library` using `gh` authentication; `--repo owner/name` or a full HTTPS/SSH Git URL selects another remote, and `SKILLCADDY_SYNC_TOKEN` is accepted as an alternative token source. The remote is never created automatically — a missing or unauthorized repository returns a clear error. Every successful push or pull writes a `snapshots/<timestamp>/` copy first, keeping the latest 10 (older ones are pruned), and project enablements stay out of sync just as they stay out of the library image. See [the synchronization contract](docs/LIBRARY_SYNC_SPEC.md).
+
 Library image export requires registered bucket contents and intact non-Git integrity baselines. When the library root is a git repository, the export additionally requires a clean, pushed working tree; when it is a plain directory, that repository-state check is skipped. Library images contain complete nested Git repositories and user enablements; project enablements and `skillcaddy-manager` are excluded. Import never replaces differing source bytes or existing aliases. A partial source submission reports committed, uncommitted, and unattempted sources; rerun the same library image to resume. See [the implementation contract](docs/LIBRARY_IMAGE_SPEC.md) and [verification notes](docs/LIBRARY_IMAGE_IMPLEMENTATION.md).
 
 The apply command writes only sidecar records under `.skillcaddy/sources/`; ambiguous sources remain unresolved rather than guessed. For extra recovery protection, copy that registry directory before applying. Restoring that copy restores the previous registry state without moving central-library content. Failed add and update operations clean up or roll back automatically; after any interruption, run `npm run source -- list` and `npm run source -- inspect <source-id>` before retrying.
