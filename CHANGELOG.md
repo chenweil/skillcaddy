@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-18
+
 ### Added
 - Source discovery now recognizes a populated `.claude/skills/` container as a third standard layout, for repositories that publish skills only in the Claude Code project-level directory. It ranks below `skills/` and `.agents/skills/` and above `<collection>/skills/`. Symlinked skill entries are never followed, so a `.claude/skills/` directory that only links back into `.agents/skills/` contributes nothing.
 
