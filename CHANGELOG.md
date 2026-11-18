@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-11-19
+
 ### Fixed
 - `skillcaddy start` only reuses a listener if the Skillcaddy version matches and the home page serves HTML. If an older Web process (for example, after a Homebrew upgrade) or another service occupies the port, the CLI explains the conflict instead of opening a broken page or stopping the listener.
 
