@@ -18,9 +18,9 @@
 class Skillcaddy < Formula
   desc "Local skill source library with project, global, and Hermes symlink scopes"
   homepage "https://github.com/chenweil/skillcaddy"
-  url "https://registry.npmjs.org/skillcaddy/-/skillcaddy-0.28.0.tgz"
-  version "0.28.0"
-  sha256 "91383bcdbfe06e9a1bd363119d4ca93c0db330cfbe3ce84f11b281c3f0cdb9eb"
+  url "https://registry.npmjs.org/skillcaddy/-/skillcaddy-0.29.0.tgz"
+  version "0.29.0"
+  sha256 "6c6c7e238fa27d367e44eda8e4649d988191221e671ddc5e9256424c897a29db"
   license "MIT"
 
   head "https://github.com/chenweil/skillcaddy.git", branch: "main"
