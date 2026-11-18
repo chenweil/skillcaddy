@@ -121,7 +121,7 @@ skillcaddy disable <alias> --global
 skillcaddy disable <alias> --hermes
 ```
 
-`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a Web process that is already running; `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the library root and applies to every command, including the Web lifecycle; the Web process always runs the code root that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
+`-a` is read-only and never creates source folders, installs, enables, or writes metadata. `-u` reuses the existing fast-forward-only Git source update flow and requires an explicit current project path; global links are checked in the same update. `start` reuses a running Skillcaddy Web only if it matches the CLI version and serves the home page; otherwise, it reports the port conflict. `stop` and `restart` act only on a process whose Skillcaddy ownership can be verified, so an external service on the port is not killed. `--root` selects the library root and applies to every command, including the Web lifecycle; the Web process always runs the code root that provides the executable. Running `skillcaddy` without arguments still opens the TUI.
 
 On platforms without a process-ownership probe, Web stop/restart fail closed rather than guessing which process to terminate.
 

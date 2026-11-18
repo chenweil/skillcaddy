@@ -608,7 +608,8 @@ export async function runCli({
       open: parsed.open
     };
     if (parsed.command === 'start') {
-      printWebResult(await actions.startWeb(lifecycleOptions), stdout);
+      const expectedApp = await actions.readVersion(roots);
+      printWebResult(await actions.startWeb({ ...lifecycleOptions, expectedApp }), stdout);
       return 0;
     }
     if (parsed.command === 'stop') {
@@ -616,7 +617,8 @@ export async function runCli({
       return 0;
     }
     if (parsed.command === 'restart') {
-      printWebResult(await actions.restartWeb(lifecycleOptions), stdout);
+      const expectedApp = await actions.readVersion(roots);
+      printWebResult(await actions.restartWeb({ ...lifecycleOptions, expectedApp }), stdout);
       return 0;
     }
 

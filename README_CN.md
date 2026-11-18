@@ -121,7 +121,7 @@ skillcaddy disable <alias> --global
 skillcaddy disable <alias> --hermes
 ```
 
-`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 会复用已经运行的 Web，`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 选择原件库根，对所有命令生效（包括 Web 生命周期）；Web 进程始终运行提供可执行文件的代码根。未带参数的 `skillcaddy` 仍然进入 TUI。
+`-a` 是只读汇报，不会创建原件库目录、安装、启用或写入 metadata；`-u` 复用已有的 fast-forward-only Git 源更新流程，必须显式提供当前项目路径，同时总会检查全局链接。`start` 只复用版本与 CLI 一致、且能正常返回首页的 Skillcaddy Web，否则会提示端口冲突。`stop/restart` 只处理能确认由 Skillcaddy 管理的进程，不会按端口误杀外部服务。`--root` 选择原件库根，对所有命令生效（包括 Web 生命周期）；Web 进程始终运行提供可执行文件的代码根。未带参数的 `skillcaddy` 仍然进入 TUI。
 
 在无法验证进程归属的平台上，Web stop/restart 会安全失败，不会猜测并终止进程。
 

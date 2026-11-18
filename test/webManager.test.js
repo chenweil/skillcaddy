@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import test from 'node:test';
 import path from 'node:path';
 import {
@@ -10,6 +11,8 @@ import {
   stopWeb
 } from '../lib/webManager.js';
 import { makeTempDir } from './testHelpers.js';
+
+const appInfo = { name: 'skillcaddy', version: '0.29.0' };
 
 function makeFakeProcess(dependencies = {}) {
   const live = new Set();
@@ -26,7 +29,7 @@ function makeFakeProcess(dependencies = {}) {
         ready = true;
         return { pid, unref() {} };
       },
-      probe: async () => ready,
+      probe: async () => ready ? { ready: true } : null,
       isAlive: async (pid) => live.has(pid),
       isOwned: async () => true,
       terminate: async (pid) => {
@@ -55,6 +58,7 @@ test('startWeb records its child and reuses the managed process', async () => {
   const options = {
     rootDir: root,
     projectPath: root,
+    expectedApp: appInfo,
     port: 45174,
     runtimeDir,
     open: false,
@@ -95,6 +99,7 @@ test('startWeb removes a stale PID record before starting', async () => {
 
   const result = await startWeb({
     rootDir: root,
+    expectedApp: appInfo,
     port: 45175,
     runtimeDir,
     open: false,
@@ -109,7 +114,7 @@ test('startWeb reports readiness failure when its child exits before cleanup', a
   const root = await makeTempDir('web-manager-exit-root-');
   const runtimeDir = await makeTempDir('web-manager-exit-runtime-');
   const fake = makeFakeProcess({
-    probe: async () => false,
+    probe: async () => null,
     terminate: () => {
       const error = new Error('kill ESRCH');
       error.code = 'ESRCH';
@@ -121,6 +126,7 @@ test('startWeb reports readiness failure when its child exits before cleanup', a
   await assert.rejects(
     () => startWeb({
       rootDir: root,
+      expectedApp: appInfo,
       port: 45177,
       runtimeDir,
       open: false,
@@ -129,6 +135,59 @@ test('startWeb reports readiness failure when its child exits before cleanup', a
     }),
     /Web process .* did not become ready on port 45177/
   );
+});
+
+async function makeWebFixture(t, { info = appInfo, versionStatus = 200, homeStatus = 200 } = {}) {
+  const root = await makeTempDir('web-manager-http-root-');
+  const runtimeDir = await makeTempDir('web-manager-http-runtime-');
+  const server = createServer((req, res) => {
+    if (req.url === '/api/version') {
+      res.writeHead(versionStatus, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(info));
+    } else {
+      res.writeHead(homeStatus, { 'content-type': 'text/html; charset=utf-8' });
+      res.end('<h1>Skillcaddy</h1>');
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const opened = [];
+  const options = {
+    rootDir: root,
+    expectedApp: appInfo,
+    port: server.address().port,
+    runtimeDir,
+    dependencies: {
+      openBrowser: async (url) => { opened.push(url); return true; },
+      spawn: () => assert.fail('must not spawn on an occupied port'),
+      terminate: () => assert.fail('must not terminate an external service')
+    }
+  };
+  return { options, opened };
+}
+
+for (const [scenario, fixture, message] of [
+  ['an older Skillcaddy version', { info: { ...appInfo, version: '0.28.0' }, homeStatus: 404 }, /expected Skillcaddy v0\.29\.0/],
+  ['a matching version without a home page', { homeStatus: 404 }, /home page returned HTTP 404/],
+  ['an unrelated HTTP service', { versionStatus: 404 }, /not a Skillcaddy Web service/]
+]) {
+  test(`startWeb refuses to open ${scenario}`, async (t) => {
+    const { options, opened } = await makeWebFixture(t, fixture);
+    await assert.rejects(() => startWeb(options), message);
+    assert.deepEqual(opened, []);
+    assert.equal((await stopWeb(options)).status, 'not-managed');
+  });
+}
+
+test('startWeb opens a healthy external Skillcaddy of the same version', async (t) => {
+  const { options, opened } = await makeWebFixture(t);
+  const result = await startWeb(options);
+  assert.equal(result.status, 'already-running');
+  assert.equal(result.managed, false);
+  assert.deepEqual(opened, [result.url]);
 });
 
 test('stopWeb refuses to kill an external process on the port', async () => {
@@ -140,7 +199,7 @@ test('stopWeb refuses to kill an external process on the port', async () => {
     port: 45176,
     runtimeDir,
     dependencies: {
-      probe: async () => true,
+      probe: async () => ({ ready: false }),
       terminate: async () => { terminateCount += 1; }
     }
   });
@@ -189,7 +248,7 @@ test('restartWeb refuses an unmanaged service instead of replacing it', async ()
       rootDir: root,
       port: 45178,
       runtimeDir,
-      dependencies: { probe: async () => true }
+      dependencies: { probe: async () => ({ ready: false }) }
     }),
     /refusing to restart an unmanaged Web process/
   );

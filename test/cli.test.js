@@ -212,6 +212,7 @@ test('CLI -u forwards verbose update summaries', async () => {
 test('CLI keeps the Web code root on its own clone and forwards a custom library root', async () => {
   const output = captureOutput();
   const calls = [];
+  const expectedApp = { name: 'skillcaddy', version: '0.29.0' };
 
   assert.equal(
     await runCli({
@@ -220,6 +221,10 @@ test('CLI keeps the Web code root on its own clone and forwards a custom library
       runtimeRootDir: '/tmp/skillcaddy-clone',
       ...output.streams,
       handlers: {
+        readVersion: async (roots) => {
+          assert.equal(roots.codeRoot, '/tmp/skillcaddy-clone');
+          return expectedApp;
+        },
         startWeb: async (options) => {
           calls.push(options);
           return { status: 'started', managed: true, pid: 4242, port: options.port, url: 'http://127.0.0.1:4173/' };
@@ -230,6 +235,7 @@ test('CLI keeps the Web code root on its own clone and forwards a custom library
   );
   assert.equal(calls[0].codeRoot, '/tmp/skillcaddy-clone');
   assert.equal(calls[0].libraryRoot, '/tmp/library');
+  assert.deepEqual(calls[0].expectedApp, expectedApp);
 });
 
 test('CLI exposes explicit global CLI installation and keeps tui as an alias', async () => {
