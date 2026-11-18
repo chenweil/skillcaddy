@@ -27,6 +27,28 @@ test('discovers skills in the .agents/skills agent standard container', async ()
   );
 });
 
+test('discovers skills in the .claude/skills Claude Code container', async () => {
+  const source = await makeTempDir('source-discovery-claude-container-');
+  await writeSkill(source, '.claude/skills/gamma');
+  await writeSkill(source, '.claude/skills/delta');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    ['.claude/skills/delta', '.claude/skills/gamma']
+  );
+});
+
+test('prefers .agents/skills over .claude/skills when both exist', async () => {
+  const source = await makeTempDir('source-discovery-agents-vs-claude-');
+  await writeSkill(source, '.agents/skills/agent-standard');
+  await writeSkill(source, '.claude/skills/claude-only');
+
+  assert.deepEqual(
+    relativePaths(source, await discoverSourceSkillDirectories(source)),
+    ['.agents/skills/agent-standard']
+  );
+});
+
 test('prefers the skills container over .agents/skills when both exist', async () => {
   const source = await makeTempDir('source-discovery-agents-vs-skills-');
   await writeSkill(source, 'skills/primary');
