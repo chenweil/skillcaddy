@@ -24,7 +24,7 @@ test('throws when package.json is missing', async () => {
 });
 
 async function makeTempDir(prefix) {
-  return mkdir(path.join(tmpdir(), `${prefix}${Date.now()}-${Math.random().toString(16).slice(2)}`), {
-    recursive: true
-  });
+  const dir = path.join(tmpdir(), `${prefix}${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }
