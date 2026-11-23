@@ -132,6 +132,26 @@ _Avoid_: Bulk installation, collection setup
 An Agent-facing capability rooted at a directory containing `SKILL.md`, discovered within a skill source and enabled independently by enablement scope.
 _Avoid_: Library, repository
 
+**Hot ranking**:
+A windowed ranking of skills by recent install growth, surfaced on the Web page as `热门`. It ranks skills because that is what the upstream leaderboard measures, while acquisition remains source-level; the ranking never implies partial installation of a source.
+_Avoid_: Recommendation engine, popularity score, curated list
+
+**Hot window**:
+The period a hot ranking covers. Fixed windows are answered by upstream pages; arbitrary `N`-day windows are computed from local install-count snapshots and labelled when history is insufficient.
+_Avoid_: Time filter, date range
+
+**Hot snapshot**:
+A local capture of every ranked skill's cumulative install count, stored under the user cache rather than the library. It exists for custom windows, rolling 24-hour growth, and the local `firstSeen` date; it is not part of a library image or a sync.
+_Avoid_: Library archive, backup
+
+**Hot provider**:
+A replaceable adapter that returns a ranked list for a window. The Web surface depends only on this contract, so the upstream source can change or be switched off (`SKILLCADDY_HOT_SOURCE=off`) without touching the UI.
+_Avoid_: Scraper, crawler
+
+**Catalog overrides**:
+Curated metadata (`catalog/overrides.json`) that supplies the descriptions, categories, covers, stars, and review state the leaderboard does not provide. Missing values stay missing rather than being invented.
+_Avoid_: Cached upstream metadata, enrichment feed
+
 **Library image**:
 A self-contained, relocatable snapshot of the central library that carries the library state needed to reconstruct an equivalent library on another machine: every source's installed bytes (including nested `.git`), the registry records, and the user-level enablement triples. It is the input to library image import and the output of library image export.
 _Avoid_: Archive, bundle, backup, snapshot, image

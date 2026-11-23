@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-23",
+  "notes": "Curated metadata for the Hot page. The leaderboard only provides source, skill and install counts; descriptions, categories, covers, stars and verification live here. Stars are snapshots captured from the GitHub API on starsCapturedAt and must never be invented for a repository that was not checked.",
+  "sources": {
+    "mattpocock/skills": {
+      "category": "engineering",
+      "description": "Matt Pocock 的 .agents 目录直出：工程实践类 skill 合集，含 grill-me、tdd、架构改进与交接流程。",
+      "homepage": "https://github.com/mattpocock/skills",
+      "stars": 330674,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "microsoft/azure-skills": {
+      "category": "engineering",
+      "description": "微软官方 Azure agent 插件：面向 Azure 场景的 skill 与 MCP 服务配置。",
+      "homepage": "https://github.com/microsoft/azure-skills",
+      "stars": 1667,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "heygen-com/hyperframes": {
+      "category": "design",
+      "description": "开源 AI 视频编辑器：剪辑自己的素材，或用编码 agent / Studio 生成视频，写 HTML 渲染 MP4。",
+      "homepage": "https://github.com/heygen-com/hyperframes",
+      "stars": 88390,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "larksuite/cli": {
+      "category": "product",
+      "description": "飞书官方 CLI：覆盖消息、文档、多维表格、日历、邮件、任务与会议，附带 20+ agent skill。",
+      "homepage": "https://github.com/larksuite/cli",
+      "stars": 18194,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "prime-skills/runcomfy-agent-skills": {
+      "category": "design",
+      "description": "RunComfy 的 AI 媒体 skill：图像生成、视频编辑等媒体流水线。",
+      "homepage": "https://github.com/prime-skills/runcomfy-agent-skills",
+      "stars": 62,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "leonxlnx/taste-skill": {
+      "category": "design",
+      "description": "给编码 agent 装审美：艺术指导、参考图与浏览器检查，替代千篇一律的 AI 页面。",
+      "homepage": "https://github.com/leonxlnx/taste-skill",
+      "stars": 120229,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "remotion-dev/skills": {
+      "category": "design",
+      "description": "Remotion 官方 agent skill：用 React 写视频的实践规范。",
+      "homepage": "https://github.com/remotion-dev/skills",
+      "stars": 7818,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "coreyhaines31/marketingskills": {
+      "category": "growth",
+      "description": "营销 skill 合集：CRO、文案、SEO、分析与增长工程。",
+      "homepage": "https://github.com/coreyhaines31/marketingskills",
+      "stars": 62093,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "101-skills/superpowers": {
+      "category": "other",
+      "description": "superpowers 系列 agent skill 的一个分发来源。",
+      "homepage": "https://github.com/101-skills/superpowers",
+      "stars": 33,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "juliusbrussee/caveman": {
+      "category": "writing",
+      "description": "少用 token 的表达方式：压缩回答与工具输出，原始内容可还原。",
+      "homepage": "https://github.com/juliusbrussee/caveman",
+      "stars": 122207,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "magentosh/superpowers": {
+      "category": "other",
+      "description": "inference.sh 的 API skill：把上百个应用与 agent 接到你的 agent 上。",
+      "homepage": "https://github.com/magentosh/superpowers",
+      "stars": 5,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "llllllllama/rigorpilot-skills": {
+      "category": "writing",
+      "description": "论文与研究流程相关 skill，代表条目为 paper-context-resolver。",
+      "homepage": "https://github.com/llllllllama/rigorpilot-skills",
+      "verified": false
+    },
+    "vercel-labs/skills": {
+      "category": "engineering",
+      "description": "开放 agent skill 工具链（npx skills）的官方来源。",
+      "homepage": "https://github.com/vercel-labs/skills",
+      "stars": 40511,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "skills-shell/superpowers": {
+      "category": "other",
+      "description": "superpowers 框架的第三方分发来源。",
+      "homepage": "https://github.com/skills-shell/superpowers",
+      "stars": 7,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "google/agents-cli": {
+      "category": "engineering",
+      "description": "Google Cloud 官方 CLI 与 skill：创建、评测并部署 AI agent。",
+      "homepage": "https://github.com/google/agents-cli",
+      "stars": 6393,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "prisma/skills": {
+      "category": "engineering",
+      "description": "Prisma 官方 agent skill，覆盖 Prisma Client API 与数据建模。",
+      "homepage": "https://github.com/prisma/skills",
+      "stars": 80,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "obra/superpowers": {
+      "category": "engineering",
+      "description": "agentic skill 框架与软件开发方法论，含 brainstorming、TDD 等基础流程。",
+      "homepage": "https://github.com/obra/superpowers",
+      "stars": 324299,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "anthropics/skills": {
+      "category": "engineering",
+      "description": "Anthropic 官方 Agent Skills 仓库。",
+      "homepage": "https://github.com/anthropics/skills",
+      "stars": 199100,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "qu-skills/superpowers": {
+      "category": "other",
+      "description": "superpowers 框架的第三方分发来源。",
+      "homepage": "https://github.com/qu-skills/superpowers",
+      "stars": 4,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "designed-by-ai/skills": {
+      "category": "design",
+      "description": "面向设计交付的 agent skill，代表条目为 design-mobile-apps。",
+      "homepage": "https://github.com/designed-by-ai/skills",
+      "stars": 41,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "flowkit-labs/skills": {
+      "category": "growth",
+      "description": "自动化流程类 skill 合集，代表条目为 reddit-automation。",
+      "homepage": "https://github.com/flowkit-labs/skills",
+      "stars": 47,
+      "starsCapturedAt": "2026-11-23",
+      "verified": false
+    },
+    "vercel-labs/agent-browser": {
+      "category": "engineering",
+      "description": "面向 AI agent 的浏览器自动化 CLI。",
+      "homepage": "https://github.com/vercel-labs/agent-browser",
+      "stars": 53458,
+      "starsCapturedAt": "2026-11-23",
+      "verified": true
+    },
+    "open.feishu.cn": {
+      "category": "product",
+      "description": "飞书开放平台托管的官方 skill：云文档、多维表格、会议纪要等。",
+      "homepage": "https://open.feishu.cn",
+      "verified": false
+    }
+  },
+  "skills": {
+    "vercel-labs/skills/find-skills": {
+      "displayName": "find-skills",
+      "category": "engineering",
+      "description": "在开放生态里发现并安装专门的 agent skill：按任务检索候选来源，再按需获取。",
+      "verified": true
+    },
+    "vercel-labs/agent-browser/agent-browser": {
+      "displayName": "agent-browser",
+      "category": "engineering",
+      "description": "完整的浏览器自动化：打开页面、点击、填表、截图、抓取内容，供 agent 操作真实站点。",
+      "verified": true
+    },
+    "anthropics/skills/frontend-design": {
+      "displayName": "frontend-design",
+      "category": "design",
+      "description": "前端视觉与交互设计规范，用于产出不像模板生成的界面。"
+    },
+    "mattpocock/skills/grill-me": {
+      "displayName": "grill-me",
+      "category": "engineering",
+      "description": "让 agent 反过来追问你的需求与设计，逼出被忽略的边界条件。"
+    },
+    "mattpocock/skills/tdd": {
+      "displayName": "tdd",
+      "category": "engineering",
+      "description": "以测试先行推进实现的工作流约束。"
+    },
+    "mattpocock/skills/improve-codebase-architecture": {
+      "displayName": "improve-codebase-architecture",
+      "category": "engineering",
+      "description": "梳理现有代码结构并给出可执行的架构改进步骤。"
+    },
+    "obra/superpowers/brainstorming": {
+      "displayName": "brainstorming",
+      "category": "engineering",
+      "description": "在动手前展开方案空间，先把问题和取舍讲清楚。"
+    },
+    "coreyhaines31/marketingskills/copywriting": {
+      "displayName": "copywriting",
+      "category": "growth",
+      "description": "营销文案写作规范：卖点、结构与行动号召。"
+    },
+    "remotion-dev/skills/remotion-best-practices": {
+      "displayName": "remotion-best-practices",
+      "category": "design",
+      "description": "用 Remotion 以 React 组合视频时的最佳实践。"
+    },
+    "heygen-com/hyperframes/hyperframes-cli": {
+      "displayName": "hyperframes-cli",
+      "category": "design",
+      "description": "HeyGen Hyperframes 的命令行入口：用 HTML 描述画面并渲染为 MP4。"
+    },
+    "leonxlnx/taste-skill/design-taste-frontend": {
+      "displayName": "design-taste-frontend",
+      "category": "design",
+      "description": "给前端页面加审美判断：艺术方向、参考图，以及用浏览器实际验收。"
+    },
+    "larksuite/cli/lark-doc": {
+      "displayName": "lark-doc",
+      "category": "product",
+      "description": "通过飞书 CLI 读写云文档。"
+    },
+    "juliusbrussee/caveman/caveman": {
+      "displayName": "caveman",
+      "category": "writing",
+      "description": "极简表达模式：答案先行、保留技术事实、去掉客套。"
+    },
+    "prisma/skills/prisma-client-api": {
+      "displayName": "prisma-client-api",
+      "category": "engineering",
+      "description": "Prisma Client API 的查询、关系与事务用法。"
+    },
+    "open.feishu.cn/lark-sheets": {
+      "displayName": "lark-sheets",
+      "category": "product",
+      "description": "飞书多维表格 / 电子表格的读写 skill。"
+    }
+  }
+}

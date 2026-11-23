@@ -1,14 +1,5 @@
 {
-  "_notes": [
-    "Import dependency rules for internal modules.",
-    "Each rule: { from, allow, reason }.",
-    "from is a file path and supports * globs.",
-    "allow is either an array of allowed internal targets or true.",
-    "targets in allow support * globs.",
-    "importedBy optionally restricts which production files may import a target.",
-    "Imports from node:* are always allowed.",
-    "Files matched by requireRulesFor must be covered by at least one rule."
-  ],
+  "_notes": ["Import dependency rules for internal modules.", "Each rule: { from, allow, reason }.", "from is a file path and supports * globs.", "allow is either an array of allowed internal targets or true.", "targets in allow support * globs.", "importedBy optionally restricts which production files may import a target.", "Imports from node:* are always allowed.", "Files matched by requireRulesFor must be covered by at least one rule."],
   "requireRulesFor": ["server.js", "lib/*.js", "scripts/*.js"],
   "rules": [
     {
@@ -315,6 +306,61 @@
       "from": "lib/webManager.js",
       "allow": [],
       "reason": "Web process lifecycle — owns PID records, readiness probes, and verified shutdown"
+    },
+    {
+      "from": "lib/catalog.js",
+      "allow": ["lib/sourceGitUrl.js", "lib/sourceManager.js", "lib/sourceRegistry.js"],
+      "reason": "Catalog surface — installed detection over registry records plus the acquisition pipeline it reuses unchanged"
+    },
+    {
+      "from": "lib/hot/skillsShProvider.js",
+      "allow": [],
+      "reason": "Leaf adapter — the only module that knows the upstream leaderboard payload shape"
+    },
+    {
+      "from": "lib/hot/hotCache.js",
+      "allow": [],
+      "reason": "Leaf module — in-memory TTL cache with stale serving and Retry-After backoff"
+    },
+    {
+      "from": "lib/hot/snapshotStore.js",
+      "allow": [],
+      "reason": "Leaf module — atomic install-count snapshots and retention"
+    },
+    {
+      "from": "lib/hot/hotRanking.js",
+      "allow": [],
+      "reason": "Leaf module — pure hot-window computation over supplied pages and snapshots"
+    },
+    {
+      "from": "lib/hot/hotMetadata.js",
+      "allow": [],
+      "reason": "Leaf module — curated catalog overrides merge and category vocabulary"
+    },
+    {
+      "from": "lib/hot/requestOrigin.js",
+      "allow": [],
+      "reason": "Leaf module — same-origin guard shared by every mutating endpoint"
+    },
+    {
+      "from": "lib/hot/skillPreview.js",
+      "allow": ["lib/sourceRegistry.js"],
+      "reason": "Local SKILL.md read — resolves skill paths from registry records only"
+    },
+    {
+      "from": "lib/hot/hotProvider.js",
+      "allow": ["lib/hot/hotCache.js", "lib/hot/hotRanking.js", "lib/hot/skillsShProvider.js"],
+      "reason": "Provider orchestration — composes cache, ranking, and the upstream adapter behind one hot contract"
+    },
+    {
+      "from": "lib/hot/hotHttp.js",
+      "allow": ["lib/hot/requestOrigin.js"],
+      "reason": "HTTP surface — hot routing plus the shared origin guard, kept out of server.js so it is testable over a socket"
+    },
+    {
+      "from": "lib/hot/hotApi.js",
+      "allow": ["lib/catalog.js", "lib/hot/hotMetadata.js", "lib/hot/skillPreview.js", "lib/sourceGitUrl.js"],
+      "reason": "Application layer — hot ranking, detail, install allowlist and refresh rate limit"
     },
     {
       "from": "scripts/*.js",

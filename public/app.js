@@ -1,6 +1,7 @@
 import { renderAgentsSkills } from './agentsUi.js';
 import { renderClaudeStatus } from './claudeUi.js';
 import { emptyState } from './emptyState.js';
+import { createHotView } from './hotUi.js';
 
 const PROJECT_HISTORY_KEY = 'skillcaddy.projectHistory';
 const MAX_PROJECT_HISTORY = 8;
@@ -72,7 +73,9 @@ const elements = {
   heroTotalSkills: document.querySelector('#heroTotalSkills'),
   heroAgentsCount: document.querySelector('#heroAgentsCount'),
   heroClaudeCount: document.querySelector('#heroClaudeCount'),
-  activeProject: document.querySelector('#activeProject')
+  activeProject: document.querySelector('#activeProject'),
+  hotView: document.querySelector('#hotView'),
+  viewTabs: [...document.querySelectorAll('.topbar-tab')]
 };
 
 // These module-level states must be initialized before the startup top-level
@@ -168,6 +171,145 @@ document.addEventListener('keydown', (event) => {
 initializeProjectPathFromUrl();
 initializeHeroState();
 await Promise.all([loadState(), loadVersion()]);
+
+// ---------- 视图路由 ----------
+// 已安装 / 热门 两个视图共用同一个 URL，靠 ?view= 区分；热门内部的窗口、分类、
+// 搜索与详情都写进查询参数，因此浏览器前进/后退能原样回到上一次的热门状态。
+
+const HOT_WINDOWS = new Set(['24h', '7d', '30d', '8w', 'all', 'custom']);
+const hotView = createHotView({ onNavigate: navigate, onReplace: replaceRoute });
+let activeRoute = readRoute();
+let lastRenderedView = '';
+
+applyRoute(activeRoute);
+
+for (const tab of elements.viewTabs) {
+  tab.addEventListener('click', () => {
+    const view = tab.dataset.view === 'hot' ? 'hot' : 'installed';
+    if (view === activeRoute.view) return;
+    navigate({ view, source: '', skill: '' });
+  });
+}
+
+window.addEventListener('popstate', (event) => {
+  applyRoute(readRoute(), { scrollY: event.state?.skillcaddy?.scrollY });
+});
+
+function readRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const daysRaw = Number.parseInt(params.get('days') || '', 10);
+  const windowKey = params.get('window');
+  return {
+    view: params.get('view') === 'hot' ? 'hot' : 'installed',
+    window: HOT_WINDOWS.has(windowKey) ? windowKey : '24h',
+    days: Number.isFinite(daysRaw) ? Math.min(90, Math.max(1, daysRaw)) : null,
+    category: params.get('category') || 'all',
+    q: params.get('q') || '',
+    source: params.get('source') || '',
+    skill: params.get('skill') || ''
+  };
+}
+
+function buildRouteUrl(route) {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  const isHot = route.view === 'hot';
+  const isDetail = isHot && Boolean(route.source && route.skill);
+
+  putParam(params, 'view', 'hot', isHot);
+  putParam(params, 'window', route.window, isHot && route.window !== '24h');
+  putParam(params, 'days', route.days, isHot && route.window === 'custom' && route.days);
+  putParam(params, 'category', route.category, isHot && route.category !== 'all');
+  putParam(params, 'q', route.q, isHot && route.q);
+  putParam(params, 'source', route.source, isDetail);
+  putParam(params, 'skill', route.skill, isDetail);
+  return url;
+}
+
+/**
+ * 视图入场：加类名重排后播一次，动画结束自动摘掉。
+ * 动画本身定义在 motion.css，并且只在允许动画时生效。
+ */
+function playViewEnter(node) {
+  if (!node) return;
+  // 系统要求减少动态时直接跳过，避免留下一个永远等不到 animationend 的类名。
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  node.classList.remove('view-enter');
+  void node.offsetWidth;
+  node.classList.add('view-enter');
+  node.addEventListener('animationend', () => {
+    node.classList.remove('view-enter');
+  }, { once: true });
+}
+
+function putParam(params, key, value, shouldSet) {
+  if (shouldSet && value !== null && value !== undefined && value !== '') params.set(key, String(value));
+  else params.delete(key);
+}
+
+function navigate(patch, options = {}) {
+  const next = { ...activeRoute, ...patch };
+  // 补全 view：从热门详情点进「已安装」时 patch 里已经带了 view。
+  if (patch.view === undefined && next.source && next.skill) next.view = 'hot';
+  const url = buildRouteUrl(next);
+  const leavingList = activeRoute.view === 'hot' && !(activeRoute.source && activeRoute.skill);
+  const historyState = { skillcaddy: { scrollY: leavingList ? window.scrollY : 0 } };
+
+  if (options.replace) window.history.replaceState(historyState, '', url);
+  else window.history.pushState(historyState, '', url);
+
+  applyRoute(next);
+}
+
+/**
+ * 只在地址栏替换状态，不加历史记录。
+ * 详情页里切换同来源的 skill 用这条路径：URL 可分享/可刷新，但按后退是回列表，
+ * 而不是逐个退回看过的一堆 skill。
+ */
+function replaceRoute(patch) {
+  const next = { ...activeRoute, ...patch };
+  const url = buildRouteUrl(next);
+  window.history.replaceState(window.history.state, '', url);
+  activeRoute = next;
+}
+
+function applyRoute(route, options = {}) {
+  activeRoute = route;
+  const isHot = route.view === 'hot';
+
+  document.body.classList.toggle('view-hot', isHot);
+  elements.hotView.hidden = !isHot;
+  for (const tab of elements.viewTabs) {
+    const isActive = tab.dataset.view === route.view;
+    tab.classList.toggle('is-active', isActive);
+    if (isActive) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  }
+
+  // 只在真正换视图时播一次入场；热门内部的筛选/详情不重播。
+  if (route.view !== lastRenderedView) {
+    playViewEnter(isHot ? elements.hotView : document.querySelector('.workspace'));
+    lastRenderedView = route.view;
+  }
+
+  if (isHot) {
+    const restoreTo = options.scrollY;
+    Promise.resolve(hotView.applyRoute(route)).then(() => {
+      if (Number.isFinite(restoreTo) && restoreTo > 0) window.scrollTo(0, restoreTo);
+    });
+    return;
+  }
+
+  hotView.hide();
+  // 从热门详情点「在已安装里查看」时，把来源名带进库搜索。
+  const pendingSearch = sessionStorage.getItem('skillcaddy.pendingSearch');
+  if (pendingSearch) {
+    sessionStorage.removeItem('skillcaddy.pendingSearch');
+    elements.skillSearch.value = pendingSearch;
+    state.searchQuery = pendingSearch.toLowerCase();
+    renderSkills();
+  }
+}
 
 async function loadState(options = {}) {
   const action = options.label || '读取项目';

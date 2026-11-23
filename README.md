@@ -196,6 +196,18 @@ http://127.0.0.1:4173/?projectPath=<encoded-project-path>
 
 The page loads that project immediately, keeps recently used project paths in browser-local history, and lets you bulk-enable all available skills from a library with the library-level `+` button. The enabled panel groups project Agents, Claude Code, global Agents, and Hermes into explicit channel slots and provides one shared search across their enabled entries. If a library was enabled by mistake, use the library-level `×` button to clean that library from both Agents and Claude Code.
 
+## Hot ranking
+
+The `热门` tab in the top bar opens a ranking of skills by recent install growth; `已安装` stays the default view. Both views share one URL and differ by `?view=hot`, so the window, category, search query, and detail page live in query parameters and browser back/forward restores the previous hot state.
+
+- Windows: `24 小时` (default), `7 天`, `30 天`, `8 周`, `全部`, and `自定义 N 天` (1–90). Custom windows come from local hourly snapshot deltas; when history is too short the page falls back to the nearest computable window and labels it instead of pretending.
+- Categories, search, and covers: the upstream only exposes source, skill name, and install counts. Descriptions, categories, covers, and stars come from the curated `catalog/overrides.json`. Missing covers fall back to a deterministic gradient plus a monogram — never a broken image.
+- Detail page: the install block states that adding a skill adds the whole containing source, and offers `复制来源地址`. Non-GitHub sources show `暂不支持一键添加`.
+- Data source: live skills.sh leaderboard pages, cached server-side at 60 s / 5 min / 10 min per page. When the upstream is unavailable it degrades to the local cache and then to the bundled `catalog/hot-fallback.json`, labelled `数据可能已过期` or `离线快照`. `SKILLCADDY_HOT_SOURCE=off` disables live fetching entirely.
+- Snapshots: `~/.skillcaddy/cache/hot/` — a user cache, never part of the library, a library image, or a sync. Hourly snapshots are kept for 7 days, daily ones for 90.
+- Install semantics: `添加到原件库` is source acquisition only. It creates no project, global, Hermes, or Claude link; enabling stays a separate step.
+- Security: every `POST` is same-origin checked, and the Web surface can only install a GitHub `owner/repo` that appears in the current hot data or in the overrides — the server builds the URL. The browser never contacts the upstream directly, and `SKILL.md` renders as plain text with `https`-only links.
+
 ## Skill metadata
 
 `SKILL.md` remains the Agent-facing contract. Human-facing notes and categorization are stored by Skillcaddy under `.skillcaddy/metadata/.../skillcaddy.json` so external source repositories stay clean:

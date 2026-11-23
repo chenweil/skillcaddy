@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -15,16 +16,43 @@ import { enableProjectSkill } from './lib/projectActions.js';
 import { buildCollectionEnablePlan } from './lib/enablePlan.js';
 import { updateSkillMetadata } from './lib/skillMetadata.js';
 import { normalizeEnablementScope } from './lib/enablementScope.js';
+import { createSourceInstaller } from './lib/catalog.js';
+import { createHotApi } from './lib/hot/hotApi.js';
+import { createHotProvider } from './lib/hot/hotProvider.js';
+import { createHotRoutes, sendJson as sendHotJson, statusForError } from './lib/hot/hotHttp.js';
+import { createMetadataLoader } from './lib/hot/hotMetadata.js';
+import { createSnapshotStore } from './lib/hot/snapshotStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 代码根 = server.js 所在目录；原件库根由 SKILLCADDY_ROOT 指定，或按代码根推导。
 const roots = resolveRoots({ codeRoot: __dirname });
 const rootDir = roots.libraryRoot;
 const publicDir = path.join(roots.codeRoot, 'public');
+const catalogDir = path.join(roots.codeRoot, 'catalog');
 const port = Number(process.env.PORT || 4173);
+// 热门快照是用户缓存，不属于原件库，也不随 library image / sync 走。
+const hotCacheDir = process.env.SKILLCADDY_CACHE_DIR
+  ? path.resolve(process.env.SKILLCADDY_CACHE_DIR)
+  : path.join(homedir(), '.skillcaddy', 'cache', 'hot');
 
 await ensureSourceFolders(roots);
 const appInfo = await readVersion(roots);
+const appVersion = appInfo?.version || 'dev';
+
+const hotSnapshots = createSnapshotStore({ dir: hotCacheDir });
+const hotProvider = createHotProvider({
+  catalogDir,
+  snapshots: hotSnapshots,
+  userAgent: `skillcaddy/${appVersion}`
+});
+const hotApi = createHotApi({
+  libraryRoot: rootDir,
+  catalogDir,
+  provider: hotProvider,
+  installer: createSourceInstaller({ libraryRoot: rootDir }),
+  metadata: createMetadataLoader({ catalogDir })
+});
+const hotRoutes = createHotRoutes({ api: hotApi, catalogDir, port });
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -38,7 +66,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
-    if (url.pathname.startsWith('/api/')) {
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/catalog-assets/')) {
       await handleApi(req, res, url);
       return;
     }
@@ -54,6 +82,19 @@ server.listen(port, '127.0.0.1', () => {
 });
 
 async function handleApi(req, res, url) {
+  // 热门接口自带路由、跨站守卫和状态码映射，放在前面以便复用同一套错误处理。
+  if (url.pathname.startsWith('/api/hot') || url.pathname.startsWith('/catalog-assets/')) {
+    try {
+      if (await hotRoutes(req, res, url)) return;
+    } catch (error) {
+      sendHotJson(res, statusForError(error), {
+        error: error.message || 'Request failed',
+        code: error.code || null
+      });
+      return;
+    }
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/version') {
     sendJson(res, 200, appInfo);
     return;

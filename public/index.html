@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/enabled.css">
     <link rel="stylesheet" href="/claude.css">
+    <link rel="stylesheet" href="/hot.css">
+    <link rel="stylesheet" href="/motion.css">
   </head>
   <body>
     <main class="shell">
@@ -16,6 +18,10 @@
           <span class="brand-mark" aria-hidden="true"></span>
           <span>SkillCaddy</span>
         </div>
+        <nav class="topbar-tabs" aria-label="主导航">
+          <button type="button" class="topbar-tab is-active" data-view="installed" data-focus-key="view-installed" aria-current="page">已安装</button>
+          <button type="button" class="topbar-tab" data-view="hot" data-focus-key="view-hot">热门</button>
+        </nav>
         <div class="topbar-actions">
           <label class="topbar-toggle" title="在已启用面板和库操作里显示或隐藏 Hermes 段">
             <input id="hermesToggle" type="checkbox" data-focus-key="hermes-toggle" aria-describedby="hermesToggleLabel">
@@ -186,6 +192,46 @@
           <nav id="tagTabs" class="tag-tabs" aria-label="Skill 标签过滤"></nav>
           <div id="skillList" class="list"></div>
         </section>
+      </section>
+
+      <section id="hotView" class="hot-view" hidden aria-label="热门 skill 排行">
+        <div id="hotRanking" class="hot-ranking">
+          <nav id="hotCategories" class="hot-categories" aria-label="热门分类"></nav>
+
+          <div class="hot-toolbar">
+            <p id="hotSummary" class="hot-summary" role="status" aria-live="polite">正在读取热门…</p>
+            <div class="hot-toolbar-controls">
+              <div class="hot-window">
+                <label class="hot-window-label visually-hidden" for="hotWindow">时间窗口</label>
+                <select id="hotWindow" data-focus-key="hot-window" aria-describedby="hotNotice">
+                  <option value="24h">24 小时</option>
+                  <option value="7d">7 天</option>
+                  <option value="30d">30 天</option>
+                  <option value="8w">8 周</option>
+                  <option value="all">全部</option>
+                  <option value="custom">自定义</option>
+                </select>
+                <div id="hotCustom" class="hot-custom" hidden>
+                  <label for="hotCustomDays">最近</label>
+                  <input id="hotCustomDays" type="number" min="1" max="90" step="1" value="14" inputmode="numeric">
+                  <span>天</span>
+                  <button id="hotCustomApply" type="button" class="secondary">应用</button>
+                </div>
+              </div>
+              <label class="hot-search" for="hotSearch">
+                <span class="hot-search-label visually-hidden">搜索热门</span>
+                <input id="hotSearch" type="search" data-focus-key="hot-search" placeholder="搜索名称、来源、描述或标签…" autocomplete="off" aria-controls="hotGrid">
+              </label>
+              <button id="hotRefresh" class="icon-button" type="button" data-focus-key="hot-refresh" title="刷新热门" aria-label="刷新热门">↻</button>
+            </div>
+          </div>
+
+          <p id="hotNotice" class="hot-notice" role="status" hidden></p>
+          <div id="hotGrid" class="hot-grid" aria-label="热门排行"></div>
+          <div id="hotEmpty" class="hot-empty" hidden></div>
+        </div>
+
+        <div id="hotDetail" class="hot-detail" hidden aria-label="热门 skill 详情"></div>
       </section>
 
       <div class="message-region">

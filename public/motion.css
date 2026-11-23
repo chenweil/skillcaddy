@@ -1,0 +1,168 @@
+/* 动效层。
+   两条硬规则：
+   1. 所有动画都包在 `prefers-reduced-motion: no-preference` 里，系统要求减少动态时
+      一条都不生效；
+   2. 只动 opacity / transform / 颜色，不动布局属性，避免动画期间触发布局抖动。
+
+   时长统一在 160–400ms，缓动用 ease-out 系：快进慢出，符合"响应输入"的直觉。 */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ---------- 通用：颜色与边框的状态过渡 ---------- */
+  a,
+  button,
+  .hot-card,
+  .hot-chip,
+  .related-item,
+  .detail-skill-row,
+  .topbar-tab,
+  .hot-search input,
+  .hot-window select {
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      color 0.16s ease,
+      box-shadow 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  /* 按下时下沉 1px：不改变布局高度，只给一个触觉似的反馈。 */
+  button:not(:disabled):active {
+    transform: translateY(1px);
+  }
+
+  /* ---------- 视图切换（已安装 ↔ 热门） ---------- */
+  .view-enter {
+    animation: view-enter 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  }
+
+  @keyframes view-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- 操作提示条 ---------- */
+  .message:not(:empty) {
+    animation: message-in 0.22s ease-out backwards;
+  }
+
+  @keyframes message-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- 热门卡片入场：错峰，最多前 12 张参与 ---------- */
+  .hot-grid.is-entering .hot-card {
+    animation: card-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+    animation-delay: calc(var(--i, 0) * 22ms);
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- 封面轻推 ---------- */
+  .hot-cover img,
+  .hot-cover-fallback {
+    transition: transform 0.4s ease;
+  }
+
+  .hot-card:hover .hot-cover img,
+  .hot-card:hover .hot-cover-fallback,
+  .hot-card:focus-visible .hot-cover img,
+  .hot-card:focus-visible .hot-cover-fallback {
+    transform: scale(1.04);
+  }
+
+  /* ---------- 详情页入场 ---------- */
+  .hot-detail > * {
+    animation: view-enter 0.24s ease-out backwards;
+  }
+
+  /* ---------- 切换 SKILL.MD 的确认反馈 ---------- */
+  /* 这是"点了有反应"的关键：内容原位替换时给一次淡入，读者才知道换了内容。 */
+  .skillmd.is-swapping {
+    animation: md-swap 0.3s ease-out backwards;
+  }
+
+  @keyframes md-swap {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- 浮层：库提示 popover 与自定义窗口 ---------- */
+  .advice-popover:not([hidden]),
+  .hot-custom:not([hidden]) {
+    animation: pop-in 0.16s ease-out backwards;
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- 分类 chip 选中 ---------- */
+  .hot-chip.is-active {
+    animation: chip-pop 0.18s ease-out backwards;
+  }
+
+  @keyframes chip-pop {
+    from {
+      transform: scale(0.97);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+/* 系统要求减少动态：连骨架屏的持续闪烁也停掉。 */
+@media (prefers-reduced-motion: reduce) {
+  .hot-skeleton-cover {
+    animation: none;
+  }
+
+  .view-enter,
+  .hot-card,
+  .skillmd,
+  .hot-detail > *,
+  .hot-chip.is-active {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .hot-cover img,
+  .hot-cover-fallback {
+    transition: none;
+  }
+}

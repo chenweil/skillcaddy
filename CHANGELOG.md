@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- 热门排行榜（`热门` tab）: a windowed ranking of skills by recent install growth, with category counts, search, cover cards, and a detail page. `已安装` remains the default view; both share one URL (`?view=hot`) so browser back/forward restores the window, category, search, and scroll position.
+- `lib/hot/skillsShProvider.js` — the only module that knows the skills.sh RSC payload shape. Fixed upstream URLs, 5 s timeout, 2 MB response cap, `text/html` check, fixture-tested parser.
+- `lib/hot/hotRanking.js` — window computation: `24 小时` from `/hot` `change`, `7 天` from `/trending`, `30 天`/`8 周` from `weeklyInstalls` buckets, `全部` from cumulative installs, and custom `N`-day windows from snapshot deltas. Insufficient history degrades to the nearest computable window with an explicit label.
+- `lib/hot/snapshotStore.js` — hourly snapshots under `~/.skillcaddy/cache/hot/` (atomic temp-file + rename, serialized writes, 7 days hourly / 90 days daily retention) plus per-key `firstSeen`.
+- `lib/hot/hotCache.js` — TTL cache with stale serving and `429`/`Retry-After` backoff. `lib/hot/hotProvider.js` — provider contract with `SKILLCADDY_HOT_SOURCE=off` and the bundled snapshot as the offline path.
+- `lib/hot/hotMetadata.js` — curated `catalog/overrides.json` merge (skill override → source override → defaults), fixed category vocabulary, generated-cover fallback.
+- `lib/hot/skillPreview.js` — local `SKILL.md` read for installed sources, capped at 20,000 rendered characters.
+- `lib/catalog.js` — installed detection through `canonicalGitRepositoryLocation()`, so HTTPS, SSH, `.git`, and tree URL variants are one source; install queue with per-source dedupe and at most two concurrent acquisitions.
+- `server.js` — `GET /api/hot`, `GET /api/hot/skill`, `POST /api/hot/install`, `POST /api/hot/refresh`, and `GET /catalog-assets/*` (covers only, path-traversal guarded, long-lived cache header).
+- `public/hotUi.js` / `public/hot.css` — hot list and detail rendering. `SKILL.md` is rendered by building DOM nodes (no `innerHTML`), links are `https`-only, and remote images are never loaded.
+- `catalog/hot-fallback.json` (offline leaderboard snapshot) and `catalog/overrides.json` (categories, descriptions, and GitHub star snapshots for the most-installed sources).
+- Tests: `test/hotProvider.test.js`, `test/hotRanking.test.js`, `test/hotCache.test.js`, `test/hotApi.test.js`, plus new `test/publicUi.test.js` assertions for the tab, routing, card behavior, and the no-`innerHTML` guard.
+
+### Security
+- All hot `POST` endpoints are same-origin checked (`Origin` must match the loopback server, `Sec-Fetch-Site` must be `same-origin`/`none`, `Origin: null` rejected, JSON bodies required). The Web surface can only install a source present in the current hot data or the overrides, and only as a GitHub `owner/repo` whose URL the server constructs. Acquired sources never create enablement links.
+
+### Fixed
+- Test temp-dir helpers now return the created directory. On Node 22 `mkdir({ recursive: true })` resolves to `undefined`, which made every test that used the return value as a path fail.
+
 ## [0.29.1] - 2026-11-19
 
 ### Fixed

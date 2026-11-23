@@ -8,6 +8,9 @@ const indexSource = await readFile(new URL('../public/index.html', import.meta.u
 const enabledSource = await readFile(new URL('../public/enabled.css', import.meta.url), 'utf8');
 const agentsUiSource = await readFile(new URL('../public/agentsUi.js', import.meta.url), 'utf8');
 const claudeUiSource = await readFile(new URL('../public/claudeUi.js', import.meta.url), 'utf8');
+const hotUiSource = await readFile(new URL('../public/hotUi.js', import.meta.url), 'utf8');
+const hotStyleSource = await readFile(new URL('../public/hot.css', import.meta.url), 'utf8');
+const motionSource = await readFile(new URL('../public/motion.css', import.meta.url), 'utf8');
 
 test('global collection enable button keeps its success state after completion', () => {
   assert.match(
@@ -164,4 +167,132 @@ test('Agents bulk-clear passes an explicit project scope', () => {
   assert.doesNotMatch(appSource, /addEventListener\('click', disableAgents\)/);
   // 纵深防御：disableAgents 入口把非字符串 scope 纠回 project。
   assert.match(appSource, /async function disableAgents\(scope = 'project'\) \{[^}]*?if \(typeof scope !== 'string'\) scope = 'project';/);
+});
+
+test('top bar adds exactly one new tab and keeps 已安装 as the default view', () => {
+  assert.match(indexSource, /<nav class="topbar-tabs" aria-label="主导航">/);
+  assert.match(indexSource, /data-view="installed"[^>]*aria-current="page">已安装<\/button>/);
+  assert.match(indexSource, /data-view="hot"[^>]*>热门<\/button>/);
+  assert.equal(indexSource.match(/data-view="/g).length, 2);
+  // 热门容器与样式表随页面一起加载。
+  assert.match(indexSource, /<link rel="stylesheet" href="\/hot\.css">/);
+  assert.match(indexSource, /<section id="hotView"[^>]*hidden/);
+  assert.match(indexSource, /<div id="hotGrid"/);
+  assert.match(indexSource, /<div id="hotDetail"/);
+});
+
+test('hot view is routed by query parameters and restores scroll on back', () => {
+  assert.match(appSource, /import \{ createHotView \} from '\.\/hotUi\.js'/);
+  assert.match(appSource, /function readRoute\(\)/);
+  assert.match(appSource, /params\.get\('view'\) === 'hot' \? 'hot' : 'installed'/);
+  assert.match(appSource, /window\.addEventListener\('popstate'/);
+  assert.match(appSource, /event\.state\?\.skillcaddy\?\.scrollY/);
+  assert.match(appSource, /window\.history\.pushState/);
+  // 项目路径写回 URL 时保留热门相关参数（replaceState 只改 projectPath）。
+  assert.match(appSource, /function syncProjectPathToUrl[\s\S]*?url\.searchParams\.set\('projectPath'/);
+  assert.match(appSource, /document\.body\.classList\.toggle\('view-hot', isHot\)/);
+});
+
+test('hot cards are links, not quick-add buttons', () => {
+  assert.match(hotUiSource, /card\.className = 'hot-card'/);
+  assert.match(hotUiSource, /card\.href = detailHref\(entry\)/);
+  assert.match(hotUiSource, /onNavigate\(\{ source: entry\.source, skill: entry\.skillId \}\)/);
+  // 卡片里没有直接写入原件库的入口：浏览与安装分离。
+  assert.doesNotMatch(hotUiSource, /renderCard[\s\S]{0,400}?\/api\/hot\/install/);
+  assert.match(hotUiSource, /loading = 'lazy'/);
+  assert.match(hotUiSource, /decoding = 'async'/);
+});
+
+test('hot detail discloses source-granular acquisition and never fakes a metric', () => {
+  assert.match(hotUiSource, /添加会加入整个来源/);
+  assert.match(hotUiSource, /暂不支持一键添加/);
+  assert.match(hotUiSource, /安装后可查看完整 SKILL\.md/);
+  assert.match(hotUiSource, /内容来自来源，Skillcaddy 不执行它/);
+  // 缺 stars 时整行隐藏，不补 0。
+  assert.match(hotUiSource, /if \(value === null \|\| value === undefined \|\| value === ''\) continue/);
+});
+
+test('SKILL.md rendering never assigns HTML and only allows https links', () => {
+  assert.doesNotMatch(hotUiSource, /\.innerHTML\s*=/);
+  assert.match(hotUiSource, /document\.createTextNode/);
+  assert.match(hotUiSource, /function renderInline/);
+  // 链接协议白名单写在正则里：只匹配 https。
+  assert.ok(hotUiSource.includes('(https:\\/\\/[^\\s)]+)'), 'link pattern is https-only');
+  // 代码块与标题都走 textContent。
+  assert.match(hotUiSource, /code\.textContent = codeLines\.join/);
+});
+
+test('hot styles cover the grid, skeleton state, and the detail sidebar', () => {
+  assert.match(hotStyleSource, /\.hot-grid\s*\{[\s\S]*?grid-template-columns: repeat\(auto-fill, minmax\(236px, 1fr\)\)/);
+  assert.match(hotStyleSource, /\.hot-skeleton-cover\s*\{[\s\S]*?animation: hot-shimmer/);
+  assert.match(hotStyleSource, /\.hot-detail-grid\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 280px/);
+  // 容器内 [hidden] 必须真的隐藏：否则 .hot-custom 这类 display:flex 会盖掉 UA 规则。
+  assert.match(hotStyleSource, /\.hot-view \[hidden\]\s*\{\s*display: none !important;/);
+});
+
+test('hot view hides the Hermes toggle, which has no target there', () => {
+  // 热门页不涉及启用范围：开关留着点了也无效，直接在热门视图里隐藏。
+  assert.match(hotStyleSource, /body\.view-hot \.topbar-toggle\s*\{\s*display: none;/);
+});
+
+test('switching skills inside a source happens in place, not by page navigation', () => {
+  // 整行是切换控件，并且靠事件委托绑定：详情页局部重渲染不会丢监听。
+  assert.match(hotUiSource, /row\.dataset\.skillId = skill\.skillId/);
+  assert.match(hotUiSource, /els\.detail\.addEventListener\('click'/);
+  assert.match(hotUiSource, /selectSkill\(row\.dataset\.skillId\)/);
+  // 旧的「查看」按钮已移除：它只改 URL 不改变可见结果，用户以为没反应。
+  assert.doesNotMatch(hotUiSource, /textContent = '查看'/);
+  // 切换后标题写明是哪个 skill，并把面板滚进视口。
+  assert.match(hotUiSource, /SKILL\.MD · \$\{detail\.entry\.skillId\}/);
+  assert.match(hotUiSource, /scrollIntoView\(\{ block: 'nearest' \}\)/);
+  // 只替换地址栏状态，不堆历史记录。
+  assert.match(appSource, /function replaceRoute\(patch\)/);
+  assert.match(appSource, /window\.history\.replaceState\(window\.history\.state, '', url\)/);
+  assert.match(hotStyleSource, /\.detail-skill-row\.is-current\s*\{[\s\S]*?background: var\(--hot-active-wash\)/);
+});
+
+test('large sources cap the skill list and offer an in-place filter', () => {
+  assert.match(hotUiSource, /const SKILL_LIST_SCROLL_THRESHOLD = 8;/);
+  assert.match(hotUiSource, /const SKILL_FILTER_THRESHOLD = 12;/);
+  assert.match(hotUiSource, /is-scrollable/);
+  assert.match(hotUiSource, /在 \$\{skills\.length\} 个 skill 里筛选…/);
+  assert.match(hotUiSource, /没有匹配的 skill/);
+  // 首屏渲染后要把「当前」行滚进列表视口，否则 43 个 skill 里找不到自己在看哪个。
+  assert.match(hotUiSource, /syncSkillListScroll\(\)/);
+  assert.match(hotStyleSource, /\.detail-skills\.is-scrollable\s*\{[\s\S]*?max-height: 340px;[\s\S]*?overflow-y: auto;/);
+});
+
+test('hot surface colours follow the theme instead of light-only tokens', () => {
+  // --brand-blue-wash 只在亮色 :root 定义，暗色下不翻；用在背景上会变成「浅蓝底+浅蓝字」。
+  assert.doesNotMatch(hotStyleSource, /background: var\(--brand-blue-wash\)/);
+  assert.match(hotStyleSource, /@media \(prefers-color-scheme: dark\) \{\s*\.hot-view \{[\s\S]*?--hot-surface: #111d30/);
+  // 卡片/阅读区/相关推荐都用主题感知的表面色，而不是与页面同色的 canvas。
+  assert.match(hotStyleSource, /\.hot-card \{[\s\S]*?background: var\(--hot-surface\)/);
+  assert.match(hotStyleSource, /\.skillmd \{[\s\S]*?background: var\(--hot-surface\)/);
+});
+
+test('motion is opt-in and fully disabled when the system asks for less', () => {
+  assert.match(indexSource, /href="\/hot\.css">\s*<link rel="stylesheet" href="\/motion\.css">/);
+  // 所有动画规则都在 no-preference 里。
+  const noPref = motionSource.split('@media (prefers-reduced-motion: no-preference)')[1] || '';
+  assert.match(noPref, /\.view-enter\s*\{/);
+  assert.match(noPref, /\.hot-grid\.is-entering \.hot-card\s*\{/);
+  assert.match(noPref, /\.skillmd\.is-swapping\s*\{/);
+  // reduce 分支必须把持续动画也停掉。
+  assert.match(motionSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hot-skeleton-cover\s*\{\s*animation: none;/);
+  // 视图入场在 JS 侧同样跳过，避免留下等不到 animationend 的类名。
+  assert.match(appSource, /prefers-reduced-motion: reduce\)'\)\.matches\) return;/);
+});
+
+test('card entrance is staggered by index and only replays on fresh data', () => {
+  assert.match(hotUiSource, /card\.style\.setProperty\('--i', String\(Math\.min\(index, 11\)\)\)/);
+  assert.match(hotUiSource, /const animate = state\.animateCards;/);
+  assert.match(hotUiSource, /els\.grid\.classList\.toggle\('is-entering', animate\)/);
+  assert.match(motionSource, /animation-delay: calc\(var\(--i, 0\) \* 22ms\)/);
+});
+
+test('search and category filtering reuse the loaded payload instead of refetching', () => {
+  assert.match(hotUiSource, /function loadMatchesRoute\(route\)/);
+  assert.match(hotUiSource, /if \(loadMatchesRoute\(route\)\) \{\s*renderList\(\);/);
+  assert.match(hotUiSource, /state\.listQuery = \{ window: route\.window, days: route\.days \|\| null \}/);
 });

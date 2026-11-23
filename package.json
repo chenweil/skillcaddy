@@ -15,6 +15,7 @@
     "scripts/pull-github.sh",
     "scripts/cron-sync-update-git.sh",
     "public/",
+    "catalog/",
     "skills/",
     "!skills/.claude",
     "collection-metadata/",
