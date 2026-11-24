@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-24
+
 ### Added
-- 热门排行榜（`热门` tab）: a windowed ranking of skills by recent install growth, with category counts, search, cover cards, and a detail page. `已安装` remains the default view; both share one URL (`?view=hot`) so browser back/forward restores the window, category, search, and scroll position.
+- Hot ranking (`发现` tab): a windowed ranking of skills by recent install growth, with category counts, search, cover cards, and a detail page. `管理` (the library workspace) remains the default view; both share one URL (`?view=hot`) so browser back/forward restores the window, category, search, and scroll position.
 - `lib/hot/skillsShProvider.js` — the only module that knows the skills.sh RSC payload shape. Fixed upstream URLs, 5 s timeout, 2 MB response cap, `text/html` check, fixture-tested parser.
 - `lib/hot/hotRanking.js` — window computation: `24 小时` from `/hot` `change`, `7 天` from `/trending`, `30 天`/`8 周` from `weeklyInstalls` buckets, `全部` from cumulative installs, and custom `N`-day windows from snapshot deltas. Insufficient history degrades to the nearest computable window with an explicit label.
 - `lib/hot/snapshotStore.js` — hourly snapshots under `~/.skillcaddy/cache/hot/` (atomic temp-file + rename, serialized writes, 7 days hourly / 90 days daily retention) plus per-key `firstSeen`.
@@ -17,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `lib/hot/skillPreview.js` — local `SKILL.md` read for installed sources, capped at 20,000 rendered characters.
 - `lib/catalog.js` — installed detection through `canonicalGitRepositoryLocation()`, so HTTPS, SSH, `.git`, and tree URL variants are one source; install queue with per-source dedupe and at most two concurrent acquisitions.
 - `server.js` — `GET /api/hot`, `GET /api/hot/skill`, `POST /api/hot/install`, `POST /api/hot/refresh`, and `GET /catalog-assets/*` (covers only, path-traversal guarded, long-lived cache header).
-- `public/hotUi.js` / `public/hot.css` — hot list and detail rendering. `SKILL.md` is rendered by building DOM nodes (no `innerHTML`), links are `https`-only, and remote images are never loaded.
+- `public/hotUi.js` / `public/hot.css` — hot list and detail rendering. `SKILL.md` is rendered by building DOM nodes (no `innerHTML`), links are `https`-only, and remote images are never loaded. `public/motion.css` holds the motion layer.
 - `catalog/hot-fallback.json` (offline leaderboard snapshot) and `catalog/overrides.json` (categories, descriptions, and GitHub star snapshots for the most-installed sources).
 - Tests: `test/hotProvider.test.js`, `test/hotRanking.test.js`, `test/hotCache.test.js`, `test/hotApi.test.js`, plus new `test/publicUi.test.js` assertions for the tab, routing, card behavior, and the no-`innerHTML` guard.
 
@@ -26,6 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Test temp-dir helpers now return the created directory. On Node 22 `mkdir({ recursive: true })` resolves to `undefined`, which made every test that used the return value as a path fail.
+
+### Changed
+- The top bar gains a second view: `管理` (the existing library workspace, still the default) and `发现` (the hot ranking). The nav sits in a fixed grid column, so hiding the Hermes toggle on the hot view no longer shifts it.
+- Category and search filtering now run on the already-fetched payload instead of hitting the upstream on every keystroke.
+- Selecting another skill inside the same source updates the detail in place: the row highlights, the SKILL.MD heading names the skill, and the scroll position is kept. The URL is replaced rather than pushed, so Back returns to the list.
+- Sources with many skills no longer render a wall of rows: over 8 entries the list scrolls inside a capped panel, and over 12 it also offers an in-source filter.
+- The motion layer (`public/motion.css`) is opt-in and fully off under `prefers-reduced-motion`. Card entrance, view transitions, popovers, and the refresh spinner all live there.
+
+### Fixed
+- Composing text (pinyin, Wubi, kana) no longer triggers a search or gets interrupted: the input ignores `input` events while composing and the route no longer rewrites the search value unconditionally.
+- Installing a source now refetches the detail, so the sidebar, the button, and the SKILL.MD placeholder can no longer contradict each other; the list is also marked stale so the `已安装` pill appears on return.
+- Icon buttons keep their glyph while busy. The refresh control used to replace `↻` with `刷新中`, which overflowed the 36x36 round button and shoved the top bar.
+- Accessibility: the live region announces the result set instead of every polling timestamp, category filters use `aria-current` instead of `aria-pressed`, the list page has an `h2` above its card headings, touch targets follow the project's 44px standard below 760px, and an ineffective `aria-label` on a plain `div` was removed.
+- The SKILL.MD heading no longer uppercases the skill identifier, which is case-sensitive.
 
 ## [0.29.1] - 2026-11-19
 
