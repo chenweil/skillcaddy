@@ -16,6 +16,7 @@ import { enableProjectSkill } from './lib/projectActions.js';
 import { buildCollectionEnablePlan } from './lib/enablePlan.js';
 import { updateSkillMetadata } from './lib/skillMetadata.js';
 import { normalizeEnablementScope } from './lib/enablementScope.js';
+import { isExistingDirectory } from './lib/projectPath.js';
 import { createSourceInstaller } from './lib/catalog.js';
 import { createHotApi } from './lib/hot/hotApi.js';
 import { createHotProvider } from './lib/hot/hotProvider.js';
@@ -30,6 +31,7 @@ const rootDir = roots.libraryRoot;
 const publicDir = path.join(roots.codeRoot, 'public');
 const catalogDir = path.join(roots.codeRoot, 'catalog');
 const port = Number(process.env.PORT || 4173);
+const MAX_EXISTENCE_PATHS = 20;
 // 热门快照是用户缓存，不属于原件库，也不随 library image / sync 走。
 const hotCacheDir = process.env.SKILLCADDY_CACHE_DIR
   ? path.resolve(process.env.SKILLCADDY_CACHE_DIR)
@@ -97,6 +99,17 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && url.pathname === '/api/version') {
     sendJson(res, 200, appInfo);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/projects/exists') {
+    // 只回答历史里那些路径还在不在，用于剔除已经被移动/删除的项目。
+    const paths = [...new Set(url.searchParams.getAll('path'))].filter(Boolean).slice(0, MAX_EXISTENCE_PATHS);
+    const existing = {};
+    await Promise.all(paths.map(async (projectPath) => {
+      existing[projectPath] = await isExistingDirectory(projectPath);
+    }));
+    sendJson(res, 200, { existing });
     return;
   }
 

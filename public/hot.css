@@ -243,13 +243,38 @@ body.view-hot #refreshButton {
   font-size: 12px;
 }
 
-.hot-window select {
+.hot-select {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 原生 select 的文字位置由浏览器各画一套，mac 上会显得偏右。
+   关掉原生外观，左右对称留白 + 居中，箭头自己画在右侧留白里。 */
+.hot-select select {
+  appearance: none;
+  -webkit-appearance: none;
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0 30px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   background: var(--hot-surface);
   color: var(--ink);
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+}
+
+.hot-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  width: 9px;
+  height: 6px;
+  transform: translateY(-50%);
+  background: var(--muted);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
 }
 
 .hot-custom {
@@ -302,7 +327,7 @@ body.view-hot #refreshButton {
 }
 
 .hot-search input:focus-visible,
-.hot-window select:focus-visible {
+.hot-select select:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
 }
@@ -1053,7 +1078,7 @@ body.view-hot #refreshButton {
     padding: 0 16px;
   }
 
-  .hot-window select,
+  .hot-select select,
   .hot-search input,
   .detail-skills-filter input {
     min-height: 44px;

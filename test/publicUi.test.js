@@ -11,6 +11,8 @@ const claudeUiSource = await readFile(new URL('../public/claudeUi.js', import.me
 const hotUiSource = await readFile(new URL('../public/hotUi.js', import.meta.url), 'utf8');
 const hotStyleSource = await readFile(new URL('../public/hot.css', import.meta.url), 'utf8');
 const motionSource = await readFile(new URL('../public/motion.css', import.meta.url), 'utf8');
+const serverSource = await readFile(new URL('../server.js', import.meta.url), 'utf8');
+const storeSource = await readFile(new URL('../lib/skillStore.js', import.meta.url), 'utf8');
 
 test('global collection enable button keeps its success state after completion', () => {
   assert.match(
@@ -373,4 +375,30 @@ test('the refresh control spins while busy and stops under reduced motion', () =
   assert.match(noPref, /@keyframes icon-spin \{\s*to \{\s*transform: rotate\(360deg\);/);
   // 系统要求减少动态时必须停转。
   assert.match(motionSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.icon-button\.is-busy \{\s*animation: none !important;/);
+});
+
+test('a moved or deleted project path is dropped from history instead of listed', () => {
+  // 启动时问一次服务端"这些路径还在不在"，只保留存在的。
+  assert.match(appSource, /async function pruneProjectHistory\(\)/);
+  assert.match(appSource, /fetch\(`\/api\/projects\/exists\?\$\{query\}`\)/);
+  assert.match(appSource, /payload\.existing\?\.\[item\] !== false/);
+  assert.match(appSource, /await pruneProjectHistory\(\);/);
+  // 手动读取一个已经不存在的路径时，不接管状态，只剔除并报错。
+  assert.match(appSource, /if \(nextState\.projectExists === false\) \{/);
+  assert.match(appSource, /forgetProject\(nextState\.projectPath, \{ announce: false \}\)/);
+  // URL 里残留的旧路径一并清掉，避免每次刷新重复报错。
+  assert.match(appSource, /url\.searchParams\.delete\('projectPath'\)/);
+  // 服务端在 /api/state 里明确回答这个问题。
+  assert.match(storeSource, /projectExists: await isExistingDirectory\(safeProjectPath\)/);
+  assert.match(serverSource, /url\.pathname === '\/api\/projects\/exists'/);
+});
+
+test('the window selector centres its label instead of relying on native select box', () => {
+  assert.match(indexSource, /<span class="hot-select">\s*<select id="hotWindow"/);
+  assert.match(hotStyleSource, /\.hot-select select \{[\s\S]*?appearance: none;/);
+  assert.match(hotStyleSource, /\.hot-select select \{[\s\S]*?text-align: center;/);
+  // 左右对称留白，箭头画在右侧留白里，不参与文字排版。
+  assert.match(hotStyleSource, /\/\* 原生 select 的文字位置由浏览器各画一套/);
+  assert.match(hotStyleSource, /padding: 0 30px;/);
+  assert.match(hotStyleSource, /\.hot-select::after \{[\s\S]*?clip-path: polygon\(0 0, 100% 0, 50% 100%\);/);
 });

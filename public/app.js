@@ -171,6 +171,7 @@ document.addEventListener('keydown', (event) => {
 initializeProjectPathFromUrl();
 initializeHeroState();
 await Promise.all([loadState(), loadVersion()]);
+await pruneProjectHistory();
 
 // ---------- 视图路由 ----------
 // 已安装 / 热门 两个视图共用同一个 URL，靠 ?view= 区分；热门内部的窗口、分类、
@@ -318,6 +319,18 @@ async function loadState(options = {}) {
     const projectPath = elements.projectPath.value.trim();
     const url = `/api/state${projectPath ? `?projectPath=${encodeURIComponent(projectPath)}` : ''}`;
     const nextState = await api(url);
+    if (nextState.projectExists === false) {
+      // 路径被移动或删除：不接管这个状态，只从历史里剔除并说明原因。
+      forgetProject(nextState.projectPath, { announce: false });
+      // URL 里残留的旧路径也要清掉，否则每次刷新都会重复报同一个错。
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('projectPath') === nextState.projectPath) {
+        url.searchParams.delete('projectPath');
+        window.history.replaceState({}, '', url);
+      }
+      setMessage(`项目路径不存在：${nextState.projectPath}`, true);
+      return;
+    }
     Object.assign(state, nextState);
     elements.projectPath.value = state.projectPath;
     rememberProject(state.projectPath);
@@ -440,11 +453,37 @@ function rememberProject(projectPath) {
   localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
 }
 
-function forgetProject(projectPath) {
+function forgetProject(projectPath, { announce = true } = {}) {
+  const before = state.projectHistory.length;
   state.projectHistory = state.projectHistory.filter((item) => item !== projectPath);
+  if (state.projectHistory.length === before) return;
   localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(state.projectHistory));
   withPreservedFocus(renderProjectHistory);
-  setMessage(`已移除项目：${projectPath}`);
+  if (announce) setMessage(`已移除项目：${projectPath}`);
+}
+
+/**
+ * 启动时剔除已经从磁盘上消失的历史项目。
+ *
+ * 历史存在 localStorage 里，仓库搬家后旧路径会一直挂在下面；
+ * 只问服务端"还在不在"，不触发任何库扫描。
+ */
+async function pruneProjectHistory() {
+  const paths = [...state.projectHistory];
+  if (paths.length === 0) return;
+  const query = paths.map((item) => `path=${encodeURIComponent(item)}`).join('&');
+  try {
+    const response = await fetch(`/api/projects/exists?${query}`);
+    if (!response.ok) return;
+    const payload = await response.json();
+    const kept = paths.filter((item) => payload.existing?.[item] !== false);
+    if (kept.length === paths.length) return;
+    state.projectHistory = kept;
+    localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(kept));
+    renderProjectHistory();
+  } catch {
+    // 清理失败不影响主流程，下次加载还会再试。
+  }
 }
 
 function readProjectHistory() {

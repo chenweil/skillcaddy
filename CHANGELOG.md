@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The motion layer (`public/motion.css`) is opt-in and fully off under `prefers-reduced-motion`. Card entrance, view transitions, popovers, and the refresh spinner all live there.
 
 ### Fixed
+- A project path that was moved or deleted is no longer listed as if it still existed. `/api/state` reports `projectExists`, `GET /api/projects/exists` answers for the whole history in one call, and the Web page drops dead entries on load. Opening one by hand is refused with a message instead of silently showing an empty project, and the stale `projectPath` is removed from the URL.
+- The time-window selector no longer relies on the native `select` box, which rendered the label off-centre on macOS. It now uses `appearance: none`, symmetric padding, centred text, and a CSS chevron in the right gutter.
 - Composing text (pinyin, Wubi, kana) no longer triggers a search or gets interrupted: the input ignores `input` events while composing and the route no longer rewrites the search value unconditionally.
 - Installing a source now refetches the detail, so the sidebar, the button, and the SKILL.MD placeholder can no longer contradict each other; the list is also marked stale so the `已安装` pill appears on return.
 - Icon buttons keep their glyph while busy. The refresh control used to replace `↻` with `刷新中`, which overflowed the 36x36 round button and shoved the top bar.

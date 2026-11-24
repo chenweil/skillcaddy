@@ -206,14 +206,16 @@
             <div class="hot-toolbar-controls">
               <div class="hot-window">
                 <label class="hot-window-label visually-hidden" for="hotWindow">时间窗口</label>
-                <select id="hotWindow" data-focus-key="hot-window" aria-describedby="hotNotice">
-                  <option value="24h">24 小时</option>
-                  <option value="7d">7 天</option>
-                  <option value="30d">30 天</option>
-                  <option value="8w">8 周</option>
-                  <option value="all">全部</option>
-                  <option value="custom">自定义</option>
-                </select>
+                <span class="hot-select">
+                  <select id="hotWindow" data-focus-key="hot-window" aria-describedby="hotNotice">
+                    <option value="24h">24 小时</option>
+                    <option value="7d">7 天</option>
+                    <option value="30d">30 天</option>
+                    <option value="8w">8 周</option>
+                    <option value="all">全部</option>
+                    <option value="custom">自定义</option>
+                  </select>
+                </span>
                 <div id="hotCustom" class="hot-custom" hidden>
                   <label for="hotCustomDays">最近</label>
                   <input id="hotCustomDays" type="number" min="1" max="90" step="1" value="14" inputmode="numeric">
