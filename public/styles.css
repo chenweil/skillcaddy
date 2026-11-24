@@ -165,12 +165,19 @@ textarea {
 }
 
 .topbar {
-  display: flex;
+  /* 三列网格：品牌 / 导航 / 操作区。
+     之前用 space-between，热门视图隐藏 Hermes 开关后右侧变窄，中间 tab 会整体右移。
+     固定中列后，左右两侧宽度怎么变，导航位置都不动。 */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   min-height: 64px;
   align-items: center;
-  justify-content: space-between;
   gap: 24px;
   border-bottom: 1px solid var(--hairline);
+}
+
+.topbar > .topbar-actions {
+  justify-self: end;
 }
 
 .brand,
@@ -925,6 +932,12 @@ button.danger:disabled,
 .actions .danger:disabled {
   background: var(--primary-disabled);
   color: var(--muted);
+}
+
+/* 忙碌态：图标按钮不换文字，只降透明度 + 进度光标。 */
+.icon-button.is-busy {
+  opacity: 0.55;
+  cursor: progress;
 }
 
 .icon-button {

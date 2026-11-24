@@ -1553,14 +1553,32 @@ function focusTarget(target) {
 
 async function withButtonState(button, busyText, task, resolveDisabled = () => false) {
   const focus = captureFocus();
+  // 图标按钮固定 36x36，换文字会撑破圆框（「刷新中」比 ↻ 宽得多）。
+  // 这类按钮只做状态标记，文字留给 aria-label。
+  const isIconOnly = button.classList.contains('icon-button');
   const originalText = button.textContent;
+  const originalLabel = button.getAttribute('aria-label');
   button.disabled = true;
-  button.textContent = busyText;
+
+  if (isIconOnly) {
+    button.classList.add('is-busy');
+    button.setAttribute('aria-busy', 'true');
+    if (busyText) button.setAttribute('aria-label', busyText);
+  } else {
+    button.textContent = busyText;
+  }
+
   try {
     await task();
   } finally {
     button.disabled = resolveDisabled();
-    button.textContent = originalText;
+    if (isIconOnly) {
+      button.classList.remove('is-busy');
+      button.removeAttribute('aria-busy');
+      if (originalLabel !== null) button.setAttribute('aria-label', originalLabel);
+    } else {
+      button.textContent = originalText;
+    }
     restoreFocus(focus);
   }
 }

@@ -66,6 +66,23 @@
   outline-offset: 2px;
 }
 
+/* 窄屏：三列等宽会挤爆。改成 auto/1fr/auto，导航在剩余空间里居中，位置依然稳定。 */
+@media (max-width: 720px) {
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+  }
+
+  .topbar-tabs {
+    justify-self: center;
+  }
+
+  .topbar-tab {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
+
 /* 热门视图接管整页：已安装工作面的三块保持原状但隐藏。 */
 body.view-hot .hero,
 body.view-hot .controls,
@@ -75,6 +92,11 @@ body.view-hot .workspace {
 
 /* 热门排行与启用范围无关：Hermes 开关在热门页没有作用对象，点了也不会生效。 */
 body.view-hot .topbar-toggle {
+  display: none;
+}
+
+/* 顶栏的 ↻ 刷新的是已安装工作面，在发现页按下去毫无反馈；发现页用工具条里的刷新。 */
+body.view-hot #refreshButton {
   display: none;
 }
 
@@ -133,7 +155,7 @@ body.view-hot .topbar-toggle {
   padding: 0 14px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: var(--canvas);
+  background: var(--hot-surface);
   color: var(--body);
   font-size: 13px;
   font-weight: 600;
@@ -226,7 +248,7 @@ body.view-hot .topbar-toggle {
   padding: 0 10px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
-  background: var(--canvas);
+  background: var(--hot-surface);
   color: var(--ink);
 }
 
@@ -275,7 +297,7 @@ body.view-hot .topbar-toggle {
   padding: 0 12px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
-  background: var(--canvas);
+  background: var(--hot-surface);
   color: var(--ink);
 }
 
@@ -624,6 +646,12 @@ body.view-hot .topbar-toggle {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* 标题里嵌入的 skill id 保持原样：它是区分大小写的标识符。 */
+.detail-section-skill {
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .detail-note {
@@ -1011,6 +1039,36 @@ body.view-hot .topbar-toggle {
 
   .hot-detail-side {
     position: static;
+  }
+}
+
+/* 与 styles.css 的触控标准对齐：760px 以下的控件一律 44px。 */
+@media (max-width: 760px) {
+  .topbar-tab {
+    min-height: 44px;
+  }
+
+  .hot-chip {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  .hot-window select,
+  .hot-search input,
+  .detail-skills-filter input {
+    min-height: 44px;
+  }
+
+  .detail-skill-row {
+    min-height: 44px;
+  }
+
+  .related-item {
+    min-height: 44px;
+  }
+
+  .hot-custom button {
+    min-height: 40px;
   }
 }
 

@@ -30,6 +30,18 @@
     transform: translateY(1px);
   }
 
+  /* ---------- 刷新按钮：图标自转 ---------- */
+  /* 按钮本身是正圆，转它等于只转里面的 ↻ 字形。 */
+  .icon-button.is-busy {
+    animation: icon-spin 0.9s linear infinite;
+  }
+
+  @keyframes icon-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* ---------- 视图切换（已安装 ↔ 热门） ---------- */
   .view-enter {
     animation: view-enter 0.2s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
@@ -93,7 +105,8 @@
   }
 
   /* ---------- 详情页入场 ---------- */
-  .hot-detail > * {
+  /* 只在打开详情时加 .is-entering；安装、切换 skill 的局部重渲染不再整页淡入。 */
+  .hot-detail.is-entering > * {
     animation: view-enter 0.24s ease-out backwards;
   }
 
@@ -155,8 +168,9 @@
   .view-enter,
   .hot-card,
   .skillmd,
-  .hot-detail > *,
-  .hot-chip.is-active {
+  .hot-detail.is-entering > *,
+  .hot-chip.is-active,
+  .icon-button.is-busy {
     animation: none !important;
     transform: none !important;
   }

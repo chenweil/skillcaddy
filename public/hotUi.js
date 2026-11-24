@@ -41,6 +41,7 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     grid: root.querySelector('#hotGrid'),
     empty: root.querySelector('#hotEmpty'),
     summary: root.querySelector('#hotSummary'),
+    status: root.querySelector('#hotStatus'),
     notice: root.querySelector('#hotNotice'),
     windowSelect: root.querySelector('#hotWindow'),
     custom: root.querySelector('#hotCustom'),
@@ -65,7 +66,9 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     skillQuery: '',
     install: { status: 'idle', message: '' },
     pollTimer: null,
-    searchTimer: null
+    searchTimer: null,
+    searchComposing: false,
+    statusSignature: ''
   };
 
   els.windowSelect.addEventListener('change', () => {
@@ -92,12 +95,26 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     els.customApply.click();
   });
 
-  els.search.addEventListener('input', () => {
+  // 输入法组合期间（拼音、五笔、假名）不要导航：此时的 value 只是候选串，
+  // 拿它去过滤等于用半截拼音搜索，而且随后的值回写会打断组合。
+  els.search.addEventListener('compositionstart', () => {
+    state.searchComposing = true;
+  });
+  els.search.addEventListener('compositionend', () => {
+    state.searchComposing = false;
+    scheduleSearch();
+  });
+  els.search.addEventListener('input', (event) => {
+    if (event.isComposing || state.searchComposing) return;
+    scheduleSearch();
+  });
+
+  function scheduleSearch() {
     clearTimeout(state.searchTimer);
     state.searchTimer = setTimeout(() => {
       onNavigate({ q: els.search.value.trim() }, { replace: true });
     }, 200);
-  });
+  }
 
   els.refresh.addEventListener('click', () => refresh(true));
 
@@ -120,7 +137,11 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
       els.windowSelect.value = route.window;
       els.custom.hidden = route.window !== 'custom';
       if (route.window === 'custom') els.customDays.value = String(route.days || 14);
-      els.search.value = route.q || '';
+      // 只在必要时回写：给 search 框赋值会重置光标，甚至打断正在进行的输入法组合。
+      const nextQuery = route.q || '';
+      if (!state.searchComposing && els.search.value !== nextQuery) {
+        els.search.value = nextQuery;
+      }
 
       if (route.source && route.skill) {
         await openDetail(route);
@@ -187,6 +208,7 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
       return;
     }
     els.refresh.disabled = true;
+    els.refresh.classList.add('is-busy');
     try {
       await apiJson('/api/hot/refresh', { method: 'POST', body: '{}' });
       await loadList({});
@@ -194,6 +216,7 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
       showNotice(error.message || '刷新失败，先显示已有数据');
     } finally {
       els.refresh.disabled = false;
+      els.refresh.classList.remove('is-busy');
     }
   }
 
@@ -266,27 +289,52 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
   }
 
   function renderCategories(categories, active, totalCount) {
-    els.categories.replaceChildren();
     const items = [{ key: 'all', label: '全部', count: totalCount ?? 0 }, ...(categories || [])];
-    for (const item of items) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `hot-chip${item.key === active ? ' is-active' : ''}`;
-      button.setAttribute('aria-pressed', String(item.key === active));
-      const label = document.createElement('span');
-      label.textContent = item.label;
-      const count = document.createElement('span');
-      count.className = 'hot-chip-count';
-      count.textContent = String(item.count);
-      button.append(label, count);
-      button.addEventListener('click', () => onNavigate({ category: item.key }));
-      els.categories.append(button);
+    const existing = [...els.categories.children];
+    const sameShape = existing.length === items.length &&
+      items.every((item, index) => existing[index].dataset.category === item.key);
+
+    if (!sameShape) {
+      const hadFocus = els.categories.contains(document.activeElement);
+      const focusedKey = hadFocus ? document.activeElement.dataset.category : null;
+      els.categories.replaceChildren();
+
+      for (const item of items) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'hot-chip';
+        button.dataset.category = item.key;
+        const label = document.createElement('span');
+        label.className = 'hot-chip-label';
+        const count = document.createElement('span');
+        count.className = 'hot-chip-count';
+        button.append(label, count);
+        button.addEventListener('click', () => onNavigate({ category: item.key }));
+        els.categories.append(button);
+      }
+
+      if (focusedKey) {
+        els.categories.querySelector(`[data-category="${focusedKey}"]`)?.focus();
+      }
     }
+
+    // 就地更新：重建节点会让 chip-pop 动画在每次按键时重播，也会把焦点甩回 body。
+    items.forEach((item, index) => {
+      const button = els.categories.children[index];
+      const isActive = item.key === active;
+      button.querySelector('.hot-chip-label').textContent = item.label;
+      button.querySelector('.hot-chip-count').textContent = String(item.count);
+      button.classList.toggle('is-active', isActive);
+      // 单选过滤不是开关，用 aria-current 而不是 aria-pressed。
+      if (isActive) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
   }
 
   function renderSummary(list) {
     if (!list) {
       els.summary.textContent = '正在读取热门…';
+      els.status.textContent = '正在读取热门';
       return;
     }
     els.summary.replaceChildren();
@@ -309,6 +357,16 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     link.textContent = list.source === 'offline' ? '离线快照' : 'skills.sh';
     source.append(link);
     els.summary.append(source);
+
+    // 轮询只改时间戳，不该打扰读屏：签名里不含时间。
+    const signature = [list.windowTotal ?? list.total, list.window.label, list.window.note || '', list.stale].join('|');
+    if (signature !== state.statusSignature) {
+      state.statusSignature = signature;
+      const parts = [`共 ${list.windowTotal ?? list.total} 个热门`, list.window.label];
+      if (list.window.note) parts.push(list.window.note);
+      if (list.stale) parts.push('数据可能已过期');
+      els.status.textContent = parts.join('，');
+    }
   }
 
   function renderNotice(list) {
@@ -531,6 +589,14 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     state.install = { status: 'idle', message: '' };
   }
 
+  /** 取详情。source/skill 必填，窗口沿用当前路由，保证侧栏的增长值与列表一致。 */
+  async function fetchDetail(source, skillId, route = state.route) {
+    const params = new URLSearchParams({ source, skill: skillId });
+    if (route?.window) params.set('window', route.window);
+    if (route?.window === 'custom') params.set('days', String(route.days || 14));
+    return apiJson(`/api/hot/skill?${params.toString()}`);
+  }
+
   async function openDetail(route) {
     els.ranking.hidden = true;
     els.detail.hidden = false;
@@ -542,17 +608,16 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     state.install = { status: 'idle', message: '' };
     els.detail.replaceChildren(renderDetailSkeleton());
 
-    const params = new URLSearchParams({ source: route.source, skill: route.skill });
-    if (route.window) params.set('window', route.window);
-    if (route.window === 'custom') params.set('days', String(route.days || 14));
-
     try {
-      state.detail = await apiJson(`/api/hot/skill?${params.toString()}`);
+      state.detail = await fetchDetail(route.source, route.skill, route);
       state.detailState = 'ready';
       state.install = state.detail.installed
         ? { status: 'installed', message: '' }
         : { status: 'idle', message: '' };
+      // 只有打开详情时播入场；之后的状态变化（安装、切 skill）不该整页重淡入。
+      els.detail.classList.add('is-entering');
       renderDetail();
+      setTimeout(() => els.detail.classList.remove('is-entering'), 320);
     } catch (error) {
       state.detailState = 'error';
       els.detail.replaceChildren(renderDetailError(error));
@@ -582,7 +647,7 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'secondary';
-    back.textContent = '返回热门';
+    back.textContent = '返回发现';
     back.addEventListener('click', () => onNavigate({ source: '', skill: '' }));
     wrapper.append(message, back);
     return wrapper;
@@ -596,7 +661,7 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'hot-back';
-    back.textContent = '← 热门';
+    back.textContent = '← 发现';
     back.addEventListener('click', () => onNavigate({ source: '', skill: '' }));
 
     const head = document.createElement('div');
@@ -740,9 +805,18 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
           ? '该来源已在原件库中，未做改动。'
           : `已加入原件库：${result.sourceId}。启用仍需手动操作。`
       };
-      detail.installed = true;
-      detail.installedSourceId = result.sourceId || detail.installedSourceId;
-      detail.entry.installed = true;
+      // 重新取详情：服务端这时能读到刚装好的本地 SKILL.md，
+      // 否则按钮说「已加入原件库」、下面还写着「安装后可查看」。
+      state.listQuery = null; // 返回列表时要重新取，才能看到「已安装」徽标
+      try {
+        state.detail = await fetchDetail(source, detail.entry.skillId);
+        state.animateMd = true;
+      } catch {
+        // 后端已经写入成功，取详情失败不回滚安装状态。
+        detail.installed = true;
+        detail.installedSourceId = result.sourceId || detail.installedSourceId;
+        detail.entry.installed = true;
+      }
       renderDetail();
     } catch (error) {
       state.install = { status: 'error', message: error.message || '获取失败', retry: true };
@@ -817,10 +891,15 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     paint();
 
     if (filterInput) {
-      filterInput.addEventListener('input', () => {
+      const applyFilter = () => {
         state.skillQuery = filterInput.value.trim().toLowerCase();
         paint();
+      };
+      filterInput.addEventListener('input', (event) => {
+        if (event.isComposing) return;
+        applyFilter();
       });
+      filterInput.addEventListener('compositionend', applyFilter);
     }
 
     if (state.skillsError) {
@@ -884,12 +963,9 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     renderDetail();
 
     const scrollY = window.scrollY;
-    const params = new URLSearchParams({ source: detail.entry.source, skill: skillId });
-    if (state.route?.window) params.set('window', state.route.window);
-    if (state.route?.window === 'custom') params.set('days', String(state.route.days || 14));
 
     try {
-      const next = await apiJson(`/api/hot/skill?${params.toString()}`);
+      const next = await fetchDetail(detail.entry.source, skillId);
       state.detail = next;
       state.switching = null;
       state.animateMd = true;
@@ -918,7 +994,13 @@ export function createHotView({ onNavigate = () => {}, onReplace = () => {} } = 
     section.className = 'detail-section';
     section.dataset.skillmd = 'true';
     // 标题带上 skill 名：局部切换后，面板自己说明正在看哪个 skill。
-    section.append(sectionTitle(`SKILL.MD · ${detail.entry.skillId}`));
+    const title = sectionTitle('SKILL.MD');
+    const skillName = document.createElement('span');
+    skillName.className = 'detail-section-skill';
+    // skill id 区分大小写，标题整体大写会把它写成另一个名字。
+    skillName.textContent = ` · ${detail.entry.skillId}`;
+    title.append(skillName);
+    section.append(title);
 
     const preview = detail.skillMd || { available: false };
     if (!preview.available) {

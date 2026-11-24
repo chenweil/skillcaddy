@@ -171,8 +171,8 @@ test('Agents bulk-clear passes an explicit project scope', () => {
 
 test('top bar adds exactly one new tab and keeps 已安装 as the default view', () => {
   assert.match(indexSource, /<nav class="topbar-tabs" aria-label="主导航">/);
-  assert.match(indexSource, /data-view="installed"[^>]*aria-current="page">已安装<\/button>/);
-  assert.match(indexSource, /data-view="hot"[^>]*>热门<\/button>/);
+  assert.match(indexSource, /data-view="installed"[^>]*aria-current="page">管理<\/button>/);
+  assert.match(indexSource, /data-view="hot"[^>]*>发现<\/button>/);
   assert.equal(indexSource.match(/data-view="/g).length, 2);
   // 热门容器与样式表随页面一起加载。
   assert.match(indexSource, /<link rel="stylesheet" href="\/hot\.css">/);
@@ -243,7 +243,7 @@ test('switching skills inside a source happens in place, not by page navigation'
   // 旧的「查看」按钮已移除：它只改 URL 不改变可见结果，用户以为没反应。
   assert.doesNotMatch(hotUiSource, /textContent = '查看'/);
   // 切换后标题写明是哪个 skill，并把面板滚进视口。
-  assert.match(hotUiSource, /SKILL\.MD · \$\{detail\.entry\.skillId\}/);
+  assert.match(hotUiSource, /skillName\.textContent = ` · \$\{detail\.entry\.skillId\}`/);
   assert.match(hotUiSource, /scrollIntoView\(\{ block: 'nearest' \}\)/);
   // 只替换地址栏状态，不堆历史记录。
   assert.match(appSource, /function replaceRoute\(patch\)/);
@@ -295,4 +295,82 @@ test('search and category filtering reuse the loaded payload instead of refetchi
   assert.match(hotUiSource, /function loadMatchesRoute\(route\)/);
   assert.match(hotUiSource, /if \(loadMatchesRoute\(route\)\) \{\s*renderList\(\);/);
   assert.match(hotUiSource, /state\.listQuery = \{ window: route\.window, days: route\.days \|\| null \}/);
+});
+
+test('the nav sits in a fixed column so switching views cannot move it', () => {
+  // space-between 下隐藏 Hermes 开关会让右侧变窄、中间 tab 右移；改成固定中列。
+  assert.match(styleSource, /\.topbar \{[\s\S]*?display: grid;[\s\S]*?grid-template-columns: 1fr auto 1fr;/);
+  assert.match(styleSource, /\.topbar > \.topbar-actions \{\s*justify-self: end;/);
+  // 窄屏退化成 auto/1fr/auto，避免等宽三列被挤爆。
+  assert.match(hotStyleSource, /@media \(max-width: 720px\) \{\s*\.topbar \{\s*grid-template-columns: auto 1fr auto;/);
+});
+
+test('Chinese IME input is never interrupted by search navigation', () => {
+  // 组合态里不导航：否则等于用半截拼音搜索，回写 value 还会打断组合。
+  assert.match(hotUiSource, /els\.search\.addEventListener\('compositionstart'/);
+  assert.match(hotUiSource, /els\.search\.addEventListener\('compositionend'/);
+  assert.match(hotUiSource, /if \(event\.isComposing \|\| state\.searchComposing\) return;/);
+  // 只在值真的不同时才回写，避免重置光标。
+  assert.match(hotUiSource, /if \(!state\.searchComposing && els\.search\.value !== nextQuery\)/);
+  // 来源内筛选框同样处理。
+  assert.match(hotUiSource, /if \(event\.isComposing\) return;\s*applyFilter\(\);/);
+});
+
+test('installing a source refreshes the detail so the page cannot contradict itself', () => {
+  assert.match(hotUiSource, /async function fetchDetail\(source, skillId, route = state\.route\)/);
+  assert.match(hotUiSource, /state\.listQuery = null; \/\/ 返回列表时要重新取/);
+  assert.match(hotUiSource, /state\.detail = await fetchDetail\(source, detail\.entry\.skillId\);/);
+});
+
+test('category chips update in place so focus and animation survive a keystroke', () => {
+  // 就地更新：重建节点会丢焦点，也会让 chip-pop 在每次按键时重播。
+  assert.match(hotUiSource, /const sameShape = existing\.length === items\.length/);
+  assert.match(hotUiSource, /button\.dataset\.category = item\.key/);
+  assert.match(hotUiSource, /button\.classList\.toggle\('is-active', isActive\)/);
+  // 单选过滤用 aria-current，不是 aria-pressed。
+  assert.match(hotUiSource, /button\.setAttribute\('aria-current', 'true'\)/);
+  assert.doesNotMatch(hotUiSource, /setAttribute\('aria-pressed'/);
+});
+
+test('screen readers are told the result set, not the polling clock', () => {
+  assert.match(indexSource, /<p id="hotSummary" class="hot-summary">/);
+  assert.doesNotMatch(indexSource, /id="hotSummary"[^>]*aria-live/);
+  assert.match(indexSource, /<p id="hotStatus" class="visually-hidden" role="status" aria-live="polite">/);
+  // 签名不含时间戳，轮询不会重复播报。
+  assert.match(hotUiSource, /const signature = \[list\.windowTotal \?\? list\.total, list\.window\.label/);
+});
+
+test('detail entrance plays once per open, not on every state change', () => {
+  assert.match(hotUiSource, /els\.detail\.classList\.add\('is-entering'\)/);
+  assert.match(hotUiSource, /setTimeout\(\(\) => els\.detail\.classList\.remove\('is-entering'\), 320\)/);
+  assert.match(motionSource, /\.hot-detail\.is-entering > \*/);
+  assert.doesNotMatch(motionSource, /\.hot-detail > \*/);
+});
+
+test('hot page matches the project touch-target and surface conventions', () => {
+  assert.match(hotStyleSource, /body\.view-hot #refreshButton \{\s*display: none;/);
+  assert.match(hotStyleSource, /@media \(max-width: 760px\) \{[\s\S]*?\.hot-chip \{\s*min-height: 44px;/);
+  // 分类 chip 与卡片同一层表面色，不再与页面同色。
+  assert.match(hotStyleSource, /\.hot-chip \{[\s\S]*?background: var\(--hot-surface\)/);
+  // 列表页补了 h2 承接卡片 h3。
+  assert.match(indexSource, /<h2 id="hotRankingTitle" class="visually-hidden">发现<\/h2>/);
+  assert.doesNotMatch(indexSource, /id="hotGrid"[^>]*aria-label/);
+});
+
+test('icon buttons mark busy state instead of swapping in text', () => {
+  // 图标按钮固定 36x36，写入「刷新中」会撑破圆框并挤动顶栏。
+  assert.match(appSource, /const isIconOnly = button\.classList\.contains\('icon-button'\)/);
+  assert.match(appSource, /button\.classList\.add\('is-busy'\);\s*button\.setAttribute\('aria-busy', 'true'\);/);
+  assert.match(appSource, /if \(isIconOnly\) \{\s*button\.classList\.remove\('is-busy'\);/);
+  // 非图标按钮仍然换文字（启用/同步这类按钮需要文字反馈）。
+  assert.match(appSource, /\} else \{\s*button\.textContent = busyText;\s*\}/);
+  assert.match(styleSource, /\.icon-button\.is-busy \{\s*opacity: 0\.55;\s*cursor: progress;/);
+});
+
+test('the refresh control spins while busy and stops under reduced motion', () => {
+  const noPref = motionSource.split('@media (prefers-reduced-motion: no-preference)')[1] || '';
+  assert.match(noPref, /\.icon-button\.is-busy \{\s*animation: icon-spin 0\.9s linear infinite;/);
+  assert.match(noPref, /@keyframes icon-spin \{\s*to \{\s*transform: rotate\(360deg\);/);
+  // 系统要求减少动态时必须停转。
+  assert.match(motionSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.icon-button\.is-busy \{\s*animation: none !important;/);
 });
